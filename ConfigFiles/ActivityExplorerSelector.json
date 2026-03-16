@@ -1,0 +1,53 @@
+{
+  "_Description": "Toggle Activity Explorer activities and workloads to export (True/False)",
+
+  "Activities": {
+    "ArchiveCreated": "True",
+    "AutoLabelingSimulation": "True",
+    "ChangeProtection": "True",
+    "CopilotInteraction": "True",
+    "DlpClassification": "True",
+    "DLPRuleMatch": "True",
+    "DLPRuleUndo": "True",
+    "DownloadText": "True",
+    "FileAccessedByUnallowedApp": "True",
+    "FileArchived": "True",
+    "FileCopiedToClipboard": "True",
+    "FileCopiedToNetworkShare": "True",
+    "FileCopiedToRemoteDesktopSession": "True",
+    "FileCopiedToRemovableMedia": "True",
+    "FileCreated": "True",
+    "FileCreatedOnNetworkShare": "True",
+    "FileCreatedOnRemovableMedia": "True",
+    "FileDeleted": "True",
+    "FileDiscovered": "True",
+    "FileModified": "True",
+    "FilePrinted": "True",
+    "FileRead": "True",
+    "FileRenamed": "True",
+    "FileUploadedToCloud": "True",
+    "LabelApplied": "True",
+    "LabelChanged": "True",
+    "LabelRecommended": "True",
+    "LabelRemoved": "True",
+    "PastedToBrowser": "True",
+    "WebpageCopiedToClipboard": "True"
+  },
+
+  "Workloads": {
+    "Copilot": "True",
+    "Endpoint": "True",
+    "Exchange": "True",
+    "OneDrive": "True",
+    "OnPremisesFileShareScanner": "True",
+    "OnPremisesSharePointScanner": "True",
+    "PowerBI": "True",
+    "PurviewDataMap": "True",
+    "SharePoint": "True"
+  },
+
+  "TimeRange": {
+    "DefaultPastDays": 30,
+    "MaxPastDays": 30
+  }
+}

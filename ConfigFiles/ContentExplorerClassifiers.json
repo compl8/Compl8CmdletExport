@@ -1,0 +1,62 @@
+{
+  "_Description": "Content Explorer classifiers to export. Set to True to include, False to exclude.",
+  "_Note": "Leave sections empty or omit to auto-discover from tenant. Specify individual items to limit scope.",
+
+  "Settings": {
+    "BatchSize": 10,
+    "PageSize": 1000,
+    "Workloads": ["Exchange", "SharePoint", "OneDrive", "Teams"]
+  },
+
+  "SensitivityLabels": {
+    "_AutoDiscover": "False",
+    "_Comment": "Set _AutoDiscover to True to auto-discover from tenant, or list specific labels below"
+  },
+
+  "RetentionLabels": {
+    "_AutoDiscover": "False",
+    "_Comment": "Set _AutoDiscover to True to auto-discover from tenant, or list specific labels below"
+  },
+
+  "SensitiveInformationTypes": {
+    "_AutoDiscover": "True",
+    "_Comment": "Auto-discovers all SITs from tenant, then SITsToSkip.json filters out unwanted ones",
+    "Australia Business Number": "True",
+    "Australia Company Number": "True",
+    "Australia Driver's License Number": "True",
+    "Australia Medical Account Number": "True",
+    "Australia Passport Number": "True",
+    "Australia Tax File Number": "True",
+    "Australia Bank Account Number": "True",
+    "Credit Card Number": "True",
+    "Email Address": "True",
+    "IP Address": "True",
+    "All Full Names": "True",
+    "Australia Physical Addresses": "True",
+    "Phone Number": "True"
+  },
+
+  "TrainableClassifiers": {
+    "_AutoDiscover": "False",
+    "_Comment": "Specify trainable classifiers to export",
+    "Corporate Sabotage": "False",
+    "Customer Complaints": "False",
+    "Discrimination": "False",
+    "Financial Regulatory Collusion": "False",
+    "Gift & Entertainment": "False",
+    "Healthcare": "False",
+    "HR": "False",
+    "IP": "False",
+    "Legal Affairs": "False",
+    "Money Laundering": "False",
+    "Procurement": "False",
+    "Profanity": "False",
+    "Regulatory Collusion": "False",
+    "Resumes": "False",
+    "Source Code": "False",
+    "Stock Manipulation": "False",
+    "Targeted Harassment": "False",
+    "Threat": "False",
+    "Unauthorized Disclosure": "False"
+  }
+}

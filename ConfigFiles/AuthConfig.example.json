@@ -1,0 +1,7 @@
+{
+  "_Description": "Certificate-based authentication for unattended/multi-terminal operation. Set UseCertificateAuth to True and fill in AppId, CertificateThumbprint, and Organization to enable.",
+  "UseCertificateAuth": "True",
+  "AppId": "your-azure-app-id",
+  "CertificateThumbprint": "YOUR_CERT_THUMBPRINT",
+  "Organization": "contoso.onmicrosoft.com"
+}
