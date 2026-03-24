@@ -18,8 +18,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+except ModuleNotFoundError as exc:
+    pa = None
+    pq = None
+    PYARROW_IMPORT_ERROR = exc
+else:
+    PYARROW_IMPORT_ERROR = None
 
 # ---------------------------------------------------------------------------
 # Column rename maps (PascalCase cmdlet output -> snake_case unified schema)
@@ -705,6 +712,15 @@ def write_hive_partitioned(records: list[dict], base_dir: Path,
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    if PYARROW_IMPORT_ERROR is not None:
+        missing_module = getattr(PYARROW_IMPORT_ERROR, "name", "pyarrow")
+        print(
+            f"ERROR: Missing Python dependency '{missing_module}'. "
+            "Install runtime dependencies with `pip install -r requirements.txt`.",
+            file=sys.stderr,
+        )
+        return 2
+
     parser = argparse.ArgumentParser(
         description="Convert Compl8CmdletExport JSON output to unified Parquet format"
     )
