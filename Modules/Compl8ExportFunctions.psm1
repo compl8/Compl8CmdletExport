@@ -19,6 +19,7 @@
 
 
 $moduleRoot = Split-Path -Parent $PSCommandPath
+$projectRoot = Split-Path $moduleRoot -Parent
 $sectionRoot = Join-Path $moduleRoot "Compl8ExportFunctions"
 $sectionFiles = @(
     'Core\01-ScriptVariables.ps1'

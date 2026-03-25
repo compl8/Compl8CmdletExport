@@ -32,11 +32,7 @@ function Get-SITsToSkip {
 
     # Default path: module parent directory / ConfigFiles / SITstoSkip.json
     if (-not $ConfigPath) {
-        $moduleRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-        # If running from the module file directly, PSScriptRoot is the Modules folder
-        # so the parent is the project root
-        $moduleParent = Split-Path $PSScriptRoot -Parent
-        $ConfigPath = Join-Path $moduleParent "ConfigFiles" "SITstoSkip.json"
+        $ConfigPath = Join-Path (Join-Path $projectRoot "ConfigFiles") "SITstoSkip.json"
     }
 
     $config = Read-JsonConfig -Path $ConfigPath

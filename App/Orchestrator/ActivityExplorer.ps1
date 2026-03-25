@@ -38,7 +38,7 @@ function Invoke-ActivityExplorerWorker {
     Write-ProgressEntry -Path $progressLogPath -Message "AE Worker PID $PID started"
 
     # Load Activity Explorer filters (prefer saved manifest for consistency)
-    $aeConfigPath = Join-Path $PSScriptRoot "ConfigFiles\ActivityExplorerSelector.json"
+    $aeConfigPath = Join-Path $scriptRoot "ConfigFiles\ActivityExplorerSelector.json"
     $filters = Resolve-AEFilters -ExportRunDirectory $exportDir -ConfigPath $aeConfigPath
 
     $lastWorkerActivity = Get-Date
@@ -285,7 +285,7 @@ function Invoke-AEMultiExport {
             Write-ExportLog -Message "Single-terminal resume mode" -Level Info
 
             # Load filters (prefer saved manifest for consistency)
-            $aeConfigPath = Join-Path $PSScriptRoot "ConfigFiles\ActivityExplorerSelector.json"
+            $aeConfigPath = Join-Path $scriptRoot "ConfigFiles\ActivityExplorerSelector.json"
             $filters = Resolve-AEFilters -ExportRunDirectory $exportDir -ConfigPath $aeConfigPath
 
             # Process each pending task using a "virtual worker" coordination directory
@@ -419,7 +419,7 @@ function Invoke-AEMultiExport {
         Write-AETaskCsv -Path $aeTaskCsvPath -Tasks $dayTasks
 
         # Save export settings manifest for resume consistency
-        $configPath = Join-Path $PSScriptRoot "ConfigFiles\ActivityExplorerSelector.json"
+        $configPath = Join-Path $scriptRoot "ConfigFiles\ActivityExplorerSelector.json"
         $selectorConfig = Read-JsonConfig -Path $configPath
         Save-ExportSettings -ExportRunDirectory $exportDir -ExportType "ActivityExplorer" -Settings @{
             PastDays       = $PastDays

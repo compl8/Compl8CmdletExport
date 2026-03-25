@@ -19,7 +19,7 @@ Install-Module -Name ExchangeOnlineManagement -Force -Scope CurrentUser
 # CLI help
 .\Export-Compl8Configuration.ps1 --help
 
-# Interactive menu (17 options)
+# Interactive menu
 .\Export-Compl8Configuration.ps1
 
 # Full export
@@ -28,6 +28,43 @@ Install-Module -Name ExchangeOnlineManagement -Force -Scope CurrentUser
 # Full export, skipping slow Content/Activity Explorer
 .\Export-Compl8Configuration.ps1 -FullExport -NoActivity -NoContent
 ```
+
+## Repository Layout
+
+The entry script is still operator-first, but the runtime is now split into a small set of stable folders. Keep this structure intact if you copy or package the tool:
+
+```text
+Export-Compl8Configuration.ps1
+App/
+  Host/
+  Orchestrator/
+  Providers/
+Modules/
+  Compl8ExportFunctions.psm1
+  Compl8ExportFunctions/
+ConfigFiles/
+build_unified_parquet.py
+README.md
+```
+
+`Export-Compl8Configuration.ps1` expects `App/`, `Modules/`, and `ConfigFiles/` to sit beside it. Do not move individual files out of that layout.
+
+## Run On Another Machine
+
+1. Copy the repository root, or extract a portable zip, while preserving the folder structure above.
+2. Install PowerShell 7 and `ExchangeOnlineManagement` 3.2.0+.
+3. If you want certificate auth, copy `ConfigFiles/AuthConfig.example.json` to `ConfigFiles/AuthConfig.json` and populate it.
+4. If you want Parquet conversion, install Python and `pyarrow`.
+
+```powershell
+Install-Module -Name ExchangeOnlineManagement -Force -Scope CurrentUser
+```
+
+```bash
+pip install pyarrow
+```
+
+For a full development and test environment, use `pip install -r requirements.txt`.
 
 ## Export Modes
 
@@ -202,6 +239,12 @@ Without certificate auth, interactive (browser) authentication is used. In multi
 | `CurrentTenantSITs.json` | Auto-generated GUID-to-Name SIT mapping (not tracked) |
 
 Config files use `"True"`/`"False"` strings for toggles. Properties starting with `_` are metadata and ignored by the export logic.
+
+## Documentation Scope
+
+`README.md` is the maintained operator-facing document.
+
+Ad hoc root markdown files such as `progress.md`, `paginationanalysis.md`, `security_architecture_review.md`, and anything under `memory/` are working notes and design artifacts. They can be useful context, but they are not treated as authoritative runbooks and may lag behind the current code.
 
 ## Output Structure
 

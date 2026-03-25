@@ -141,7 +141,7 @@ function Show-ExportMenu {
             }
             "8" {
                 # Resume Previous Export - scan for ExportPhase.txt in Export-* directories
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $PSScriptRoot "Output" }
+                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $resumableDirs = @()
                 if (Test-Path $baseOutputDir) {
                     $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
@@ -206,7 +206,7 @@ function Show-ExportMenu {
             }
             "9" {
                 # Retry Discrepant Tasks - scan for RetryTasks.csv in Export-* directories
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $PSScriptRoot "Output" }
+                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $retryableDirs = @()
                 if (Test-Path $baseOutputDir) {
                     $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
@@ -263,7 +263,7 @@ function Show-ExportMenu {
 
                 if ([string]::IsNullOrEmpty($csvInput)) {
                     # Scan for RemainingTasks.csv in Output directories
-                    $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $PSScriptRoot "Output" }
+                    $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                     $taskCsvDirs = @()
                     if (Test-Path $baseOutputDir) {
                         $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
@@ -375,7 +375,7 @@ function Show-ExportMenu {
             }
             "13" {
                 # Resume Previous AE Export - scan for ExportType.txt = "ActivityExplorer" + incomplete phase
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $PSScriptRoot "Output" }
+                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $aeResumableDirs = @()
                 if (Test-Path $baseOutputDir) {
                     $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
@@ -573,7 +573,7 @@ function Build-AuthParameters {
     [CmdletBinding()]
     param()
 
-    $authConfigPath = Join-Path $PSScriptRoot "ConfigFiles\AuthConfig.json"
+    $authConfigPath = Join-Path $scriptRoot "ConfigFiles\AuthConfig.json"
 
     if (Test-Path $authConfigPath) {
         $authConfig = Read-JsonConfig -Path $authConfigPath
@@ -621,7 +621,7 @@ function Start-WorkerTerminals {
         [int]$Count
     )
 
-    $scriptPath = Join-Path $PSScriptRoot "Export-Compl8Configuration.ps1"
+    $scriptPath = Join-Path $scriptRoot "Export-Compl8Configuration.ps1"
 
     # Check auth mode from config
     $authParams = Build-AuthParameters
@@ -721,7 +721,7 @@ function Add-WorkerToExport {
         [int]$NextWorkerNumber
     )
 
-    $scriptPath = Join-Path $PSScriptRoot "Export-Compl8Configuration.ps1"
+    $scriptPath = Join-Path $scriptRoot "Export-Compl8Configuration.ps1"
     $authParams = Build-AuthParameters
     $isCertAuth = $authParams.ContainsKey('AppId')
 

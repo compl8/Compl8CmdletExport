@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import textwrap
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = REPO_ROOT / "Modules" / "Compl8ExportFunctions.psm1"
 CONFIG_PATH = REPO_ROOT / "ConfigFiles" / "ContentExplorerClassifiers.json"
+MENU_PART_PATH = REPO_ROOT / "App" / "Host" / "Menu.ps1"
 SCRIPT_PARTS_ROOT = REPO_ROOT / "App"
 MODULE_PARTS_ROOT = REPO_ROOT / "Modules" / "Compl8ExportFunctions"
 
@@ -130,3 +132,36 @@ def test_split_powershell_sections_parse_cleanly() -> None:
 
     output = run_pwsh(script)
     assert "PARSE=OK" in output
+
+
+def test_build_auth_parameters_reads_root_level_auth_config(tmp_path: Path) -> None:
+    script_root = tmp_path / "portable-root"
+    config_dir = script_root / "ConfigFiles"
+    config_dir.mkdir(parents=True)
+    (config_dir / "AuthConfig.json").write_text(
+        json.dumps(
+            {
+                "UseCertificateAuth": "True",
+                "AppId": "test-app-id",
+                "CertificateThumbprint": "ABC123",
+                "Organization": "contoso.onmicrosoft.com",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $scriptRoot = '{script_root}'
+        $UserPrincipalName = $null
+        . '{MENU_PART_PATH}'
+        $result = Build-AuthParameters
+        Write-Output ('APPID=' + $result.AppId)
+        Write-Output ('ORG=' + $result.Organization)
+        """
+    )
+
+    output = run_pwsh(script)
+    assert "APPID=test-app-id" in output
+    assert "ORG=contoso.onmicrosoft.com" in output

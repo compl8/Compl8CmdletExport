@@ -48,7 +48,7 @@
 
     # Load Content Explorer configuration (prefer saved manifest for consistency)
     $savedSettings = Get-ExportSettings -ExportRunDirectory $exportDir
-    $configPath = Join-Path $PSScriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
+    $configPath = Join-Path $scriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
     $ceConfig = Read-JsonConfig -Path $configPath
     if (-not $ceConfig -and -not $savedSettings) {
         Write-ExportLog -Message "ERROR: Cannot read Content Explorer config" -Level Error
@@ -72,7 +72,7 @@
     $tracker = Get-ContentExplorerRunTracker -TrackerPath $trackerPath
 
     # Telemetry setup
-    $telemetryDbPath = Join-Path $PSScriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
+    $telemetryDbPath = Join-Path $scriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
 
     # Aggregate data (loaded once when entering Detail phase)
     $aggregateDataLoaded = $false
@@ -650,18 +650,18 @@ function Invoke-ContentExplorerResume {
     Write-ExportLog -Message ("Resuming export from phase: {0}" -f $phase) -Level Info
 
     # Load Content Explorer page size (manifest overrides config file for consistency)
-    $configPath = Join-Path $PSScriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
+    $configPath = Join-Path $scriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
     $resolved = Resolve-CEPageSize -ExportRunDirectory $ExportDir -ConfigPath $configPath -FallbackPageSize $PageSize
     $cePageSize = $resolved.PageSize
 
-    $sitsToSkipPath = Join-Path $PSScriptRoot "ConfigFiles" "SITstoSkip.json"
+    $sitsToSkipPath = Join-Path $scriptRoot "ConfigFiles" "SITstoSkip.json"
     $sitsToSkip = Get-SITsToSkip -ConfigPath $sitsToSkipPath
 
     $progressLogPath = Join-Path (Get-LogsDir $ExportDir) "ContentExplorer-Progress.log"
     $aggregateCsvPath = Join-Path (Get-CoordinationDir $ExportDir) "ContentExplorer-Aggregates.csv"
     $trackerPath = Join-Path (Get-CoordinationDir $ExportDir) "RunTracker.json"
     $tracker = Get-ContentExplorerRunTracker -TrackerPath $trackerPath
-    $telemetryDbPath = Join-Path $PSScriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
+    $telemetryDbPath = Join-Path $scriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
 
     # Route based on current phase
     switch ($phase) {
@@ -1300,7 +1300,7 @@ function Invoke-ContentExplorerRetry {
     Write-ExportLog -Message ("Retrying {0} discrepant tasks" -f $retryTasks.Count) -Level Info
 
     # Load Content Explorer page size (manifest overrides config file for consistency)
-    $configPath = Join-Path $PSScriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
+    $configPath = Join-Path $scriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
     $resolved = Resolve-CEPageSize -ExportRunDirectory $ExportDir -ConfigPath $configPath -FallbackPageSize $PageSize
     $cePageSize = $resolved.PageSize
 
@@ -1308,7 +1308,7 @@ function Invoke-ContentExplorerRetry {
     $aggregateCsvPath = Join-Path (Get-CoordinationDir $ExportDir) "ContentExplorer-Aggregates.csv"
     $trackerPath = Join-Path (Get-CoordinationDir $ExportDir) "RunTracker.json"
     $tracker = Get-ContentExplorerRunTracker -TrackerPath $trackerPath
-    $telemetryDbPath = Join-Path $PSScriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
+    $telemetryDbPath = Join-Path $scriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
 
     # Build work plan tasks from retry CSV (reuse aggregate data, skip aggregation)
     $script:AllWorkPlanTasks = @()
@@ -1554,7 +1554,7 @@ function Invoke-ContentExplorerFromTasksCsv {
     Write-ExportPhase -ExportDir $exportDir -Phase "Detail"
 
     # Load Content Explorer configuration
-    $configPath = Join-Path $PSScriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
+    $configPath = Join-Path $scriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
     $ceConfig = Read-JsonConfig -Path $configPath
     $ceSettings = Get-ContentExplorerSettings -ConfigObject $ceConfig -DefaultBatchSize $script:CEDefaultBatchSize -DefaultWorkloads $script:CEDefaultWorkloads -DefaultPageSize $PageSize
     $cePageSize = $ceSettings.PageSize
@@ -1563,7 +1563,7 @@ function Invoke-ContentExplorerFromTasksCsv {
     $progressLogPath = Join-Path (Get-LogsDir $exportDir) "ContentExplorer-Progress.log"
     $trackerPath = Join-Path (Get-CoordinationDir $exportDir) "RunTracker.json"
     $tracker = Get-ContentExplorerRunTracker -TrackerPath $trackerPath
-    $telemetryDbPath = Join-Path $PSScriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
+    $telemetryDbPath = Join-Path $scriptRoot "TelemetryDB" "content-explorer-telemetry.jsonl"
 
     # Build work plan tasks from input CSV
     $script:AllWorkPlanTasks = @()
