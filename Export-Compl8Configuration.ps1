@@ -243,6 +243,21 @@ if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $scriptRoot "Output"
 }
 
+# Import the module (must happen before any helper functions like Get-LogsDir are called)
+$modulePath = Join-Path $scriptRoot "Modules\Compl8ExportFunctions.psm1"
+if (-not (Test-Path $modulePath)) {
+    Write-Error "Module not found: $modulePath"
+    exit 1
+}
+
+try {
+    Import-Module $modulePath -Force -ErrorAction Stop
+}
+catch {
+    Write-Error "Failed to import module: $($_.Exception.Message)"
+    exit 1
+}
+
 if ($WorkerExportDir) {
     # Worker mode: use the orchestrator's export directory, don't create a new one
     $script:ExportRunDirectory = $WorkerExportDir
@@ -256,21 +271,6 @@ if ($WorkerExportDir) {
     $script:ExportRunDirectory = Join-Path $OutputDirectory "Export-$script:ExportTimestamp"
     New-Item -ItemType Directory -Force -Path $script:ExportRunDirectory | Out-Null
     $script:ErrorLogPath = Join-Path (Get-LogsDir $script:ExportRunDirectory) "ExportProject-Errors.log"
-}
-
-# Import the module
-$modulePath = Join-Path $scriptRoot "Modules\Compl8ExportFunctions.psm1"
-if (-not (Test-Path $modulePath)) {
-    Write-Error "Module not found: $modulePath"
-    exit 1
-}
-
-try {
-    Import-Module $modulePath -Force -ErrorAction Stop
-}
-catch {
-    Write-Error "Failed to import module: $($_.Exception.Message)"
-    exit 1
 }
 
 # Initialize logging in the export run directory
