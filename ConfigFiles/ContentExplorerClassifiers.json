@@ -5,7 +5,9 @@
   "Settings": {
     "BatchSize": 10,
     "PageSize": 1000,
-    "Workloads": ["Exchange", "SharePoint", "OneDrive", "Teams"]
+    "Workloads": ["Exchange", "SharePoint", "OneDrive", "Teams"],
+    "LargeAllSITDetailThreshold": 100,
+    "LargeAllSITWorkloadFallbackWorkloads": ["Exchange", "Teams"]
   },
 
   "SensitivityLabels": {

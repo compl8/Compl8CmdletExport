@@ -66,6 +66,8 @@
     $batchSize = $ceSettings.BatchSize
     $workloads = @($ceSettings.Workloads)
     $cePageSize = $ceSettings.PageSize
+    $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
+    $largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)
 
     # Per-worker run tracker (in worker folder)
     $trackerPath = Join-Path $workerDir "RunTracker.json"
@@ -653,6 +655,12 @@ function Invoke-ContentExplorerResume {
     $configPath = Join-Path $scriptRoot "ConfigFiles" "ContentExplorerClassifiers.json"
     $resolved = Resolve-CEPageSize -ExportRunDirectory $ExportDir -ConfigPath $configPath -FallbackPageSize $PageSize
     $cePageSize = $resolved.PageSize
+    $savedSettings = Get-ExportSettings -ExportRunDirectory $ExportDir
+    $ceConfig = Read-JsonConfig -Path $configPath
+    $ceSettings = Get-ContentExplorerSettings -ConfigObject $ceConfig -SavedSettings $savedSettings -DefaultBatchSize $script:CEDefaultBatchSize -DefaultWorkloads $script:CEDefaultWorkloads -DefaultPageSize $cePageSize
+    $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
+    $largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)
+    $savedCEAllSITs = ($savedSettings -and $savedSettings.CEAllSITs -eq $true)
 
     $sitsToSkipPath = Join-Path $scriptRoot "ConfigFiles" "SITstoSkip.json"
     $sitsToSkip = Get-SITsToSkip -ConfigPath $sitsToSkipPath
@@ -791,14 +799,28 @@ function Invoke-ContentExplorerResume {
                 $workloads = @($aggTasks | Select-Object -ExpandProperty Workload -Unique) | Select-Object -Unique
 
                 $script:AllWorkPlanTasks = @()
+                $allAggregateTaskData = @()
                 foreach ($tagType in $tagTypes) {
                     $tagNames = @($aggTasks | Where-Object { $_.TagType -eq $tagType } | Select-Object -ExpandProperty TagName -Unique)
                     if ($tagNames.Count -eq 0) { continue }
                     $cachedResult = Import-AggregateDataFromCsv -CsvPath $aggregateCsvPath -TagType $tagType -TagNames $tagNames -Workloads $workloads
-                    if ($cachedResult -and $cachedResult.Tasks) {
-                        $script:AllWorkPlanTasks += @($cachedResult.Tasks)
+                    if ($cachedResult -and $cachedResult.TaskData) {
+                        $allAggregateTaskData += @($cachedResult.TaskData.Values)
                     }
                 }
+
+                $resumeFallbackWorkloads = @()
+                if ($savedCEAllSITs) {
+                    $resumeSitCount = @($allAggregateTaskData | Where-Object { $_.TagType -eq "SensitiveInformationType" } | ForEach-Object { $_.TagName } | Select-Object -Unique).Count
+                    if ($resumeSitCount -gt $largeAllSITDetailThreshold) {
+                        $resumeFallbackWorkloads = @($workloads | Where-Object { $_ -in $largeAllSITFallbackCandidates })
+                        if ($resumeFallbackWorkloads.Count -gt 0) {
+                            Write-ExportLog -Message ("Large All-SIT detail strategy restored from settings: {0} SITs > threshold {1}; using workload-level detail tasks for {2}" -f $resumeSitCount, $largeAllSITDetailThreshold, ($resumeFallbackWorkloads -join ', ')) -Level Info
+                        }
+                    }
+                }
+
+                $script:AllWorkPlanTasks = @(New-ContentExplorerDetailTasks -WorkPlanTasks $allAggregateTaskData -DefaultPageSize $cePageSize -WorkloadFallbackWorkloads $resumeFallbackWorkloads -Sort)
 
                 Write-ExportLog -Message ("Built work plan: {0} detail tasks" -f $script:AllWorkPlanTasks.Count) -Level Info
             }
@@ -812,7 +834,7 @@ function Invoke-ContentExplorerResume {
             if ($detTasks.Count -gt 0) {
                 foreach ($dt in $detTasks) {
                     if ($dt.Status -eq "Completed") {
-                        $dtKey = "{0}|{1}|{2}" -f $dt.TagType, $dt.TagName, $dt.Workload
+                        $dtKey = "{0}|{1}|{2}|{3}" -f $dt.TagType, $dt.TagName, $dt.Workload, $(if ($dt.Location) { $dt.Location } else { "" })
                         $completedTaskKeys[$dtKey] = $true
                     }
                 }
@@ -844,16 +866,17 @@ function Invoke-ContentExplorerResume {
                     # Fallback: rebuild from work plan (no DetailTasks.csv available)
                     $detailTasks = @()
                     foreach ($task in $script:AllWorkPlanTasks) {
-                        $taskKey = "{0}|{1}|{2}" -f $task.TagType, $task.TagName, $task.Workload
+                        $taskKey = "{0}|{1}|{2}|{3}" -f $task.TagType, $task.TagName, $task.Workload, $(if ($task.Location) { $task.Location } else { "" })
                         if ($completedTaskKeys.ContainsKey($taskKey)) { continue }
                         if ((-not $task.ExpectedCount -or $task.ExpectedCount -eq 0) -and $task.Status -ne "Error") { continue }
 
                         $detailTasks += @{
+                            Phase                 = "Detail"
                             TagType               = $task.TagType
                             TagName               = $task.TagName
                             Workload              = $task.Workload
-                            Location              = ""
-                            LocationType          = ""
+                            Location              = if ($task.Location) { $task.Location } else { "" }
+                            LocationType          = if ($task.LocationType) { $task.LocationType } else { "WorkloadFallback" }
                             ExpectedCount         = ($task.ExpectedCount -as [int])
                             OriginalExpectedCount = if ($task.OriginalExpectedCount) { ($task.OriginalExpectedCount -as [int]) } else { ($task.ExpectedCount -as [int]) }
                             PageSize              = if ($task.PageSize) { ($task.PageSize -as [int]) } else { $cePageSize }
@@ -1162,7 +1185,8 @@ function Invoke-ContentExplorerResume {
                 # -- Single-terminal resume: process detail tasks directly --
                 $completedTaskCounts = @{}
                 foreach ($task in $script:AllWorkPlanTasks) {
-                    $taskKey = "{0}|{1}|{2}" -f $task.TagType, $task.TagName, $task.Workload
+                    $taskLocation = if ($task.Location) { $task.Location } else { "" }
+                    $taskKey = "{0}|{1}|{2}|{3}" -f $task.TagType, $task.TagName, $task.Workload, $taskLocation
 
                     if ($completedTaskKeys.ContainsKey($taskKey)) {
                         Write-ExportLog -Message ("    Skipping {0} / {1} - already completed" -f $task.TagName, $task.Workload) -Level Info
@@ -1186,6 +1210,11 @@ function Invoke-ContentExplorerResume {
                         TelemetryDatabasePath = $telemetryDbPath
                         AdaptivePageSize     = $true
                         OutputDirectory      = $classifierDir
+                    }
+                    if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
+                        $exportParams["SiteUrl"] = $task.Location
+                    } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
+                        $exportParams["UserPrincipalName"] = $task.Location
                     }
 
                     try {
@@ -1315,29 +1344,20 @@ function Invoke-ContentExplorerRetry {
     $workloads = @($script:CEDefaultWorkloads)
 
     foreach ($rt in $retryTasks) {
-        # Try to get location data from existing aggregate CSV for adaptive page sizing
-        $taskLocations = @()
-        if (Test-Path $aggregateCsvPath) {
-            try {
-                $cachedResult = Import-AggregateDataFromCsv -CsvPath $aggregateCsvPath -TagType $rt.TagType -TagNames @($rt.TagName) -Workloads @($rt.Workload)
-                $taskKey = "{0}|{1}|{2}" -f $rt.TagType, $rt.TagName, $rt.Workload
-                if ($cachedResult.TaskData -and $cachedResult.TaskData[$taskKey]) {
-                    $taskLocations = $cachedResult.TaskData[$taskKey].Locations
-                }
-            }
-            catch {
-                Write-ExportLog -Message ("  Could not load aggregate data for {0}/{1}: {2}" -f $rt.TagName, $rt.Workload, $_.Exception.Message) -Level Warning
-            }
-        }
+        $rtLocation = if ($rt.Location) { $rt.Location } else { "" }
+        $rtLocationType = if ($rt.LocationType) { $rt.LocationType } else { "WorkloadFallback" }
 
         $script:AllWorkPlanTasks += @{
-            TagType       = $rt.TagType
-            TagName       = $rt.TagName
-            Workload      = $rt.Workload
-            ExpectedCount = ($rt.OriginalExpectedCount -as [int])
-            ExportedCount = 0
-            Locations     = $taskLocations
-            Status        = "Pending"
+            TagType               = $rt.TagType
+            TagName               = $rt.TagName
+            Workload              = $rt.Workload
+            Location              = $rtLocation
+            LocationType          = $rtLocationType
+            ExpectedCount         = ($rt.OriginalExpectedCount -as [int])
+            OriginalExpectedCount = ($rt.OriginalExpectedCount -as [int])
+            PageSize              = if ($rt.PageSize) { ($rt.PageSize -as [int]) } else { $cePageSize }
+            ExportedCount         = 0
+            Status                = "Pending"
         }
     }
 
@@ -1350,25 +1370,33 @@ function Invoke-ContentExplorerRetry {
     $completedTaskCounts = @{}
 
     foreach ($task in @($script:AllWorkPlanTasks)) {
-        $taskKey = "{0}|{1}|{2}" -f $task.TagType, $task.TagName, $task.Workload
+        $taskLocation = if ($task.Location) { $task.Location } else { "" }
+        $taskKey = "{0}|{1}|{2}|{3}" -f $task.TagType, $task.TagName, $task.Workload, $taskLocation
 
         if (-not $task.ExpectedCount -or $task.ExpectedCount -eq 0) {
             Write-ExportLog -Message ("    Skipping {0} / {1} - no data" -f $task.TagName, $task.Workload) -Level Info
             continue
         }
 
-        Write-ExportLog -Message ("    Retrying: {0} / {1} (expected {2})" -f $task.TagName, $task.Workload, $task.ExpectedCount) -Level Info
+        $locationLabel = if ($taskLocation) { " @ $taskLocation" } else { "" }
+        Write-ExportLog -Message ("    Retrying: {0} / {1}{2} (expected {3})" -f $task.TagName, $task.Workload, $locationLabel, $task.ExpectedCount) -Level Info
 
         # Export task with progress tracking — output to Data/ContentExplorer/TagType/TagName/
         $classifierDir = Get-CEClassifierDir $ExportDir $task.TagType $task.TagName
 
+        $taskPageSize = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } else { $cePageSize }
         $exportParams = @{
             Task                  = $task
-            PageSize              = $cePageSize
+            PageSize              = $taskPageSize
             ProgressLogPath       = $progressLogPath
             AdaptivePageSize      = $true
             TelemetryDatabasePath = $telemetryDbPath
             OutputDirectory       = $classifierDir
+        }
+        if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
+            $exportParams["SiteUrl"] = $task.Location
+        } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
+            $exportParams["UserPrincipalName"] = $task.Location
         }
 
         try {
@@ -1377,14 +1405,14 @@ function Invoke-ContentExplorerRetry {
             $completedTaskCounts[$taskKey] = $exportedCount
 
             if ($exportedCount -gt 0) {
-                Write-ExportLog -Message ("    Completed: {0} / {1} - {2} records" -f $task.TagName, $task.Workload, $exportedCount) -Level Success
+                Write-ExportLog -Message ("    Completed: {0} / {1}{2} - {3} records" -f $task.TagName, $task.Workload, $locationLabel, $exportedCount) -Level Success
             }
             else {
-                Write-ExportLog -Message ("    Completed: {0} / {1} - 0 records" -f $task.TagName, $task.Workload) -Level Info
+                Write-ExportLog -Message ("    Completed: {0} / {1}{2} - 0 records" -f $task.TagName, $task.Workload, $locationLabel) -Level Info
             }
         }
         catch {
-            Write-ExportLog -Message ("    FAILED: {0} / {1} - {2}" -f $task.TagName, $task.Workload, $_.Exception.Message) -Level Error
+            Write-ExportLog -Message ("    FAILED: {0} / {1}{2} - {3}" -f $task.TagName, $task.Workload, $locationLabel, $_.Exception.Message) -Level Error
             if ($script:ErrorLogPath) {
                 Write-ExportErrorLog -ErrorLogPath $script:ErrorLogPath -Context "Retry Detail Export" -TaskKey $taskKey -ErrorRecord $_
             }
@@ -1398,10 +1426,11 @@ function Invoke-ContentExplorerRetry {
         # Update the DetailTasks.csv with new actual counts for retried tasks
         $detailTasks = Read-TaskCsv -Path $detailCsvPath
         foreach ($rt in $retryTasks) {
-            $taskKey = "{0}|{1}|{2}" -f $rt.TagType, $rt.TagName, $rt.Workload
+            $rtLocation = if ($rt.Location) { $rt.Location } else { "" }
+            $taskKey = "{0}|{1}|{2}|{3}" -f $rt.TagType, $rt.TagName, $rt.Workload, $rtLocation
             if ($completedTaskCounts.ContainsKey($taskKey)) {
                 $matchTask = $detailTasks | Where-Object {
-                    $_.TagType -eq $rt.TagType -and $_.TagName -eq $rt.TagName -and $_.Workload -eq $rt.Workload
+                    $_.TagType -eq $rt.TagType -and $_.TagName -eq $rt.TagName -and $_.Workload -eq $rt.Workload -and $(if ($_.Location) { $_.Location } else { "" }) -eq $rtLocation
                 } | Select-Object -First 1
                 if ($matchTask) {
                     $matchTask.ExpectedCount = $completedTaskCounts[$taskKey]
@@ -1570,13 +1599,17 @@ function Invoke-ContentExplorerFromTasksCsv {
     foreach ($t in $inputTasks) {
         if ($t.Status -eq "Completed") { continue }
         $script:AllWorkPlanTasks += @{
-            TagType       = $t.TagType
-            TagName       = $t.TagName
-            Workload      = $t.Workload
-            ExpectedCount = ($t.ExpectedCount -as [int])
-            ExportedCount = 0
-            Locations     = @()
-            Status        = "Pending"
+            TagType               = $t.TagType
+            TagName               = $t.TagName
+            Workload              = $t.Workload
+            Location              = if ($t.Location) { $t.Location } else { "" }
+            LocationType          = if ($t.LocationType) { $t.LocationType } else { "WorkloadFallback" }
+            ExpectedCount         = ($t.ExpectedCount -as [int])
+            OriginalExpectedCount = if ($t.OriginalExpectedCount) { ($t.OriginalExpectedCount -as [int]) } else { ($t.ExpectedCount -as [int]) }
+            PageSize              = if ($t.PageSize) { ($t.PageSize -as [int]) } else { $cePageSize }
+            ExportedCount         = 0
+            Locations             = @()
+            Status                = "Pending"
         }
     }
 
@@ -1818,7 +1851,8 @@ function Invoke-ContentExplorerFromTasksCsv {
         # -- Single-terminal: process detail tasks directly --
         $completedTaskCounts = @{}
         foreach ($task in $script:AllWorkPlanTasks) {
-            $taskKey = "{0}|{1}|{2}" -f $task.TagType, $task.TagName, $task.Workload
+            $taskLocation = if ($task.Location) { $task.Location } else { "" }
+            $taskKey = "{0}|{1}|{2}|{3}" -f $task.TagType, $task.TagName, $task.Workload, $taskLocation
 
             if ((-not $task.ExpectedCount -or $task.ExpectedCount -eq 0) -and $task.Status -ne "Error") {
                 Write-ExportLog -Message ("    Skipping {0} / {1} - no data" -f $task.TagName, $task.Workload) -Level Info
@@ -1833,12 +1867,17 @@ function Invoke-ContentExplorerFromTasksCsv {
             $telemetry = New-ContentExplorerTelemetry -TagType $task.TagType -TagName $task.TagName -Workload $task.Workload
             $exportParams = @{
                 Task                  = $task
-                PageSize              = $cePageSize
+                PageSize              = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } else { $cePageSize }
                 ProgressLogPath       = $progressLogPath
                 Telemetry             = $telemetry
                 TelemetryDatabasePath = $telemetryDbPath
                 AdaptivePageSize      = $true
                 OutputDirectory       = $classifierDir
+            }
+            if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
+                $exportParams["SiteUrl"] = $task.Location
+            } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
+                $exportParams["UserPrincipalName"] = $task.Location
             }
 
             try {
@@ -1853,7 +1892,7 @@ function Invoke-ContentExplorerFromTasksCsv {
 
                 # Update task status in CSV
                 $csvTask = $inputTasks | Where-Object {
-                    $_.TagType -eq $task.TagType -and $_.TagName -eq $task.TagName -and $_.Workload -eq $task.Workload
+                    $_.TagType -eq $task.TagType -and $_.TagName -eq $task.TagName -and $_.Workload -eq $task.Workload -and $(if ($_.Location) { $_.Location } else { "" }) -eq $taskLocation
                 } | Select-Object -First 1
                 if ($csvTask) {
                     $csvTask.Status = "Completed"
@@ -1871,7 +1910,7 @@ function Invoke-ContentExplorerFromTasksCsv {
                 }
                 # Mark as Error in CSV
                 $csvTask = $inputTasks | Where-Object {
-                    $_.TagType -eq $task.TagType -and $_.TagName -eq $task.TagName -and $_.Workload -eq $task.Workload
+                    $_.TagType -eq $task.TagType -and $_.TagName -eq $task.TagName -and $_.Workload -eq $task.Workload -and $(if ($_.Location) { $_.Location } else { "" }) -eq $taskLocation
                 } | Select-Object -First 1
                 if ($csvTask) {
                     $csvTask.Status = "Error"
@@ -2002,6 +2041,8 @@ function Invoke-ContentExplorerExport {
     $batchSize = $ceSettings.BatchSize
     $workloads = @($ceSettings.Workloads)
     $cePageSize = $ceSettings.PageSize
+    $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
+    $largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)
 
     # Apply menu/CLI workload selection (overrides config)
     if ($CEWorkloads) {
@@ -2014,6 +2055,8 @@ function Invoke-ContentExplorerExport {
         CEAllSITs = [bool]$CEAllSITs
         BatchSize = $batchSize
         PageSize  = $cePageSize
+        LargeAllSITDetailThreshold = $largeAllSITDetailThreshold
+        LargeAllSITWorkloadFallbackWorkloads = $largeAllSITFallbackCandidates
     }
 
     Write-ExportLog -Message ("Default page size: {0} (adaptive sizing selects optimal size per workload)" -f $cePageSize) -Level Info
@@ -2184,6 +2227,22 @@ function Invoke-ContentExplorerExport {
     }
 
     #endregion
+
+    # Large all-SIT runs create punishing SIT x location task fanout for mailbox-like
+    # workloads. The cmdlet still requires TagType/TagName, so use one detail task per
+    # SIT/workload for configured workloads instead of per-location tasks.
+    # discoveredTagsByType at this point already reflects SITstoSkip filtering and the
+    # empty-name filter — i.e. the SITs we will actually query, not the unfiltered list.
+    $largeAllSITDetailFallbackWorkloads = @()
+    if ($CEAllSITs -and $discoveredTagsByType.ContainsKey("SensitiveInformationType")) {
+        $sitCountForPlanning = @($discoveredTagsByType["SensitiveInformationType"]).Count
+        if ($sitCountForPlanning -gt $largeAllSITDetailThreshold) {
+            $largeAllSITDetailFallbackWorkloads = @($workloads | Where-Object { $_ -in $largeAllSITFallbackCandidates })
+            if ($largeAllSITDetailFallbackWorkloads.Count -gt 0) {
+                Write-ExportLog -Message ("Large All-SIT detail strategy enabled: {0} SITs > threshold {1}; using workload-level detail tasks for {2}" -f $sitCountForPlanning, $largeAllSITDetailThreshold, ($largeAllSITDetailFallbackWorkloads -join ', ')) -Level Info
+            }
+        }
+    }
 
     #region -- Phase 2: Build and Write Aggregate Task CSV --
     # Replace Update-ProjectAggregateTasks with Write-TaskCsv for AggregateTasks.csv
@@ -2490,15 +2549,8 @@ function Invoke-ContentExplorerExport {
             $newTasks = @()
             $aggCsvPath = $Context.AggregateCsvPath
             $cePageSize = $Context.DefaultPageSize
-
-            # Determine LocationType based on workload
-            $locationType = switch ($CompletedTask.Workload) {
-                'Exchange'   { 'UPN' }
-                'Teams'      { 'UPN' }
-                'SharePoint' { 'SiteUrl' }
-                'OneDrive'   { 'SiteUrl' }
-                default      { 'SiteUrl' }
-            }
+            $detailFallbackWorkloads = @($Context.DetailWorkloadFallbackWorkloads)
+            $useWorkloadFallbackDetail = ($detailFallbackWorkloads.Count -gt 0 -and $CompletedTask.Workload -in $detailFallbackWorkloads)
 
             $totalCount = $CompletedTask.ExpectedCount -as [int]
 
@@ -2512,64 +2564,15 @@ function Invoke-ContentExplorerExport {
                 $importResult = Import-AggregateDataFromCsv -CsvPath $aggCsvPath `
                     -TagType $CompletedTask.TagType -TagNames @($CompletedTask.TagName) -Workloads @($CompletedTask.Workload)
 
-                foreach ($taskKey in $importResult.TaskData.Keys) {
-                    $taskData = $importResult.TaskData[$taskKey]
+                $newTasks = @(New-ContentExplorerDetailTasks `
+                    -WorkPlanTasks @($importResult.TaskData.Values) `
+                    -DefaultPageSize $cePageSize `
+                    -WorkloadFallbackWorkloads $detailFallbackWorkloads)
 
-                    if ((-not $taskData.TotalCount) -or ($taskData.TotalCount -as [int]) -eq 0) { continue }
-
-                    if ($taskData.Locations -and @($taskData.Locations).Count -gt 0) {
-                        # --- Location-level detail tasks ---
-                        foreach ($loc in @($taskData.Locations)) {
-                            $locExpected = $loc.ExpectedCount -as [int]
-                            if ($locExpected -le 0) { continue }
-
-                            # Page size tiers for location-level tasks
-                            $locPageSize = if ($locExpected -ge 10000) { 5000 }
-                                           elseif ($locExpected -ge 4000) { 2000 }
-                                           elseif ($locExpected -ge 500) { 1000 }
-                                           else { 500 }
-
-                            $newTasks += @{
-                                Phase                 = "Detail"
-                                TagType               = $taskData.TagType
-                                TagName               = $taskData.TagName
-                                Workload              = $taskData.Workload
-                                Location              = $loc.Name
-                                LocationType          = $locationType
-                                ExpectedCount         = $locExpected
-                                OriginalExpectedCount = $locExpected
-                                PageSize              = $locPageSize
-                                Status                = "Pending"
-                                AssignedPID           = 0
-                                ErrorMessage          = ""
-                            }
-                        }
-                    }
-                    else {
-                        # --- No location data: WorkloadFallback task ---
-                        $taskPageSize = $cePageSize
-                        $wpExpected = $taskData.TotalCount -as [int]
-                        $psFloor = 100
-                        if ($wpExpected -gt 0) {
-                            $maxPs = [Math]::Max($psFloor, 2 * $wpExpected)
-                            $taskPageSize = [Math]::Max($psFloor, [Math]::Min($taskPageSize, $maxPs))
-                        } else {
-                            $taskPageSize = [Math]::Max($psFloor, $taskPageSize)
-                        }
-
-                        $newTasks += @{
-                            Phase                 = "Detail"
-                            TagType               = $taskData.TagType
-                            TagName               = $taskData.TagName
-                            Workload              = $taskData.Workload
-                            Location              = ""
-                            LocationType          = "WorkloadFallback"
-                            ExpectedCount         = $taskData.TotalCount
-                            OriginalExpectedCount = $taskData.TotalCount
-                            PageSize              = $taskPageSize
-                            Status                = "Pending"
-                            AssignedPID           = 0
-                            ErrorMessage          = ""
+                if ($useWorkloadFallbackDetail) {
+                    foreach ($taskData in @($importResult.TaskData.Values)) {
+                        if ($taskData.Locations -and @($taskData.Locations).Count -gt 0) {
+                            Write-ExportLog -Message ("  Large All-SIT detail strategy: generated one workload-level detail task for {0}/{1} instead of {2} location tasks" -f $taskData.TagName, $taskData.Workload, @($taskData.Locations).Count) -Level Info -LogOnly
                         }
                     }
                 }
@@ -2935,6 +2938,7 @@ function Invoke-ContentExplorerExport {
             AggregateErrorTasks   = @()
             ProcessedAggErrorKeys = @{}
             PhaseTransitioned     = $false
+            DetailWorkloadFallbackWorkloads = @($largeAllSITDetailFallbackWorkloads)
         }
 
         $ceLoopResult = Invoke-DispatchLoop `
@@ -3070,6 +3074,20 @@ function Invoke-ContentExplorerExport {
         Write-ExportLog -Message ("  Loaded {0} tasks from cached aggregates" -f $script:AllWorkPlanTasks.Count) -Level Info
     }
 
+    if (-not $isMultiTerminal) {
+        $script:AllWorkPlanTasks = @(New-ContentExplorerDetailTasks `
+            -WorkPlanTasks @($script:AllWorkPlanTasks) `
+            -DefaultPageSize $cePageSize `
+            -WorkloadFallbackWorkloads $largeAllSITDetailFallbackWorkloads `
+            -Sort)
+
+        $singleDetailCsvPath = Join-Path (Get-CoordinationDir $script:SharedExportDirectory) "DetailTasks.csv"
+        if ($script:AllWorkPlanTasks.Count -gt 0) {
+            Write-TaskCsv -Path $singleDetailCsvPath -Tasks $script:AllWorkPlanTasks
+            Write-ExportLog -Message ("  Planned {0} single-terminal detail tasks" -f $script:AllWorkPlanTasks.Count) -Level Info
+        }
+    }
+
     # Warn about aggregate errors
     if ($hasAggregateErrors) {
         Write-Host ""
@@ -3090,8 +3108,13 @@ function Invoke-ContentExplorerExport {
         # -- Single-terminal: orchestrator does the detail export work itself --
         Write-ExportPhase -ExportDir $script:SharedExportDirectory -Phase "Detail"
 
+        $singleDetailCsvPath = Join-Path (Get-CoordinationDir $script:SharedExportDirectory) "DetailTasks.csv"
+        $detailCsvFlushInterval = 10
+        $tasksSinceFlush = 0
+
         foreach ($task in @($script:AllWorkPlanTasks)) {
-            $taskKey = "{0}|{1}|{2}" -f $task.TagType, $task.TagName, $task.Workload
+            $taskLocation = if ($task.Location) { $task.Location } else { "" }
+            $taskKey = "{0}|{1}|{2}|{3}" -f $task.TagType, $task.TagName, $task.Workload, $taskLocation
 
             # Skip tasks with no expected records
             if ($task.ExpectedCount -eq 0 -and $task.Status -ne "Error") {
@@ -3116,7 +3139,7 @@ function Invoke-ContentExplorerExport {
 
             # Export task with progress tracking and adaptive paging
             # Aggregate-error tasks use a higher page size floor (no location data for adaptive sizing)
-            $taskPageSize = if ($task.Status -eq "Error") { [Math]::Max(500, $cePageSize) } else { $cePageSize }
+            $taskPageSize = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } elseif ($task.Status -eq "Error") { [Math]::Max(500, $cePageSize) } else { $cePageSize }
             # Output to Data/ContentExplorer/TagType/TagName/
             $classifierDir = Get-CEClassifierDir $exportDir $task.TagType $task.TagName
 
@@ -3128,12 +3151,36 @@ function Invoke-ContentExplorerExport {
                 TelemetryDatabasePath = $telemetryDbPath
                 OutputDirectory       = $classifierDir
             }
+            if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
+                $exportParams["SiteUrl"] = $task.Location
+            } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
+                $exportParams["UserPrincipalName"] = $task.Location
+            }
 
-            Export-ContentExplorerWithProgress @exportParams | Out-Null
+            $exportFailed = $false
+            try {
+                Export-ContentExplorerWithProgress @exportParams | Out-Null
+            }
+            catch {
+                $exportFailed = $true
+                Write-ExportLog -Message ("    FAILED: {0} / {1} - {2}" -f $task.TagName, $task.Workload, $_.Exception.Message) -Level Error
+                if ($script:ErrorLogPath) {
+                    Write-ExportErrorLog -ErrorLogPath $script:ErrorLogPath -Context "Single-Terminal Detail Export" -TaskKey $taskKey -ErrorRecord $_
+                }
+                # Flush CSV immediately on error so external observers see the failure state
+                if (Test-Path $singleDetailCsvPath) {
+                    Write-TaskCsv -Path $singleDetailCsvPath -Tasks $script:AllWorkPlanTasks
+                    $tasksSinceFlush = 0
+                }
+            }
 
             # Track exported count for this task
             $exportedCount = if ($task.ExportedCount) { $task.ExportedCount } else { 0 }
             $completedTaskCounts[$taskKey] = $exportedCount
+            if (-not $task.OriginalExpectedCount -or ($task.OriginalExpectedCount -as [int]) -eq 0) {
+                $task.OriginalExpectedCount = $task.ExpectedCount
+            }
+            $task.ExpectedCount = $exportedCount
 
             if ($exportedCount -gt 0) {
                 $tracker.TotalExported += $exportedCount
@@ -3168,6 +3215,19 @@ function Invoke-ContentExplorerExport {
 
             $tracker.CompletedTasks += $taskKey
             Save-ContentExplorerRunTracker -Tracker $tracker -TrackerPath $trackerPath
+
+            # Throttle DetailTasks.csv flushes: every 10 tasks + on error (above) + at end (below).
+            # The run tracker JSON is the source of truth for resume; this CSV is for observers.
+            $tasksSinceFlush++
+            if ($tasksSinceFlush -ge $detailCsvFlushInterval -and (Test-Path $singleDetailCsvPath)) {
+                Write-TaskCsv -Path $singleDetailCsvPath -Tasks $script:AllWorkPlanTasks
+                $tasksSinceFlush = 0
+            }
+        }
+
+        # Final flush after the loop
+        if ($tasksSinceFlush -gt 0 -and (Test-Path $singleDetailCsvPath)) {
+            Write-TaskCsv -Path $singleDetailCsvPath -Tasks $script:AllWorkPlanTasks
         }
     }
 

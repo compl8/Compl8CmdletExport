@@ -16,7 +16,8 @@ function Get-RetryBucketTasks {
         Minimum OriginalExpectedCount to consider. Tasks below this are excluded
         because percentage-based thresholds are meaningless for tiny counts. Default 10.
     .OUTPUTS
-        Array of PSCustomObjects with: TagType, TagName, Workload, OriginalExpectedCount, ActualCount, DiscrepancyPct, PageSize
+        Array of PSCustomObjects with: TagType, TagName, Workload, Location, LocationType,
+        OriginalExpectedCount, ActualCount, DiscrepancyPct, PageSize
     #>
     [CmdletBinding()]
     param(
@@ -57,6 +58,8 @@ function Get-RetryBucketTasks {
                 TagType               = $task.TagType
                 TagName               = $task.TagName
                 Workload              = $task.Workload
+                Location              = if ($task.Location) { $task.Location } else { "" }
+                LocationType          = if ($task.LocationType) { $task.LocationType } else { "WorkloadFallback" }
                 OriginalExpectedCount = $originalExpected
                 ActualCount           = $actualCount
                 DiscrepancyPct        = $discrepancyPct

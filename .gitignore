@@ -1,0 +1,43 @@
+# Output directory (runtime exports)
+Output/
+
+# Log files
+*.log
+
+# Sensitive/tenant-specific configuration
+ConfigFiles/AuthConfig.json
+ConfigFiles/CurrentTenantSITs.json
+laconfig.json
+*-local.json
+
+# Telemetry data (runtime-generated)
+TelemetryDB/
+
+# Claude Code tooling
+CLAUDE.md
+requirements.txt
+
+# Dev artifacts
+notneeded/
+
+# PowerShell module cache
+*.psd1.cache
+
+# PowerBI large binary files and caches
+*.pbix
+PowerBI/__pycache__/
+PowerBI/_archive*/
+
+# Build artifacts
+*.zip
+
+# Python bytecode
+__pycache__/
+*.py[co]
+
+# Claude memory and internal working notes
+memory/
+LESSONS-AND-IMPROVEMENTS.md
+paginationanalysis.md
+progress.md
+security_architecture_review.md

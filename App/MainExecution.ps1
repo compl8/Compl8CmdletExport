@@ -262,6 +262,10 @@ Write-Host "`nExport Plan:" -ForegroundColor Yellow
 Write-Host "  Mode:             $exportMode"
 Write-Host "  Format:           $OutputFormat"
 Write-Host "  Output Directory: $script:ExportRunDirectory"
+if ($UnifiedParquet) {
+    $plannedUnifiedParquetDir = Resolve-UnifiedParquetOutputDir -ConfiguredPath $UnifiedParquetDir -ExportRunDirectory $script:ExportRunDirectory
+    Write-Host "  C8 Tuning Input:  $plannedUnifiedParquetDir"
+}
 
 # Show what will be exported based on mode and config files
 Write-Host "`nData to be exported:" -ForegroundColor Yellow
@@ -613,7 +617,7 @@ try {
             Write-ExportLog -Message "Unified Parquet script not found: $parquetScript" -Level Error
         }
         else {
-            $parquetOutputDir = if ($UnifiedParquetDir) { $UnifiedParquetDir } else { "C:\PurviewData" }
+            $parquetOutputDir = Resolve-UnifiedParquetOutputDir -ConfiguredPath $UnifiedParquetDir -ExportRunDirectory $script:ExportRunDirectory
             Write-ExportLog -Message "`nConverting to unified Parquet format..." -Level Info
             Write-ExportLog -Message "  Output: $parquetOutputDir" -Level Info
 
@@ -628,6 +632,9 @@ try {
 
                 if ($pyExitCode -eq 0) {
                     Write-ExportLog -Message "Unified Parquet export complete." -Level Success
+                    Write-ExportLog -Message "C8 tuning input root: $parquetOutputDir" -Level Info
+                    Write-ExportLog -Message "  content_files:  $(Join-Path $parquetOutputDir 'content\content_files')" -Level Info
+                    Write-ExportLog -Message "  sit_detections: $(Join-Path $parquetOutputDir 'content\sit_detections')" -Level Info
                 }
                 else {
                     Write-ExportLog -Message "Unified Parquet export failed (exit code $pyExitCode)" -Level Error

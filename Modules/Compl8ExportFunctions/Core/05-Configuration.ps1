@@ -77,7 +77,9 @@ function Get-ContentExplorerSettings {
         $SavedSettings,
         [int]$DefaultBatchSize = 10,
         [string[]]$DefaultWorkloads = @("SharePoint", "OneDrive"),
-        [int]$DefaultPageSize = 100
+        [int]$DefaultPageSize = 100,
+        [int]$DefaultLargeAllSITDetailThreshold = 100,
+        [string[]]$DefaultLargeAllSITWorkloadFallbackWorkloads = @("Exchange", "Teams")
     )
 
     $configSettings = if ($ConfigObject -and $ConfigObject.Settings) { $ConfigObject.Settings } else { $null }
@@ -124,10 +126,34 @@ function Get-ContentExplorerSettings {
         $pageSize = $DefaultPageSize
     }
 
+    $largeAllSITDetailThreshold = $null
+    if ($SavedSettings -and $SavedSettings.LargeAllSITDetailThreshold) {
+        $largeAllSITDetailThreshold = $SavedSettings.LargeAllSITDetailThreshold -as [int]
+    }
+    elseif ($configSettings -and $configSettings.LargeAllSITDetailThreshold) {
+        $largeAllSITDetailThreshold = $configSettings.LargeAllSITDetailThreshold -as [int]
+    }
+    if (-not $largeAllSITDetailThreshold -or $largeAllSITDetailThreshold -lt 1) {
+        $largeAllSITDetailThreshold = $DefaultLargeAllSITDetailThreshold
+    }
+
+    $largeAllSITWorkloadFallbackWorkloads = @()
+    if ($SavedSettings -and $SavedSettings.LargeAllSITWorkloadFallbackWorkloads) {
+        $largeAllSITWorkloadFallbackWorkloads = @($SavedSettings.LargeAllSITWorkloadFallbackWorkloads)
+    }
+    elseif ($configSettings -and $configSettings.LargeAllSITWorkloadFallbackWorkloads) {
+        $largeAllSITWorkloadFallbackWorkloads = @($configSettings.LargeAllSITWorkloadFallbackWorkloads)
+    }
+    if ($largeAllSITWorkloadFallbackWorkloads.Count -eq 0) {
+        $largeAllSITWorkloadFallbackWorkloads = @($DefaultLargeAllSITWorkloadFallbackWorkloads)
+    }
+
     return [PSCustomObject]@{
-        BatchSize = $batchSize
-        Workloads = @($workloads)
-        PageSize  = $pageSize
+        BatchSize                            = $batchSize
+        Workloads                            = @($workloads)
+        PageSize                             = $pageSize
+        LargeAllSITDetailThreshold           = $largeAllSITDetailThreshold
+        LargeAllSITWorkloadFallbackWorkloads = @($largeAllSITWorkloadFallbackWorkloads)
     }
 }
 

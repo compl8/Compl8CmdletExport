@@ -76,62 +76,153 @@ function Read-TaskCsv {
     }
 }
 
-function Update-DetailTaskPageSizes {
+function Get-ContentExplorerLocationType {
     <#
     .SYNOPSIS
-        Recalculates PageSize for pending location-level tasks in an existing DetailTasks.csv.
-    .DESCRIPTION
-        Updates PageSize for tasks that haven't started yet, using single-location sizing:
-          <100 items -> 100, <1000 -> 500, <10000 -> 2000, else -> 5000.
-        WorkloadFallback tasks are left unchanged. Already completed/in-progress tasks are untouched.
-    .PARAMETER Path
-        Path to the DetailTasks.csv file.
-    .PARAMETER WhatIf
-        If set, shows what would change without writing.
+        Returns the Content Explorer location filter type for a workload.
     #>
     param(
-        [Parameter(Mandatory)][string]$Path,
-        [switch]$WhatIf
+        [Parameter(Mandatory)][string]$Workload
     )
 
-    if (-not (Test-Path $Path)) {
-        Write-Host "DetailTasks.csv not found: $Path" -ForegroundColor Red
-        return
+    switch ($Workload) {
+        'Exchange'   { return 'UPN' }
+        'Teams'      { return 'UPN' }
+        'SharePoint' { return 'SiteUrl' }
+        'OneDrive'   { return 'SiteUrl' }
+        default      { return 'WorkloadFallback' }
+    }
+}
+
+function Get-ContentExplorerDetailPageSize {
+    <#
+    .SYNOPSIS
+        Selects the page size used for a generated Content Explorer detail task.
+    #>
+    param(
+        [int]$ExpectedCount,
+        [int]$DefaultPageSize = 1000,
+        [switch]$LocationScoped,
+        [switch]$AggregateError
+    )
+
+    if ($LocationScoped) {
+        if ($ExpectedCount -ge 10000) { return 5000 }
+        if ($ExpectedCount -ge 4000) { return 2000 }
+        if ($ExpectedCount -ge 500) { return 1000 }
+        return 500
     }
 
-    $tasks = @(Import-Csv -Path $Path -Encoding UTF8)
-    $updated = 0
-    $skipped = 0
+    $floor = if ($AggregateError) { 500 } else { 100 }
+    $pageSize = [Math]::Max($floor, $DefaultPageSize)
+    if ($ExpectedCount -gt 0) {
+        $maxPageSize = [Math]::Max($floor, 2 * $ExpectedCount)
+        $pageSize = [Math]::Max($floor, [Math]::Min($pageSize, $maxPageSize))
+    }
+    return $pageSize
+}
 
-    foreach ($task in $tasks) {
-        # Only update pending tasks with a location (not WorkloadFallback, not started)
-        if ($task.Status -ne "Pending") { $skipped++; continue }
-        if (-not $task.Location -or $task.LocationType -eq "WorkloadFallback") { $skipped++; continue }
+function New-ContentExplorerDetailTasks {
+    <#
+    .SYNOPSIS
+        Expands aggregate/work-plan rows into executable Content Explorer detail tasks.
+    .DESCRIPTION
+        Generates location-level tasks when location data is available. For workloads in
+        WorkloadFallbackWorkloads, or aggregate-error rows, generates one workload-level
+        WorkloadFallback task and leaves Location empty so workers do not pass SiteUrl or
+        UserPrincipalName filters.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][array]$WorkPlanTasks,
+        [int]$DefaultPageSize = 1000,
+        [string[]]$WorkloadFallbackWorkloads = @(),
+        [switch]$Sort
+    )
 
-        $expected = [int]$task.ExpectedCount
-        $oldPageSize = [int]$task.PageSize
-
-        # Single-location page sizing: no multi-folder overhead
-        $newPageSize = if ($expected -lt 100) { 100 }
-                       elseif ($expected -lt 1000) { 500 }
-                       elseif ($expected -lt 10000) { 2000 }
-                       else { 5000 }
-
-        if ($newPageSize -ne $oldPageSize) {
-            if ($WhatIf) {
-                Write-Host ("  {0}/{1} [{2}]: {3} -> {4} (expected: {5:N0})" -f $task.TagName, $task.Workload, $task.Location.Substring(0, [Math]::Min(40, $task.Location.Length)), $oldPageSize, $newPageSize, $expected)
-            }
-            $task.PageSize = $newPageSize
-            $updated++
+    $detailTasks = @()
+    $fallbackLookup = @{}
+    foreach ($workload in @($WorkloadFallbackWorkloads)) {
+        if (-not [string]::IsNullOrWhiteSpace($workload)) {
+            $fallbackLookup[$workload] = $true
         }
     }
 
-    if ($WhatIf) {
-        Write-Host "`n$updated tasks would be updated, $skipped skipped (completed/in-progress/fallback)" -ForegroundColor Cyan
-    } else {
-        Write-TaskCsv -Path $Path -Tasks $tasks
-        Write-Host "$updated tasks updated, $skipped skipped" -ForegroundColor Green
+    foreach ($task in @($WorkPlanTasks)) {
+        if (-not $task) { continue }
+
+        $tagType = $task.TagType
+        $tagName = $task.TagName
+        $workload = $task.Workload
+        if ([string]::IsNullOrWhiteSpace($tagType) -or [string]::IsNullOrWhiteSpace($tagName) -or [string]::IsNullOrWhiteSpace($workload)) {
+            continue
+        }
+
+        $locations = if ($task.Locations) { @($task.Locations) } else { @() }
+        $expectedCount = 0
+        if ($null -ne $task.TotalCount) {
+            $expectedCount = $task.TotalCount -as [int]
+        }
+        elseif ($null -ne $task.ExpectedCount) {
+            $expectedCount = $task.ExpectedCount -as [int]
+        }
+        if ($null -eq $expectedCount) { $expectedCount = 0 }
+
+        $hasError = $false
+        if ($task.HasError -eq $true -or $task.Status -eq 'Error' -or $task.AggregateError) {
+            $hasError = $true
+        }
+
+        $locationType = Get-ContentExplorerLocationType -Workload $workload
+        $useWorkloadFallback = $hasError -or $fallbackLookup.ContainsKey($workload) -or ($locationType -eq 'WorkloadFallback')
+
+        if ($locations.Count -gt 0 -and -not $useWorkloadFallback) {
+            foreach ($loc in $locations) {
+                $locationName = $loc.Name
+                $locExpected = $loc.ExpectedCount -as [int]
+                if ($null -eq $locExpected -or $locExpected -le 0) { continue }
+
+                $detailTasks += @{
+                    Phase                 = 'Detail'
+                    TagType               = $tagType
+                    TagName               = $tagName
+                    Workload              = $workload
+                    Location              = $locationName
+                    LocationType          = $locationType
+                    ExpectedCount         = $locExpected
+                    OriginalExpectedCount = $locExpected
+                    PageSize              = Get-ContentExplorerDetailPageSize -ExpectedCount $locExpected -DefaultPageSize $DefaultPageSize -LocationScoped
+                    Status                = 'Pending'
+                    AssignedPID           = 0
+                    ErrorMessage          = ''
+                }
+            }
+            continue
+        }
+
+        if ($expectedCount -le 0 -and -not $hasError) { continue }
+
+        $detailTasks += @{
+            Phase                 = 'Detail'
+            TagType               = $tagType
+            TagName               = $tagName
+            Workload              = $workload
+            Location              = ''
+            LocationType          = 'WorkloadFallback'
+            ExpectedCount         = $expectedCount
+            OriginalExpectedCount = $expectedCount
+            PageSize              = Get-ContentExplorerDetailPageSize -ExpectedCount $expectedCount -DefaultPageSize $DefaultPageSize -AggregateError:$hasError
+            Status                = 'Pending'
+            AssignedPID           = 0
+            ErrorMessage          = if ($hasError) { 'Aggregate failed' } else { '' }
+        }
     }
+
+    if ($Sort -and $detailTasks.Count -gt 1) {
+        $detailTasks = @($detailTasks | Sort-Object { [int]$_.ExpectedCount } -Descending)
+    }
+
+    return @($detailTasks)
 }
 
 function Write-RetryTasksCsv {
@@ -149,10 +240,13 @@ function Write-RetryTasksCsv {
     )
     $tmpPath = $Path + ".tmp.$PID"
     $sb = [System.Text.StringBuilder]::new()
-    [void]$sb.AppendLine("TagType,TagName,Workload,OriginalExpectedCount,ActualCount,DiscrepancyPct,PageSize")
+    [void]$sb.AppendLine("TagType,TagName,Workload,Location,LocationType,OriginalExpectedCount,ActualCount,DiscrepancyPct,PageSize")
     foreach ($task in $RetryTasks) {
         $escapedTag = ($task.TagName -replace '"','""')
-        $line = '{0},"{1}",{2},{3},{4},{5},{6}' -f $task.TagType, $escapedTag, $task.Workload, ($task.OriginalExpectedCount -as [int]), ($task.ActualCount -as [int]), $task.DiscrepancyPct, ($task.PageSize -as [int])
+        $location = if ($task.Location) { $task.Location } else { "" }
+        $escapedLocation = ($location -replace '"','""')
+        $locationType = if ($task.LocationType) { $task.LocationType } else { "WorkloadFallback" }
+        $line = '{0},"{1}",{2},"{3}",{4},{5},{6},{7},{8}' -f $task.TagType, $escapedTag, $task.Workload, $escapedLocation, $locationType, ($task.OriginalExpectedCount -as [int]), ($task.ActualCount -as [int]), $task.DiscrepancyPct, ($task.PageSize -as [int])
         [void]$sb.AppendLine($line)
     }
     [System.IO.File]::WriteAllText($tmpPath, $sb.ToString(), [System.Text.Encoding]::UTF8)

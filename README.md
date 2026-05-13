@@ -115,7 +115,7 @@ For a full development and test environment, use `pip install -r requirements.tx
 | Parameter | Description |
 |-----------|-------------|
 | `-UnifiedParquet` | Convert JSON output to unified Parquet format after export |
-| `-UnifiedParquetDir` | Parquet output directory (default: `C:\PurviewData`) |
+| `-UnifiedParquetDir` | Parquet output directory (default: the export run's `C8TuningInput` folder) |
 | `-UsersCsv` | GAL Scraper or Entra user CSV for enrichment (repeatable) |
 
 ## Content Explorer
@@ -191,11 +191,12 @@ Export output can be converted to unified Hive-partitioned Parquet format for do
 ### From PowerShell (post-export)
 
 ```powershell
-# Automatic conversion after export
+# Automatic conversion after export.
+# Writes to Output\Export-YYYYMMDD-HHMMSS\C8TuningInput by default.
 .\Export-Compl8Configuration.ps1 -FullExport -UnifiedParquet
 
 # With custom output directory and user enrichment
-.\Export-Compl8Configuration.ps1 -ActivityExplorer -UnifiedParquet -UnifiedParquetDir "D:\PurviewData" -UsersCsv "users.csv"
+.\Export-Compl8Configuration.ps1 -ActivityExplorer -UnifiedParquet -UnifiedParquetDir "D:\C8TuningRuns\Run-001" -UsersCsv "users.csv"
 ```
 
 ### Standalone Python
@@ -203,12 +204,15 @@ Export output can be converted to unified Hive-partitioned Parquet format for do
 ```bash
 pip install pyarrow
 
-# Convert an export
-python build_unified_parquet.py --input-dir Output/Export-20260301-090000 --output-dir C:/PurviewData
+# Convert an export.
+# Writes to Output/Export-20260301-090000/C8TuningInput by default.
+python build_unified_parquet.py --input-dir Output/Export-20260301-090000
 
 # With user enrichment (GAL Scraper or Entra CSV)
-python build_unified_parquet.py --input-dir Output/Export-20260301-090000 --output-dir C:/PurviewData --users-csv users.csv
+python build_unified_parquet.py --input-dir Output/Export-20260301-090000 --output-dir D:/C8TuningRuns/Run-001 --users-csv users.csv
 ```
+
+The C8 tuning input root contains `content/content_files`, `content/sit_detections`, and a `c8_tuning_input_manifest.json` file that downstream run pickers can use to identify the export.
 
 ## Certificate Authentication
 

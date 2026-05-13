@@ -214,7 +214,7 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host ""
     Write-Host "Post-Export Options:" -ForegroundColor Yellow
     Write-Host "  -UnifiedParquet              Convert output to unified Parquet format"
-    Write-Host "  -UnifiedParquetDir <path>    Parquet output directory (default: C:\PurviewData)"
+    Write-Host "  -UnifiedParquetDir <path>    Parquet output directory (default: <export-run>\C8TuningInput)"
     Write-Host "  -UsersCsv <path>             GAL Scraper or Entra user CSV (repeatable)"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
@@ -271,6 +271,19 @@ if ($WorkerExportDir) {
     $script:ExportRunDirectory = Join-Path $OutputDirectory "Export-$script:ExportTimestamp"
     New-Item -ItemType Directory -Force -Path $script:ExportRunDirectory | Out-Null
     $script:ErrorLogPath = Join-Path (Get-LogsDir $script:ExportRunDirectory) "ExportProject-Errors.log"
+}
+
+function Resolve-UnifiedParquetOutputDir {
+    param(
+        [string]$ConfiguredPath,
+        [string]$ExportRunDirectory
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ConfiguredPath)) {
+        return $ConfiguredPath
+    }
+
+    return Join-Path $ExportRunDirectory "C8TuningInput"
 }
 
 # Initialize logging in the export run directory
