@@ -172,7 +172,12 @@ param(
 
     [string[]]$UsersCsv,
 
-    [switch]$UnifiedParquet
+    [switch]$UnifiedParquet,
+
+    # Tenant prefix for the export directory (e.g. 'zava' -> Export-zava-20260514-...).
+    # If omitted, resolved in this order: AuthConfig.json Organization (cert auth),
+    # then the last-used value from ConfigFiles/LastTenant.local.json.
+    [string]$TenantPrefix
 )
 
 #region Initialization
@@ -217,11 +222,16 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host "  -UnifiedParquetDir <path>    Parquet output directory (default: <export-run>\C8TuningInput)"
     Write-Host "  -UsersCsv <path>             GAL Scraper or Entra user CSV (repeatable)"
     Write-Host ""
+    Write-Host "Multi-Tenant Options:" -ForegroundColor Yellow
+    Write-Host "  -TenantPrefix <name>         Prefix the export directory (Export-<name>-<timestamp>)."
+    Write-Host "                               If omitted: auto-detected from cert-auth Organization,"
+    Write-Host "                               else the last-used value, else no prefix."
+    Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
     Write-Host "  .\Export-Compl8Configuration.ps1 -FullExport"
-    Write-Host "  .\Export-Compl8Configuration.ps1 -ContentExplorer -WorkerCount 4"
+    Write-Host "  .\Export-Compl8Configuration.ps1 -ContentExplorer -WorkerCount 4 -TenantPrefix zava"
     Write-Host "  .\Export-Compl8Configuration.ps1 -ActivityExplorer -PastDays 30"
-    Write-Host "  .\Export-Compl8Configuration.ps1 -CEResumeDir `"Output\Export-20260130-100000`""
+    Write-Host "  .\Export-Compl8Configuration.ps1 -CEResumeDir `"Output\Export-zava-20260514-100000`""
     Write-Host ""
     Write-Host "Tip: For full built-in help use: Get-Help .\Export-Compl8Configuration.ps1 -Detailed" -ForegroundColor DarkCyan
     exit 0
@@ -258,6 +268,69 @@ catch {
     exit 1
 }
 
+function ConvertTo-SafeTenantPrefix {
+    param([string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return "" }
+    # Strip tenant suffixes (e.g. 'zava.onmicrosoft.com' -> 'zava'), keep alnum/dash/underscore
+    $first = ($Value -split '\.', 2)[0]
+    $sanitized = ($first -replace '[^a-zA-Z0-9_-]', '').Trim('-').ToLower()
+    return $sanitized
+}
+
+function Resolve-TenantPrefix {
+    <#
+    .SYNOPSIS
+        Resolves the tenant prefix used in the export directory name.
+    .DESCRIPTION
+        Priority:
+        1. Explicit -TenantPrefix value
+        2. AuthConfig.json Organization (cert auth)
+        3. Last-used value from ConfigFiles/LastTenant.local.json
+        Returns empty string if no source provides a value.
+    #>
+    param(
+        [string]$ExplicitPrefix,
+        [string]$ScriptRoot
+    )
+
+    $resolved = ConvertTo-SafeTenantPrefix -Value $ExplicitPrefix
+    if ($resolved) { return @{ Prefix = $resolved; Source = "parameter" } }
+
+    $authConfigPath = Join-Path $ScriptRoot "ConfigFiles" "AuthConfig.json"
+    if (Test-Path $authConfigPath) {
+        try {
+            $authConfig = Get-Content -Path $authConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($authConfig.UseCertificateAuth -eq "True" -and -not [string]::IsNullOrWhiteSpace($authConfig.Organization)) {
+                $fromAuth = ConvertTo-SafeTenantPrefix -Value $authConfig.Organization
+                if ($fromAuth) { return @{ Prefix = $fromAuth; Source = "AuthConfig.json" } }
+            }
+        } catch { <# malformed config — ignore #> }
+    }
+
+    $lastUsedPath = Join-Path $ScriptRoot "ConfigFiles" "LastTenant.local.json"
+    if (Test-Path $lastUsedPath) {
+        try {
+            $lastUsed = Get-Content -Path $lastUsedPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            if (-not [string]::IsNullOrWhiteSpace($lastUsed.TenantPrefix)) {
+                $fromLast = ConvertTo-SafeTenantPrefix -Value $lastUsed.TenantPrefix
+                if ($fromLast) { return @{ Prefix = $fromLast; Source = "last run" } }
+            }
+        } catch { <# malformed — ignore #> }
+    }
+
+    return @{ Prefix = ""; Source = "none" }
+}
+
+function Save-LastTenantPrefix {
+    param([string]$ScriptRoot, [string]$Prefix)
+    if ([string]::IsNullOrWhiteSpace($Prefix)) { return }
+    $lastUsedPath = Join-Path $ScriptRoot "ConfigFiles" "LastTenant.local.json"
+    try {
+        @{ TenantPrefix = $Prefix; UpdatedAt = (Get-Date).ToString("o") } |
+            ConvertTo-Json | Set-Content -Path $lastUsedPath -Encoding UTF8
+    } catch { <# best effort #> }
+}
+
 if ($WorkerExportDir) {
     # Worker mode: use the orchestrator's export directory, don't create a new one
     $script:ExportRunDirectory = $WorkerExportDir
@@ -268,9 +341,15 @@ if ($WorkerExportDir) {
         New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
     }
     $script:ExportTimestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $script:ExportRunDirectory = Join-Path $OutputDirectory "Export-$script:ExportTimestamp"
+    $prefixResult = Resolve-TenantPrefix -ExplicitPrefix $TenantPrefix -ScriptRoot $scriptRoot
+    $script:TenantPrefix = $prefixResult.Prefix
+    $dirName = if ($script:TenantPrefix) { "Export-{0}-{1}" -f $script:TenantPrefix, $script:ExportTimestamp } else { "Export-$script:ExportTimestamp" }
+    $script:ExportRunDirectory = Join-Path $OutputDirectory $dirName
     New-Item -ItemType Directory -Force -Path $script:ExportRunDirectory | Out-Null
     $script:ErrorLogPath = Join-Path (Get-LogsDir $script:ExportRunDirectory) "ExportProject-Errors.log"
+    if ($script:TenantPrefix) {
+        Save-LastTenantPrefix -ScriptRoot $scriptRoot -Prefix $script:TenantPrefix
+    }
 }
 
 function Resolve-UnifiedParquetOutputDir {

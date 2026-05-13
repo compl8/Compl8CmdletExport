@@ -261,6 +261,10 @@ $exportMode = switch ($script:SelectedMode) {
 Write-Host "`nExport Plan:" -ForegroundColor Yellow
 Write-Host "  Mode:             $exportMode"
 Write-Host "  Format:           $OutputFormat"
+if ($script:TenantPrefix) {
+    $prefixSource = if ($prefixResult) { $prefixResult.Source } else { "previous" }
+    Write-Host ("  Tenant:           {0} (from {1})" -f $script:TenantPrefix, $prefixSource)
+}
 Write-Host "  Output Directory: $script:ExportRunDirectory"
 if ($UnifiedParquet) {
     $plannedUnifiedParquetDir = Resolve-UnifiedParquetOutputDir -ConfiguredPath $UnifiedParquetDir -ExportRunDirectory $script:ExportRunDirectory
