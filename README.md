@@ -143,7 +143,7 @@ Spawns worker terminals that process tasks in parallel, coordinated through a fi
 .\Export-Compl8Configuration.ps1 -CERetryDir "Output\Export-20260130-100000"
 ```
 
-Or use the interactive menu (options 5-10) to configure Content Explorer modes.
+Or use the interactive menu (options 1-4) to configure Content Explorer modes.
 
 ### Aggregate Caching
 

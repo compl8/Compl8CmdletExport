@@ -47,99 +47,47 @@ function Show-ExportMenu {
         Write-BoxLine -Text "       Compl8 Cmdlet Export" -InnerWidth $w -Color Cyan -Single
         Write-BoxSeparator -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "FULL EXPORT" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [1]  Full Export (all data types)" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [2]  Full - Skip Activity Explorer" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [3]  Full - Skip Content Explorer" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [4]  Full - Skip Both Explorers" -InnerWidth $w -Color Cyan -Single
-        Write-BoxSeparator -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -Text "CONTENT EXPLORER" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [5]  Content Explorer (from config)" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [6]  Content Explorer - All SITs (full tenant scan)" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [7]  Content Explorer - Multi-Terminal (parallel)" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [8]  Content Explorer - Resume Previous Export" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [9]  Content Explorer - Retry Discrepant Tasks" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [10] Content Explorer - Run from Task CSV" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [1]  Content Explorer (configurable)" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [2]  Content Explorer - Resume Previous Export" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [3]  Content Explorer - Retry Discrepant Tasks" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [4]  Content Explorer - Run from Task CSV" -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -Text "       * Filtered by SITstoSkip.json (all CE modes)" -InnerWidth $w -Color DarkCyan -Single
         Write-BoxSeparator -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -Text "ACTIVITY EXPLORER" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [11] Activity Explorer" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [12] Activity Explorer - Multi-Terminal (parallel)" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [13] Activity Explorer - Resume Previous Export" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [5]  Activity Explorer (configurable)" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [6]  Activity Explorer - Resume Previous Export" -InnerWidth $w -Color Cyan -Single
         Write-BoxSeparator -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -Text "OTHER EXPORTS" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [14] DLP Policies & Rules" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [15] Sensitivity & Retention Labels" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [16] eDiscovery Cases" -InnerWidth $w -Color Cyan -Single
-        Write-BoxLine -Text "  [17] RBAC Configuration" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [7]  DLP Policies & Rules" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [8]  Sensitivity & Retention Labels" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [9]  eDiscovery Cases" -InnerWidth $w -Color Cyan -Single
+        Write-BoxLine -Text "  [10] RBAC Configuration" -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -Text "  [Q]  Quit" -InnerWidth $w -Color Cyan -Single
         Write-BoxLine -InnerWidth $w -Color Cyan -Single
         Write-BoxBottom -InnerWidth $w -Color Cyan -Single
         Write-Host ""
 
-        $selection = Read-Host "  Enter selection [1-17, Q]"
+        $selection = Read-Host "  Enter selection [1-10, Q]"
 
         if ([string]::IsNullOrEmpty($selection)) { $selection = "" }
         $selectionUpper = $selection.Trim().ToUpper()
 
         switch ($selectionUpper) {
-            "1" { $result.Mode = "Full" }
-            "2" { $result.Mode = "Full"; $result.NoActivity = $true }
-            "3" { $result.Mode = "Full"; $result.NoContent = $true }
-            "4" { $result.Mode = "Full"; $result.NoContent = $true; $result.NoActivity = $true }
-            "5" {
+            "1" {
+                # Content Explorer - unified configurable option
+                $ceConfig = Get-CEInteractiveConfiguration
+                if ($null -eq $ceConfig) { continue }
                 $result.Mode = "ContentExplorer"
-                $result.CEWorkloads = Get-CEWorkloadSelection
-            }
-            "6" {
-                $result.Mode = "ContentExplorer"
-                $result.CEAllSITs = $true
-                $result.CEWorkloads = Get-CEWorkloadSelection
-            }
-            "7" {
-                # Multi-Terminal Content Explorer
-                $result.Mode = "ContentExplorer"
-                $result.CEMultiTerminal = $true
-
-                # Worker count prompt
-                Write-Host ""
-                Write-Host "  How many worker terminals?" -ForegroundColor Yellow
-                $workerInput = Read-Host "  Enter count [4]"
-                if ([string]::IsNullOrEmpty($workerInput)) { $workerInput = "4" }
-                $workerCount = $workerInput -as [int]
-                if (-not $workerCount -or $workerCount -lt 2 -or $workerCount -gt 16) {
-                    Write-Host "  Invalid count. Must be 2-16. Using default of 4." -ForegroundColor Yellow
-                    $workerCount = 4
+                $result.CEAllSITs = [bool]$ceConfig.AllSITs
+                $result.CEWorkloads = $ceConfig.Workloads
+                if ($ceConfig.WorkerCount -ge 2) {
+                    $result.CEMultiTerminal = $true
+                    $result.CEWorkerCount = $ceConfig.WorkerCount
                 }
-                $result.CEWorkerCount = $workerCount
-
-                # All SITs prompt
-                Write-Host ""
-                $allSitsInput = Read-Host "  Scan ALL Sensitive Info Types? [Y/n]"
-                Write-Host "    * Filtered by SITstoSkip.json (excluded SITs are always skipped)" -ForegroundColor DarkCyan
-                if ([string]::IsNullOrEmpty($allSitsInput) -or $allSitsInput.Trim().ToUpper() -ne "N") {
-                    $result.CEAllSITs = $true
-                }
-
-                # Auth mode detection
-                $authParams = Build-AuthParameters
-                $isCertAuth = $authParams.ContainsKey('AppId')
-                if ($isCertAuth) {
-                    Write-Host ""
-                    Write-Host "  Authentication: Certificate (unattended)" -ForegroundColor Green
-                    Write-Host "  AppId: $($authParams.AppId.Substring(0, 8))..." -ForegroundColor Gray
-                    Write-Host "  Workers will authenticate automatically." -ForegroundColor Green
-                } else {
-                    Write-Host ""
-                    Write-Host "  Authentication: Interactive (browser login)" -ForegroundColor Yellow
-                    Write-Host "  NOTE: Each spawned terminal will open a browser window." -ForegroundColor Yellow
-                    Write-Host "  You must authenticate in each window manually." -ForegroundColor Yellow
-                }
-
-                $result.CEWorkloads = Get-CEWorkloadSelection
             }
-            "8" {
+            "2" {
                 # Resume Previous Export - scan for ExportPhase.txt in Export-* directories
                 $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $resumableDirs = @()
@@ -204,7 +152,7 @@ function Show-ExportMenu {
                     }
                 }
             }
-            "9" {
+            "3" {
                 # Retry Discrepant Tasks - scan for RetryTasks.csv in Export-* directories
                 $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $retryableDirs = @()
@@ -255,7 +203,7 @@ function Show-ExportMenu {
                     }
                 }
             }
-            "10" {
+            "4" {
                 # Run from Task CSV - scan for RemainingTasks.csv or accept a path
                 Write-Host ""
                 Write-Host "  Enter path to a task CSV file, or press Enter to scan Output directory:" -ForegroundColor Yellow
@@ -341,39 +289,18 @@ function Show-ExportMenu {
                     $result.CEWorkloads = Get-CEWorkloadSelection
                 }
             }
-            "11" { $result.Mode = "ActivityExplorer" }
-            "12" {
-                # Multi-Terminal Activity Explorer
+            "5" {
+                # Activity Explorer - unified configurable option
+                $aeConfig = Get-AEInteractiveConfiguration
+                if ($null -eq $aeConfig) { continue }
                 $result.Mode = "ActivityExplorer"
-                $result.AEMultiTerminal = $true
-
-                # Worker count prompt
-                Write-Host ""
-                Write-Host "  How many worker terminals?" -ForegroundColor Yellow
-                $workerInput = Read-Host "  Enter count [4]"
-                if ([string]::IsNullOrEmpty($workerInput)) { $workerInput = "4" }
-                $aeWc = $workerInput -as [int]
-                if (-not $aeWc -or $aeWc -lt 2 -or $aeWc -gt 16) {
-                    Write-Host "  Invalid count. Must be 2-16. Using default of 4." -ForegroundColor Yellow
-                    $aeWc = 4
-                }
-                $result.AEWorkerCount = $aeWc
-
-                # Auth mode detection
-                $authParams = Build-AuthParameters
-                $isCertAuth = $authParams.ContainsKey('AppId')
-                if ($isCertAuth) {
-                    Write-Host ""
-                    Write-Host "  Authentication: Certificate (unattended)" -ForegroundColor Green
-                    Write-Host "  Workers will authenticate automatically." -ForegroundColor Green
-                } else {
-                    Write-Host ""
-                    Write-Host "  Authentication: Interactive (browser login)" -ForegroundColor Yellow
-                    Write-Host "  NOTE: Each spawned terminal will open a browser window." -ForegroundColor Yellow
-                    Write-Host "  You must authenticate in each window manually." -ForegroundColor Yellow
+                $result.PastDays = $aeConfig.PastDays
+                if ($aeConfig.WorkerCount -ge 2) {
+                    $result.AEMultiTerminal = $true
+                    $result.AEWorkerCount = $aeConfig.WorkerCount
                 }
             }
-            "13" {
+            "6" {
                 # Resume Previous AE Export - scan for ExportType.txt = "ActivityExplorer" + incomplete phase
                 $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $aeResumableDirs = @()
@@ -448,10 +375,10 @@ function Show-ExportMenu {
                     }
                 }
             }
-            "14" { $result.Mode = "DLP" }
-            "15" { $result.Mode = "Labels" }
-            "16" { $result.Mode = "eDiscovery" }
-            "17" { $result.Mode = "RBAC" }
+            "7" { $result.Mode = "DLP" }
+            "8" { $result.Mode = "Labels" }
+            "9" { $result.Mode = "eDiscovery" }
+            "10" { $result.Mode = "RBAC" }
             "Q" { $result.Quit = $true; return $result }
             "" { $result.Quit = $true; return $result }  # Default to quit on empty input
             default {
@@ -462,24 +389,6 @@ function Show-ExportMenu {
         }
 
     } while ($null -eq $result.Mode -and -not $result.Quit)
-
-    # Show additional options for Activity Explorer
-    if ($result.Mode -eq "ActivityExplorer" -or ($result.Mode -eq "Full" -and -not $result.NoActivity)) {
-        Write-Host ""
-        Write-Host "  Activity Explorer Options:" -ForegroundColor Yellow
-        Write-Host ""
-
-        $pastDaysInput = Read-Host "    Past days to export (1-30) [7]"
-        if ($pastDaysInput -match '^\d+$') {
-            $days = [int]$pastDaysInput
-            if ($days -ge 1 -and $days -le 30) {
-                $result.PastDays = $days
-            }
-            else {
-                Write-Host "    Invalid range. Using default: 7 days" -ForegroundColor Yellow
-            }
-        }
-    }
 
     # Output format selection (skip for resume mode since output already exists)
     if ($result.Mode -ne "ContentExplorerResume") {
@@ -520,6 +429,123 @@ function Get-CEWorkloadSelection {
         "4" { return @("SharePoint", "OneDrive", "Exchange") }
         "5" { return @("Exchange", "SharePoint", "OneDrive", "Teams") }
         default { return $null }
+    }
+}
+
+function Format-CEWorkloadSummary {
+    param($Workloads)
+    if (-not $Workloads -or @($Workloads).Count -eq 0) { return "From config" }
+    return (@($Workloads) -join ', ')
+}
+
+function Read-WorkerCountPrompt {
+    param([int]$Default = 1)
+    Write-Host ""
+    Write-Host "  Workers: 1 = single terminal, 2-16 = multi-terminal parallel" -ForegroundColor Gray
+    $wcInput = Read-Host ("  Number of workers [$Default]")
+    if ([string]::IsNullOrEmpty($wcInput)) { return $Default }
+    $wcVal = $wcInput -as [int]
+    if ($wcVal -and $wcVal -ge 1 -and $wcVal -le 16) { return $wcVal }
+    Write-Host "  Invalid worker count. Must be 1-16. Keeping previous value." -ForegroundColor Yellow
+    return $Default
+}
+
+function Show-AuthModeNote {
+    param([int]$WorkerCount)
+    if ($WorkerCount -lt 2) { return }
+    $authParams = Build-AuthParameters
+    Write-Host ""
+    if ($authParams.ContainsKey('AppId')) {
+        Write-Host "  Authentication: Certificate (workers auto-authenticate)" -ForegroundColor Green
+    } else {
+        Write-Host "  Authentication: Interactive - each worker terminal will open a" -ForegroundColor Yellow
+        Write-Host "  browser window requiring manual login." -ForegroundColor Yellow
+    }
+}
+
+function Get-CEInteractiveConfiguration {
+    <#
+    .SYNOPSIS
+        Interactive prompt-and-confirm flow for Content Explorer exports.
+    .OUTPUTS
+        Hashtable {WorkerCount, AllSITs, Workloads} or $null if cancelled.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $config = @{
+        WorkerCount = 1
+        AllSITs     = $true
+        Workloads   = $null
+    }
+
+    while ($true) {
+        Write-Host ""
+        Write-SectionHeader -Text "Content Explorer - Configure Export" -Color Cyan
+        $wkrLabel = if ($config.WorkerCount -le 1) { "1 (single terminal)" } else { "{0} (multi-terminal)" -f $config.WorkerCount }
+        Write-Host ("    Workers:   {0}" -f $wkrLabel) -ForegroundColor White
+        Write-Host ("    SITs:      {0}" -f $(if ($config.AllSITs) { "All Sensitive Info Types (filtered by SITstoSkip.json)" } else { "From config file" })) -ForegroundColor White
+        Write-Host ("    Workloads: {0}" -f (Format-CEWorkloadSummary -Workloads $config.Workloads)) -ForegroundColor White
+        Show-AuthModeNote -WorkerCount $config.WorkerCount
+
+        Write-Host ""
+        $choice = (Read-Host "  [W]orkers, [S]ITs, work[L]oads, [Y] Continue, [N] Cancel").Trim().ToUpper()
+        switch ($choice) {
+            'W' { $config.WorkerCount = Read-WorkerCountPrompt -Default $config.WorkerCount }
+            'S' {
+                $sitsInput = (Read-Host ("  Scan ALL SITs? Currently {0} [Y/N]" -f $(if ($config.AllSITs) { 'Yes' } else { 'No' }))).Trim().ToUpper()
+                if ($sitsInput -eq 'Y') { $config.AllSITs = $true }
+                elseif ($sitsInput -eq 'N') { $config.AllSITs = $false }
+            }
+            'L' { $config.Workloads = Get-CEWorkloadSelection }
+            'Y' { return $config }
+            ''  { return $config }
+            'N' { return $null }
+            default { Write-Host "  Unrecognized choice." -ForegroundColor Yellow }
+        }
+    }
+}
+
+function Get-AEInteractiveConfiguration {
+    <#
+    .SYNOPSIS
+        Interactive prompt-and-confirm flow for Activity Explorer exports.
+    .OUTPUTS
+        Hashtable {WorkerCount, PastDays} or $null if cancelled.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $config = @{
+        WorkerCount = 1
+        PastDays    = 7
+    }
+
+    while ($true) {
+        Write-Host ""
+        Write-SectionHeader -Text "Activity Explorer - Configure Export" -Color Cyan
+        $wkrLabel = if ($config.WorkerCount -le 1) { "1 (single terminal)" } else { "{0} (multi-terminal)" -f $config.WorkerCount }
+        Write-Host ("    Workers:   {0}" -f $wkrLabel) -ForegroundColor White
+        Write-Host ("    Past days: {0}" -f $config.PastDays) -ForegroundColor White
+        Show-AuthModeNote -WorkerCount $config.WorkerCount
+
+        Write-Host ""
+        $choice = (Read-Host "  [W]orkers, [D]ays, [Y] Continue, [N] Cancel").Trim().ToUpper()
+        switch ($choice) {
+            'W' { $config.WorkerCount = Read-WorkerCountPrompt -Default $config.WorkerCount }
+            'D' {
+                $daysInput = Read-Host ("  Past days to export (1-30) [{0}]" -f $config.PastDays)
+                if ($daysInput -match '^\d+$') {
+                    $days = [int]$daysInput
+                    if ($days -ge 1 -and $days -le 30) { $config.PastDays = $days }
+                    else { Write-Host "  Out of range (1-30). Keeping previous value." -ForegroundColor Yellow }
+                }
+            }
+            'Y' { return $config }
+            ''  { return $config }
+            'N' { return $null }
+            default { Write-Host "  Unrecognized choice." -ForegroundColor Yellow }
+        }
     }
 }
 
