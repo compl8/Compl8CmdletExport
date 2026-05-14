@@ -177,8 +177,53 @@ param(
     # Tenant prefix for the export directory (e.g. 'zava' -> Export-zava-20260514-...).
     # If omitted, resolved in this order: AuthConfig.json Organization (cert auth),
     # then the last-used value from ConfigFiles/LastTenant.local.json.
-    [string]$TenantPrefix
+    [string]$TenantPrefix,
+
+    # Write per-page output as JSONL (one record per line) instead of JSON arrays.
+    # Append-safe, recoverable from partial writes, faster to stream-parse. Loaders
+    # auto-detect by extension. Opt-in until validated against real exports.
+    [switch]$JsonlOutput,
+
+    # Write Parquet directly from PowerShell workers instead of producing JSON pages
+    # that build_unified_parquet.py later converts. Lower disk I/O, but schema drift
+    # becomes a breaking change instead of an extra_fields blob. Library: Parquet.Net
+    # (pure-managed C#, no native deps). Not yet implemented; flag plumbed for future use.
+    [switch]$ParquetFirst,
+
+    # Park/unpark workers based on queue depth instead of running all -WorkerCount
+    # workers concurrently. All workers still spawn at startup (browser auth runs
+    # once); parked workers stay alive but skip dispatch. v1: simple queue-depth
+    # auto-scale, no session rotation (follow-up).
+    [switch]$AdaptiveWorkers,
+
+    # Incremental export mode. v1: compares current aggregate counts against the
+    # per-tenant watermark file and writes _Coordination/AggregateDelta.json. Does
+    # NOT yet skip unchanged detail tasks (true incremental is a follow-up).
+    [switch]$Incremental,
+
+    # Force a full rebuild even when watermarks exist. Use after deletes or schema
+    # changes to reset the baseline.
+    [switch]$ForceFullRebuild
 )
+
+if ($JsonlOutput) {
+    $env:COMPL8_JSONL_OUTPUT = "1"
+}
+if ($ParquetFirst) {
+    $env:COMPL8_PARQUET_FIRST = "1"
+    Write-Warning "-ParquetFirst is not yet implemented. Falling back to JSON page output."
+    Write-Warning "  See task #15 in the roadmap; needs schema drift detection (#4) running first."
+}
+if ($AdaptiveWorkers) {
+    $env:COMPL8_ADAPTIVE_WORKERS = "1"
+}
+if ($Incremental) {
+    $env:COMPL8_INCREMENTAL = "1"
+    Write-Host "Incremental mode: aggregate-delta report will be written. (Detail skipping not yet implemented.)" -ForegroundColor Cyan
+}
+if ($ForceFullRebuild) {
+    $env:COMPL8_FORCE_FULL_REBUILD = "1"
+}
 
 #region Initialization
 
@@ -226,6 +271,10 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host "  -TenantPrefix <name>         Prefix the export directory (Export-<name>-<timestamp>)."
     Write-Host "                               If omitted: auto-detected from cert-auth Organization,"
     Write-Host "                               else the last-used value, else no prefix."
+    Write-Host ""
+    Write-Host "Output Format Options:" -ForegroundColor Yellow
+    Write-Host "  -JsonlOutput                 Per-page output as JSONL (one record per line). Append-safe."
+    Write-Host "  -ParquetFirst                [PLANNED] Workers write Parquet directly. Not yet implemented."
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
     Write-Host "  .\Export-Compl8Configuration.ps1 -FullExport"

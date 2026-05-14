@@ -58,6 +58,7 @@
     # Extract config settings (manifest overrides config file)
     if ($savedSettings) {
         Write-ExportLog -Message "CE Worker using saved settings from ExportSettings.json" -Level Info
+        if ($savedSettings.JsonlOutput -eq $true) { $env:COMPL8_JSONL_OUTPUT = "1" }
     }
     else {
         Write-ExportLog -Message "CE Worker using current config file (no manifest found)" -Level Warning
@@ -656,6 +657,7 @@ function Invoke-ContentExplorerResume {
     $resolved = Resolve-CEPageSize -ExportRunDirectory $ExportDir -ConfigPath $configPath -FallbackPageSize $PageSize
     $cePageSize = $resolved.PageSize
     $savedSettings = Get-ExportSettings -ExportRunDirectory $ExportDir
+    if ($savedSettings -and $savedSettings.JsonlOutput -eq $true) { $env:COMPL8_JSONL_OUTPUT = "1" }
     $ceConfig = Read-JsonConfig -Path $configPath
     $ceSettings = Get-ContentExplorerSettings -ConfigObject $ceConfig -SavedSettings $savedSettings -DefaultBatchSize $script:CEDefaultBatchSize -DefaultWorkloads $script:CEDefaultWorkloads -DefaultPageSize $cePageSize
     $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
@@ -2057,6 +2059,7 @@ function Invoke-ContentExplorerExport {
         PageSize  = $cePageSize
         LargeAllSITDetailThreshold = $largeAllSITDetailThreshold
         LargeAllSITWorkloadFallbackWorkloads = $largeAllSITFallbackCandidates
+        JsonlOutput = ($env:COMPL8_JSONL_OUTPUT -eq "1")
     }
 
     Write-ExportLog -Message ("Default page size: {0} (adaptive sizing selects optimal size per workload)" -f $cePageSize) -Level Info
@@ -3273,6 +3276,35 @@ function Invoke-ContentExplorerExport {
 
     # Display retry bucket summary
     Show-RetryBucketSummary -RetryTasks $retryBucketTasks -ExportDir $exportDir
+
+    # Aggregate-delta + watermark save (foundation for incremental support)
+    try {
+        $detailCsvPathFinal = Join-Path (Get-CoordinationDir $exportDir) "DetailTasks.csv"
+        if (Test-Path $detailCsvPathFinal) {
+            $finalDetailTasks = @(Read-TaskCsv -Path $detailCsvPathFinal)
+
+            # Write aggregate-delta report comparing this run's counts to prior watermarks
+            $priorWatermarks = Read-Watermarks -ScriptRoot $scriptRoot -TenantPrefix $script:TenantPrefix
+            $deltaInput = @($finalDetailTasks | ForEach-Object {
+                [PSCustomObject]@{
+                    TagType        = $_.TagType
+                    TagName        = $_.TagName
+                    Workload       = $_.Workload
+                    Location       = $_.Location
+                    ExpectedCount  = if ($_.OriginalExpectedCount) { $_.OriginalExpectedCount } else { $_.ExpectedCount }
+                }
+            })
+            Write-AggregateDeltaReport -ExportDir $exportDir -Watermarks $priorWatermarks -AggregateTasks $deltaInput
+
+            # Persist new watermarks for the next run
+            $wasFullRun = -not ($env:COMPL8_INCREMENTAL -eq "1") -or ($env:COMPL8_FORCE_FULL_REBUILD -eq "1")
+            Save-WatermarksFromDetailTasks -ScriptRoot $scriptRoot -TenantPrefix $script:TenantPrefix -DetailTasks $finalDetailTasks -WasFullRun:$wasFullRun
+            Write-ExportLog -Message "Saved tenant watermarks for future incremental runs" -Level Info
+        }
+    }
+    catch {
+        Write-ExportLog -Message ("Watermark/delta processing failed: {0}" -f $_.Exception.Message) -Level Warning
+    }
 
     # Write remaining (non-completed) tasks for follow-on runs
     $remainingCount = Write-RemainingTasksCsv -ExportDir $exportDir

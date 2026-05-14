@@ -306,5 +306,51 @@ function Complete-WorkerTask {
     }
 }
 
+function Set-WorkerParked {
+    <#
+    .SYNOPSIS
+        Mark a worker as parked or active by writing/deleting a 'parked' marker.
+    .DESCRIPTION
+        Parked workers stay alive (session preserved, no re-auth needed) but the
+        orchestrator dispatcher skips them. Used by adaptive worker scaling to
+        scale concurrency without killing browser-auth'd workers.
+    #>
+    param(
+        [Parameter(Mandatory)][string]$WorkerDir,
+        [Parameter(Mandatory)][bool]$Parked
+    )
+    $parkedPath = Join-Path $WorkerDir "parked"
+    if ($Parked) {
+        if (-not (Test-Path $parkedPath)) {
+            try {
+                [System.IO.File]::WriteAllText($parkedPath, (Get-Date).ToString("o"))
+            }
+            catch {
+                Write-Verbose "Set-WorkerParked: Could not write parked marker: $($_.Exception.Message)"
+            }
+        }
+    }
+    else {
+        try {
+            [System.IO.File]::Delete($parkedPath)
+        }
+        catch [System.IO.FileNotFoundException], [System.IO.DirectoryNotFoundException] {
+            # Already unparked
+        }
+        catch {
+            Write-Verbose "Set-WorkerParked: Could not delete parked marker: $($_.Exception.Message)"
+        }
+    }
+}
+
+function Test-WorkerParked {
+    <#
+    .SYNOPSIS
+        Returns $true if the worker has been parked by the orchestrator.
+    #>
+    param([Parameter(Mandatory)][string]$WorkerDir)
+    return (Test-Path (Join-Path $WorkerDir "parked"))
+}
+
 #endregion
 

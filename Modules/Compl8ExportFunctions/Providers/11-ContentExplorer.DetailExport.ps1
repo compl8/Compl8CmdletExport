@@ -271,24 +271,37 @@ function Export-ContentExplorerWithProgress {
                     }
                 }
 
-                # Write per-page file
-                $pageFileName = "{0}-{1:D3}.json" -f $pageFilePrefix, $pageNumber
+                # Write per-page file (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1)
+                $useJsonl = $env:COMPL8_JSONL_OUTPUT -eq "1"
+                $pageExt = if ($useJsonl) { "jsonl" } else { "json" }
+                $pageFileName = "{0}-{1:D3}.{2}" -f $pageFilePrefix, $pageNumber, $pageExt
                 $pageFilePath = Join-Path $OutputDirectory $pageFileName
 
-                $pageData = @{
-                    PageNumber      = $pageNumber
-                    ExportTimestamp  = (Get-Date).ToString("o")
-                    TagType         = $tagType
-                    TagName         = $tagName
-                    Workload        = $workload
-                    RecordCount     = $recordsInPage
-                    Records         = @($pageRecords)
-                }
-
                 try {
-                    $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
-                    $pageJson = $serializablePage | ConvertTo-Json -Depth 20
-                    Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                    if ($useJsonl) {
+                        # JSONL: one record per line. Tag metadata is already on each
+                        # record via _ExportTagType / _ExportTagName.
+                        $sb = [System.Text.StringBuilder]::new()
+                        foreach ($rec in $pageRecords) {
+                            $serRec = ConvertTo-SerializableObject -InputObject $rec
+                            [void]$sb.AppendLine(($serRec | ConvertTo-Json -Depth 20 -Compress))
+                        }
+                        [System.IO.File]::WriteAllText($pageFilePath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+                    }
+                    else {
+                        $pageData = @{
+                            PageNumber      = $pageNumber
+                            ExportTimestamp  = (Get-Date).ToString("o")
+                            TagType         = $tagType
+                            TagName         = $tagName
+                            Workload        = $workload
+                            RecordCount     = $recordsInPage
+                            Records         = @($pageRecords)
+                        }
+                        $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
+                        $pageJson = $serializablePage | ConvertTo-Json -Depth 20
+                        Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                    }
                 }
                 catch {
                     Write-ExportLog -Message ("      Page {0}: Failed to save page file: {1}" -f $pageNumber, $_.Exception.Message) -Level Error

@@ -132,6 +132,7 @@ def write_c8_tuning_manifest(
     run_stamp: str,
     row_counts: dict[str, int],
     users_csv: list[str],
+    schema_drift_path: Path | None = None,
 ) -> None:
     """Write a small manifest for downstream run pickers."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -158,6 +159,7 @@ def write_c8_tuning_manifest(
         },
         "row_counts": row_counts,
         "users_csv": users_csv,
+        "schema_drift_report": schema_drift_path.name if schema_drift_path is not None else None,
     }
     manifest_path = output_dir / "c8_tuning_input_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")

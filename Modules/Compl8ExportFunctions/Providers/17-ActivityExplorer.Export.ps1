@@ -247,23 +247,34 @@ function Export-ActivityExplorerWithProgress {
                 Write-Verbose "Timestamp parsing failed for page $pageNumber : $($_.Exception.Message)"
             }
 
-            # Save page file immediately
-            $pageFileName = "Page-{0:D3}.json" -f $pageNumber
+            # Save page file immediately (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1)
+            $useJsonl = $env:COMPL8_JSONL_OUTPUT -eq "1"
+            $pageExt = if ($useJsonl) { "jsonl" } else { "json" }
+            $pageFileName = "Page-{0:D3}.{1}" -f $pageNumber, $pageExt
             $pageFilePath = Join-Path $OutputDirectory $pageFileName
 
-            $pageData = @{
-                PageNumber      = $pageNumber
-                ExportTimestamp = (Get-Date).ToString("o")
-                RecordTimeRange = $recordTimeRange
-                RecordCount     = $recordCount
-                WaterMark       = $result.WaterMark
-                Records         = $pageRecords
-            }
-
             try {
-                $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
-                $pageJson = $serializablePage | ConvertTo-Json -Depth 20
-                Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                if ($useJsonl) {
+                    $sb = [System.Text.StringBuilder]::new()
+                    foreach ($rec in $pageRecords) {
+                        $serRec = ConvertTo-SerializableObject -InputObject $rec
+                        [void]$sb.AppendLine(($serRec | ConvertTo-Json -Depth 20 -Compress))
+                    }
+                    [System.IO.File]::WriteAllText($pageFilePath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+                }
+                else {
+                    $pageData = @{
+                        PageNumber      = $pageNumber
+                        ExportTimestamp = (Get-Date).ToString("o")
+                        RecordTimeRange = $recordTimeRange
+                        RecordCount     = $recordCount
+                        WaterMark       = $result.WaterMark
+                        Records         = $pageRecords
+                    }
+                    $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
+                    $pageJson = $serializablePage | ConvertTo-Json -Depth 20
+                    Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                }
             }
             catch {
                 $msg = "  Page {0}: Failed to save page file: {1}" -f $pageNumber, $_.Exception.Message

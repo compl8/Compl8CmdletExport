@@ -41,6 +41,7 @@ from .policy import (
     process_retention_labels,
     process_sensitivity_labels,
 )
+from .schema_drift import SchemaDriftTracker, write_schema_drift_report
 from .users import USER_RENAMES, process_users_csv
 from .writers import (
     PARQUET_WRITE_OPTS,
@@ -60,6 +61,7 @@ __all__ = [
     "PARQUET_WRITE_OPTS",
     "SERVICE_ACCOUNT_PATTERNS",
     "SIT_DETECTION_RENAMES",
+    "SchemaDriftTracker",
     "USER_RENAMES",
     "find_ae_pages",
     "find_ce_pages",
@@ -76,4 +78,5 @@ __all__ = [
     "write_c8_tuning_manifest",
     "write_hive_partitioned",
     "write_parquet",
+    "write_schema_drift_report",
 ]

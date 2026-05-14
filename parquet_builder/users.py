@@ -73,7 +73,7 @@ for _i in range(1, 16):
     USER_RENAMES[f"extension_{_i}"] = f"ext_attr_{_i}"
 
 
-def process_users_csv(csv_path: Path) -> list[dict]:
+def process_users_csv(csv_path: Path, drift_tracker=None) -> list[dict]:
     """Process a GAL Scraper or Entra user export CSV into unified user records."""
     if not csv_path.exists():
         print(f"  WARNING: Users CSV not found: {csv_path}")
@@ -86,6 +86,8 @@ def process_users_csv(csv_path: Path) -> list[dict]:
         reader = csv.DictReader(f)
         for raw in reader:
             renamed, extra = _rename_record(raw, USER_RENAMES)
+            if drift_tracker is not None:
+                drift_tracker.record("users", extra)
             renamed["_source_tool"] = "cmdletexport"
             renamed["_ingested_at"] = ingested_at
 

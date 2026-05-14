@@ -19,7 +19,7 @@ from .helpers import (
 from .loaders import find_ce_pages, load_page_records
 
 
-def process_content(input_dir: Path) -> tuple[list[dict], list[dict]]:
+def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], list[dict]]:
     """Process CE pages -> content_files and sit_detections lists."""
     pages = find_ce_pages(input_dir)
     if not pages:
@@ -32,20 +32,24 @@ def process_content(input_dir: Path) -> tuple[list[dict], list[dict]]:
     for page_path in pages:
         records = load_page_records(page_path)
 
-        # Try to get tag info from page wrapper
+        # Try to get tag info from page wrapper (.json only; JSONL has no wrapper
+        # but records carry _ExportTagType / _ExportTagName)
         page_tag_type = None
         page_tag_name = None
-        try:
-            with open(page_path, "r", encoding="utf-8-sig") as f:
-                wrapper = json.load(f)
-            if isinstance(wrapper, dict):
-                page_tag_type = wrapper.get("TagType")
-                page_tag_name = wrapper.get("TagName")
-        except Exception:
-            pass
+        if page_path.suffix.lower() == ".json":
+            try:
+                with open(page_path, "r", encoding="utf-8-sig") as f:
+                    wrapper = json.load(f)
+                if isinstance(wrapper, dict):
+                    page_tag_type = wrapper.get("TagType")
+                    page_tag_name = wrapper.get("TagName")
+            except Exception:
+                pass
 
         for raw in records:
             renamed, extra = _rename_record(raw, CONTENT_RENAMES, excluded_keys=CE_METADATA_FIELDS)
+            if drift_tracker is not None:
+                drift_tracker.record("content_files", extra)
 
             # Add tag metadata from record or page wrapper
             renamed["tag_type"] = raw.get("_ExportTagType") or page_tag_type

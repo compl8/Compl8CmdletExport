@@ -24,7 +24,7 @@ from .helpers import (
 from .loaders import find_ae_pages, load_page_records
 
 
-def process_activities(input_dir: Path) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
+def process_activities(input_dir: Path, drift_tracker=None) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     """Process AE pages -> (activities, sit_matches, policy_matches, email_details)."""
     pages = find_ae_pages(input_dir)
     if not pages:
@@ -43,6 +43,8 @@ def process_activities(input_dir: Path) -> tuple[list[dict], list[dict], list[di
 
             # Rename activity fields
             renamed, extra = _rename_record(raw, ACTIVITY_RENAMES, excluded_keys=ACTIVITY_NESTED_FIELDS)
+            if drift_tracker is not None:
+                drift_tracker.record("activities", extra)
 
             # Derived columns
             happened_at = renamed.get("happened_at")

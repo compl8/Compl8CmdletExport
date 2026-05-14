@@ -165,6 +165,66 @@ def test_retry_tasks_csv_round_trips_location_columns(tmp_path: Path) -> None:
     assert "EX_TYPE=WorkloadFallback" in output
 
 
+def test_worker_park_unpark_round_trip(tmp_path: Path) -> None:
+    """Set-WorkerParked / Test-WorkerParked roundtrip via the parked marker file."""
+    worker_dir = (tmp_path / "Worker-12345").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        New-Item -ItemType Directory -Force -Path '{worker_dir}' | Out-Null
+        Write-Output ('PARKED_INITIAL=' + (Test-WorkerParked -WorkerDir '{worker_dir}'))
+        Set-WorkerParked -WorkerDir '{worker_dir}' -Parked $true
+        Write-Output ('PARKED_AFTER_PARK=' + (Test-WorkerParked -WorkerDir '{worker_dir}'))
+        Set-WorkerParked -WorkerDir '{worker_dir}' -Parked $false
+        Write-Output ('PARKED_AFTER_UNPARK=' + (Test-WorkerParked -WorkerDir '{worker_dir}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "PARKED_INITIAL=False" in output, output
+    assert "PARKED_AFTER_PARK=True" in output, output
+    assert "PARKED_AFTER_UNPARK=False" in output, output
+
+
+def test_watermark_save_and_aggregate_delta(tmp_path: Path) -> None:
+    """Watermarks round-trip and the aggregate-delta report classifies correctly."""
+    script_root = (tmp_path / "fakeroot").as_posix()
+    export_dir = (tmp_path / "Export-test").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        New-Item -ItemType Directory -Force -Path '{script_root}\\ConfigFiles' | Out-Null
+        New-Item -ItemType Directory -Force -Path '{export_dir}\\_Coordination' | Out-Null
+
+        $detailTasks = @(
+            [PSCustomObject]@{{ TagType='SensitiveInformationType'; TagName='CreditCard'; Workload='SharePoint'; Location=''; Status='Completed'; ExpectedCount=1000; OriginalExpectedCount=1000 }}
+        )
+        Save-WatermarksFromDetailTasks -ScriptRoot '{script_root}' -TenantPrefix 'zava' -DetailTasks $detailTasks -WasFullRun
+
+        $marks = Read-Watermarks -ScriptRoot '{script_root}' -TenantPrefix 'zava'
+        Write-Output ('MARKS_TASK_COUNT=' + $marks.Tasks.Count)
+        Write-Output ('MARKS_TENANT=' + $marks.TenantPrefix)
+        Write-Output ('MARKS_HAS_FULL=' + ($null -ne $marks.LastFullRunAt))
+
+        $currentAggregates = @(
+            [PSCustomObject]@{{ TagType='SensitiveInformationType'; TagName='CreditCard'; Workload='SharePoint'; Location=''; ExpectedCount=1000 }},
+            [PSCustomObject]@{{ TagType='SensitiveInformationType'; TagName='NewSIT'; Workload='SharePoint'; Location=''; ExpectedCount=42 }},
+            [PSCustomObject]@{{ TagType='SensitiveInformationType'; TagName='CreditCard'; Workload='OneDrive'; Location=''; ExpectedCount=2500 }}
+        )
+        Write-AggregateDeltaReport -ExportDir '{export_dir}' -Watermarks $marks -AggregateTasks $currentAggregates
+
+        $report = Get-Content -Raw -Path '{export_dir}\\_Coordination\\AggregateDelta.json' | ConvertFrom-Json
+        Write-Output ('UNCHANGED=' + $report.summary.unchanged)
+        Write-Output ('NEW=' + $report.summary.new)
+        """
+    )
+    output = run_pwsh(script)
+    assert "MARKS_TASK_COUNT=1" in output, output
+    assert "MARKS_TENANT=zava" in output, output
+    assert "MARKS_HAS_FULL=True" in output, output
+    assert "UNCHANGED=1" in output, output
+    assert "NEW=2" in output, output
+
+
 def test_unknown_workload_collapses_to_workload_fallback() -> None:
     """Get-ContentExplorerLocationType default + New-ContentExplorerDetailTasks collapse."""
     script = textwrap.dedent(

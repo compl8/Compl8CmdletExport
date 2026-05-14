@@ -15,6 +15,7 @@ from .policy import (
     process_retention_labels,
     process_sensitivity_labels,
 )
+from .schema_drift import SchemaDriftTracker, write_schema_drift_report
 from .users import process_users_csv
 from .writers import (
     PYARROW_IMPORT_ERROR,
@@ -67,10 +68,11 @@ def main() -> int:
 
     wrote_any = False
     row_counts: dict[str, int] = {}
+    drift_tracker = SchemaDriftTracker()
 
     # --- Activity Explorer ---
     print("Processing Activity Explorer...")
-    activities, sit_matches, policy_matches, email_details = process_activities(input_dir)
+    activities, sit_matches, policy_matches, email_details = process_activities(input_dir, drift_tracker=drift_tracker)
 
     if activities:
         print("  Writing activities (Hive-partitioned)...")
@@ -113,7 +115,7 @@ def main() -> int:
 
     # --- Content Explorer ---
     print("\nProcessing Content Explorer...")
-    content_files, content_sit_detections = process_content(input_dir)
+    content_files, content_sit_detections = process_content(input_dir, drift_tracker=drift_tracker)
     if content_files:
         table = _records_to_table(content_files)
         wrote_content_files = write_parquet(
@@ -188,7 +190,7 @@ def main() -> int:
         print("\nProcessing user identity data...")
         all_users: list[dict] = []
         for csv_path_str in args.users_csv:
-            all_users.extend(process_users_csv(Path(csv_path_str).resolve()))
+            all_users.extend(process_users_csv(Path(csv_path_str).resolve(), drift_tracker=drift_tracker))
         if all_users:
             wrote_users = write_parquet(
                 _records_to_table(all_users),
@@ -198,14 +200,22 @@ def main() -> int:
             if wrote_users:
                 row_counts["users"] = len(all_users)
 
+    # --- Schema drift report ---
+    drift_path = write_schema_drift_report(output_dir, drift_tracker, input_dir)
+
     # --- Summary ---
     print()
     if wrote_any:
-        write_c8_tuning_manifest(output_dir, input_dir, stamp, row_counts, args.users_csv)
+        write_c8_tuning_manifest(
+            output_dir, input_dir, stamp, row_counts, args.users_csv,
+            schema_drift_path=drift_path,
+        )
         print("Unified Parquet export complete.")
         print(f"C8 tuning input root: {output_dir}")
         print(f"  content_files:  {output_dir / 'content' / 'content_files'}")
         print(f"  sit_detections: {output_dir / 'content' / 'sit_detections'}")
+        if drift_path is not None:
+            print(f"  schema_drift:   {drift_path}")
     else:
         print("No data found to export. Check that the input directory contains JSON export files.")
 

@@ -151,8 +151,24 @@ function Invoke-DispatchLoop {
                 }
             }
 
-            # Step 5: Dispatch pending tasks to idle workers
+            # Step 5: Adaptive worker scaling (opt-in via $env:COMPL8_ADAPTIVE_WORKERS=1).
+            # Park workers when there's slack, unpark them when the queue grows.
+            # Parked workers stay alive (session warm, no re-auth) but skip dispatch.
+            if ($env:COMPL8_ADAPTIVE_WORKERS -eq "1") {
+                $aliveWorkers = @($WorkerProcesses | Where-Object { Test-WorkerAlive -WorkerPID $_.PID -WorkerDir $_.WorkerDir })
+                $pendingCount = @($Tasks | Where-Object { $_.Status -eq "Pending" }).Count
+                # Target ~1 active worker per 4 pending tasks, bounded by alive count.
+                $target = [Math]::Max(1, [Math]::Min($aliveWorkers.Count, [Math]::Ceiling($pendingCount / 4)))
+                # Pick the lowest-PID workers as active; park the rest.
+                $sortedWorkers = @($aliveWorkers | Sort-Object PID)
+                for ($i = 0; $i -lt $sortedWorkers.Count; $i++) {
+                    Set-WorkerParked -WorkerDir $sortedWorkers[$i].WorkerDir -Parked:($i -ge $target)
+                }
+            }
+
+            # Step 6: Dispatch pending tasks to idle, non-parked workers
             foreach ($w in $WorkerProcesses) {
+                if (Test-WorkerParked -WorkerDir $w.WorkerDir) { continue }
                 $state = Get-WorkerState -WorkerDir $w.WorkerDir -WorkerPID $w.PID
                 if ($state -eq "Idle") {
                     $nextTask = $Tasks | Where-Object { $_.Status -eq "Pending" } | Select-Object -First 1

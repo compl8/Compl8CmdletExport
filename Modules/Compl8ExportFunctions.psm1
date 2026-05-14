@@ -58,6 +58,7 @@ $sectionFiles = @(
     'UI\01-Text.ps1'
     'UI\02-Dashboards.ps1'
     'Orchestrator\07-Dispatch.ps1'
+    'Orchestrator\08-Watermarks.ps1'
 )
 
 foreach ($section in $sectionFiles) {
@@ -201,6 +202,13 @@ Export-ModuleMember -Function @(
     'Read-AETaskCsv',
     'Write-TaskCsv',
     'Read-TaskCsv',
+    'Set-WorkerParked',
+    'Test-WorkerParked',
+    'Get-WatermarkPath',
+    'Read-Watermarks',
+    'Write-Watermarks',
+    'Save-WatermarksFromDetailTasks',
+    'Write-AggregateDeltaReport',
     'Get-ContentExplorerLocationType',
     'Get-ContentExplorerDetailPageSize',
     'New-ContentExplorerDetailTasks',
