@@ -166,5 +166,94 @@ function Get-SitGuidMapping {
     }
 }
 
+function Get-TrainableClassifiersFromCache {
+    <#
+    .SYNOPSIS
+        Reads the trainable-classifier cache produced by Helpers/Get-TrainableClassifiers.py.
+
+    .DESCRIPTION
+        Microsoft has not shipped a public cmdlet/API for listing trainable
+        classifiers, so the Compl8 pipeline gets them via a Playwright-based
+        scraper that talks to the Purview portal's internal IPML endpoints.
+        That helper writes ConfigFiles/CurrentTenantTCs.local.json. This
+        function reads it and returns objects shaped like the other CE
+        discovery cmdlets (each item has a .Name property).
+
+    .PARAMETER ConfigPath
+        Path to the cache file. Defaults to ConfigFiles/CurrentTenantTCs.local.json
+        relative to the project root.
+
+    .PARAMETER StaleAfterDays
+        Emit a warning if the cache is older than this many days. Default 30.
+
+    .OUTPUTS
+        Array of PSCustomObjects with Id, Name, DisplayName, Type, ModelStatus,
+        IsDeprecated. Returns empty array if the cache file is missing or
+        unreadable (the caller will surface the warning).
+
+    .EXAMPLE
+        $classifiers = Get-TrainableClassifiersFromCache
+        $names = @($classifiers.Name)
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$ConfigPath,
+        [int]$StaleAfterDays = 30
+    )
+
+    if (-not $ConfigPath) {
+        $projectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
+        $ConfigPath = Join-Path $projectRoot "ConfigFiles" "CurrentTenantTCs.local.json"
+    }
+
+    if (-not (Test-Path $ConfigPath)) {
+        Write-ExportLog -Message "  Trainable classifier cache not found: $ConfigPath" -Level Warning
+        Write-ExportLog -Message "  Run: python Helpers/Get-TrainableClassifiers.py" -Level Info
+        return @()
+    }
+
+    try {
+        $cache = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        Write-ExportLog -Message "  Trainable classifier cache is malformed ($ConfigPath): $($_.Exception.Message)" -Level Error
+        return @()
+    }
+
+    if (-not $cache.Classifiers) {
+        Write-ExportLog -Message "  Trainable classifier cache has no classifiers" -Level Warning
+        return @()
+    }
+
+    # Staleness check (best-effort; cache may not carry DiscoveredAt on old versions)
+    try {
+        if ($cache.DiscoveredAt) {
+            $discoveredAt = [datetime]::Parse($cache.DiscoveredAt)
+            $age = (Get-Date) - $discoveredAt
+            if ($age.TotalDays -gt $StaleAfterDays) {
+                Write-ExportLog -Message ("  Trainable classifier cache is {0:N0} days old (>{1}). Consider rerunning Helpers/Get-TrainableClassifiers.py" -f $age.TotalDays, $StaleAfterDays) -Level Warning
+            }
+        }
+    }
+    catch {
+        # Bad timestamp - ignore, just don't warn
+    }
+
+    $tcCount = @($cache.Classifiers).Count
+    Write-ExportLog -Message ("  Loaded {0} trainable classifiers from cache (discovered {1})" -f $tcCount, $cache.DiscoveredAt) -Level Info
+
+    # Project to the shape the orchestrator's discovery loop expects ($_.Name)
+    return @($cache.Classifiers | ForEach-Object {
+        [PSCustomObject]@{
+            Id           = $_.Id
+            Name         = $_.Name
+            DisplayName  = $_.DisplayName
+            Type         = $_.Type
+            ModelStatus  = $_.ModelStatus
+            IsDeprecated = [bool]$_.IsDeprecated
+        }
+    })
+}
+
 #endregion
 

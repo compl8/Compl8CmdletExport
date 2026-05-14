@@ -124,6 +124,7 @@ Export-ModuleMember -Function @(
     'Get-SITsToSkip',
     'Get-Compl8TenantInfo',
     'Get-SitGuidMapping',
+    'Get-TrainableClassifiersFromCache',
 
     # Content Explorer - Basic
     'Export-ContentExplorer',

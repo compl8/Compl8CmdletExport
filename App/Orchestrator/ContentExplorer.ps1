@@ -2123,7 +2123,7 @@ function Invoke-ContentExplorerExport {
         @{ TagType = "Sensitivity"; ConfigSection = "SensitivityLabels"; DiscoverCmd = { Get-Label -ErrorAction Stop } }
         @{ TagType = "Retention"; ConfigSection = "RetentionLabels"; DiscoverCmd = { Get-ComplianceTag -ErrorAction Stop } }
         @{ TagType = "SensitiveInformationType"; ConfigSection = "SensitiveInformationTypes"; DiscoverCmd = { Get-DlpSensitiveInformationType -ErrorAction Stop } }
-        @{ TagType = "TrainableClassifier"; ConfigSection = "TrainableClassifiers"; DiscoverCmd = $null }
+        @{ TagType = "TrainableClassifier"; ConfigSection = "TrainableClassifiers"; DiscoverCmd = { Get-TrainableClassifiersFromCache } }
     )
 
     # Collect discovered tag names per tag type for later aggregate/detail phases

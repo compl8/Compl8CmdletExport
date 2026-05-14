@@ -165,6 +165,65 @@ def test_retry_tasks_csv_round_trips_location_columns(tmp_path: Path) -> None:
     assert "EX_TYPE=WorkloadFallback" in output
 
 
+def test_trainable_classifier_cache_round_trip(tmp_path: Path) -> None:
+    """Get-TrainableClassifiersFromCache reads the JSON the helper produces."""
+    cache_path = (tmp_path / "CurrentTenantTCs.local.json").as_posix()
+    cache_payload = {
+        "SchemaVersion": 1,
+        "DiscoveredAt": "2026-05-14T07:00:00Z",
+        "TenantId": "tenant-123",
+        "Source": "purview-portal",
+        "ClassifierCount": 2,
+        "Classifiers": [
+            {
+                "Id": "8aef6743-61aa-44b9-9ae5-3bb3d77df535",
+                "Name": "Source code",
+                "DisplayName": "Source code",
+                "Type": "GlobalOOB",
+                "ModelStatus": "Stable",
+                "IsDeprecated": False,
+            },
+            {
+                "Id": "a02ddb8e-3c93-44ac-87c1-2f682b1cb78e",
+                "Name": "Targeted Harassment",
+                "DisplayName": "Targeted Harassment",
+                "Type": "GlobalOOB",
+                "ModelStatus": "Stable",
+                "IsDeprecated": False,
+            },
+        ],
+    }
+    Path(cache_path).write_text(json.dumps(cache_payload), encoding="utf-8")
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $tcs = @(Get-TrainableClassifiersFromCache -ConfigPath '{cache_path}')
+        Write-Output ('COUNT=' + $tcs.Count)
+        Write-Output ('NAME0=' + $tcs[0].Name)
+        Write-Output ('NAME1=' + $tcs[1].Name)
+        Write-Output ('TYPE0=' + $tcs[0].Type)
+        """
+    )
+    output = run_pwsh(script)
+    assert "COUNT=2" in output, output
+    assert "NAME0=Source code" in output, output
+    assert "NAME1=Targeted Harassment" in output, output
+    assert "TYPE0=GlobalOOB" in output, output
+
+
+def test_trainable_classifier_cache_missing_returns_empty(tmp_path: Path) -> None:
+    missing_path = (tmp_path / "does-not-exist.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $tcs = @(Get-TrainableClassifiersFromCache -ConfigPath '{missing_path}')
+        Write-Output ('COUNT=' + $tcs.Count)
+        """
+    )
+    output = run_pwsh(script)
+    assert "COUNT=0" in output, output
+
+
 def test_round_robin_dispatch_prioritizes_exchange_and_teams() -> None:
     """First N tasks must cover Exchange and Teams before piling on SharePoint."""
     script = textwrap.dedent(
