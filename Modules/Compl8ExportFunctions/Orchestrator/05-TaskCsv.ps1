@@ -219,10 +219,73 @@ function New-ContentExplorerDetailTasks {
     }
 
     if ($Sort -and $detailTasks.Count -gt 1) {
-        $detailTasks = @($detailTasks | Sort-Object { [int]$_.ExpectedCount } -Descending)
+        $detailTasks = @(Get-RoundRobinDetailTaskOrder -Tasks $detailTasks)
     }
 
     return @($detailTasks)
+}
+
+function Get-RoundRobinDetailTaskOrder {
+    <#
+    .SYNOPSIS
+        Orders detail tasks so workload-fallback workloads (Exchange/Teams) start
+        in the first dispatch wave instead of being left to the long tail.
+    .DESCRIPTION
+        Workload-fallback tasks cannot be subdivided by location, so each is a
+        single long-running unit. Pure largest-count-first sorting can defer
+        Exchange/Teams behind many smaller SharePoint/OneDrive per-location tasks
+        and leave workers idle at the tail end waiting for one slow task.
+
+        This function bucketizes tasks by workload, sorts each bucket by
+        ExpectedCount descending, then round-robins across the buckets in the
+        priority order [Exchange, Teams, SharePoint, OneDrive, ...others].
+
+        With N workers, the first N tasks dispatched are guaranteed to span up to
+        N distinct workloads (largest first within each), so Exchange and Teams
+        start early and run in parallel with SharePoint and OneDrive.
+    #>
+    param([Parameter(Mandatory)][array]$Tasks)
+
+    if ($Tasks.Count -le 1) { return @($Tasks) }
+
+    # Bucketize by workload
+    $buckets = @{}
+    foreach ($t in $Tasks) {
+        $wl = if ($t.Workload) { [string]$t.Workload } else { 'Unknown' }
+        if (-not $buckets.ContainsKey($wl)) { $buckets[$wl] = [System.Collections.ArrayList]::new() }
+        [void]$buckets[$wl].Add($t)
+    }
+
+    # Sort each bucket by ExpectedCount descending so the largest of each workload
+    # gets dispatched first within its rotation slot.
+    $orderedBuckets = @{}
+    foreach ($wl in @($buckets.Keys)) {
+        $orderedBuckets[$wl] = @(@($buckets[$wl]) | Sort-Object { [int]$_.ExpectedCount } -Descending)
+    }
+
+    # Priority order: Exchange and Teams first (they're the workload-fallback
+    # workloads that can't be subdivided), then SharePoint/OneDrive, then any
+    # other workloads in alphabetic order.
+    $priority = @('Exchange', 'Teams', 'SharePoint', 'OneDrive')
+    $others = @($buckets.Keys | Where-Object { $_ -notin $priority } | Sort-Object)
+    $workloadOrder = @($priority | Where-Object { $buckets.ContainsKey($_) }) + $others
+
+    # Interleave: take 1st from each workload, then 2nd from each, ...
+    $result = [System.Collections.ArrayList]::new()
+    $cursors = @{}
+    foreach ($wl in $workloadOrder) { $cursors[$wl] = 0 }
+    $remaining = $Tasks.Count
+    while ($remaining -gt 0) {
+        foreach ($wl in $workloadOrder) {
+            $idx = $cursors[$wl]
+            if ($idx -lt $orderedBuckets[$wl].Count) {
+                [void]$result.Add($orderedBuckets[$wl][$idx])
+                $cursors[$wl] = $idx + 1
+                $remaining--
+            }
+        }
+    }
+    return @($result)
 }
 
 function Write-RetryTasksCsv {

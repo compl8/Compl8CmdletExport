@@ -212,6 +212,7 @@ Export-ModuleMember -Function @(
     'Get-ContentExplorerLocationType',
     'Get-ContentExplorerDetailPageSize',
     'New-ContentExplorerDetailTasks',
+    'Get-RoundRobinDetailTaskOrder',
     'Write-RetryTasksCsv',
     'Show-RetryBucketSummary',
     'Write-RemainingTasksCsv',

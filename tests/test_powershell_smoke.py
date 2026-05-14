@@ -165,6 +165,37 @@ def test_retry_tasks_csv_round_trips_location_columns(tmp_path: Path) -> None:
     assert "EX_TYPE=WorkloadFallback" in output
 
 
+def test_round_robin_dispatch_prioritizes_exchange_and_teams() -> None:
+    """First N tasks must cover Exchange and Teams before piling on SharePoint."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $sp1 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteA'; LocationType='SiteUrl'; ExpectedCount=9000 }}
+        $sp2 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteB'; LocationType='SiteUrl'; ExpectedCount=8000 }}
+        $sp3 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteC'; LocationType='SiteUrl'; ExpectedCount=7000 }}
+        $sp4 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteD'; LocationType='SiteUrl'; ExpectedCount=6000 }}
+        $sp5 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteE'; LocationType='SiteUrl'; ExpectedCount=5000 }}
+        $sp6 = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='SharePoint'; Location='siteF'; LocationType='SiteUrl'; ExpectedCount=4000 }}
+        $ex  = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='Exchange';   Location='';     LocationType='WorkloadFallback'; ExpectedCount=500 }}
+        $tm  = @{{ TagType='SensitiveInformationType'; TagName='CC'; Workload='Teams';      Location='';     LocationType='WorkloadFallback'; ExpectedCount=200 }}
+        $tasks = @($sp1,$sp2,$sp3,$sp4,$sp5,$sp6,$ex,$tm)
+        $ordered = @(Get-RoundRobinDetailTaskOrder -Tasks $tasks)
+        Write-Output ('FIRST=' + $ordered[0].Workload)
+        Write-Output ('SECOND=' + $ordered[1].Workload)
+        Write-Output ('COUNT=' + $ordered.Count)
+        $firstFour = @($ordered[0..3] | ForEach-Object {{ $_.Workload }})
+        Write-Output ('EX_IN_4=' + ($firstFour -contains 'Exchange'))
+        Write-Output ('TM_IN_4=' + ($firstFour -contains 'Teams'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "COUNT=8" in output, output
+    assert "FIRST=Exchange" in output, output
+    assert "SECOND=Teams" in output, output
+    assert "EX_IN_4=True" in output, output
+    assert "TM_IN_4=True" in output, output
+
+
 def test_worker_park_unpark_round_trip(tmp_path: Path) -> None:
     """Set-WorkerParked / Test-WorkerParked roundtrip via the parked marker file."""
     worker_dir = (tmp_path / "Worker-12345").as_posix()
