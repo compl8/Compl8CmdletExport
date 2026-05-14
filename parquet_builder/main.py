@@ -115,7 +115,7 @@ def main() -> int:
 
     # --- Content Explorer ---
     print("\nProcessing Content Explorer...")
-    content_files, content_sit_detections = process_content(input_dir, drift_tracker=drift_tracker)
+    content_files, content_sit_detections, content_record_index = process_content(input_dir, drift_tracker=drift_tracker)
     if content_files:
         table = _records_to_table(content_files)
         wrote_content_files = write_parquet(
@@ -134,6 +134,15 @@ def main() -> int:
         wrote_any |= wrote_content_sits
         if wrote_content_sits:
             row_counts["content_sit_detections"] = len(content_sit_detections)
+    if content_record_index:
+        table = _records_to_table(content_record_index)
+        wrote_record_index = write_parquet(
+            table,
+            output_dir / "content" / "record_index" / "source=cmdletexport" / f"{stamp}.parquet",
+        )
+        wrote_any |= wrote_record_index
+        if wrote_record_index:
+            row_counts["content_record_index"] = len(content_record_index)
 
     # --- Policy configs ---
     print("\nProcessing policy configs...")
@@ -214,6 +223,7 @@ def main() -> int:
         print(f"C8 tuning input root: {output_dir}")
         print(f"  content_files:  {output_dir / 'content' / 'content_files'}")
         print(f"  sit_detections: {output_dir / 'content' / 'sit_detections'}")
+        print(f"  record_index:   {output_dir / 'content' / 'record_index'}")
         if drift_path is not None:
             print(f"  schema_drift:   {drift_path}")
     else:

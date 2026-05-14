@@ -51,6 +51,7 @@ def _records_to_table(records: list[dict]):
         "medium_count",
         "high_count",
         "total_count",
+        "page_offset",
     }
 
     columns: dict[str, list] = {k: [] for k in all_keys}
@@ -146,6 +147,7 @@ def write_c8_tuning_manifest(
         "paths": {
             "content_files": "content/content_files",
             "sit_detections": "content/sit_detections",
+            "record_index": "content/record_index",
             "activities": "activities",
             "activity_sit_matches": "activity_sit_matches",
             "activity_policy_matches": "activity_policy_matches",
@@ -155,6 +157,7 @@ def write_c8_tuning_manifest(
         "capabilities": {
             "content_inventory": row_counts.get("content_files", 0) > 0,
             "sit_detections": row_counts.get("content_sit_detections", 0) > 0,
+            "record_index": row_counts.get("content_record_index", 0) > 0,
             "matched_value_enrichment": False,
         },
         "row_counts": row_counts,

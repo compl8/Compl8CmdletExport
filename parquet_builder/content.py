@@ -16,21 +16,34 @@ from .helpers import (
     _sha1_text,
     _split_sit_ids,
 )
-from .loaders import find_ce_pages, load_page_records
+from .loaders import find_ce_pages, load_page_records_with_positions
 
 
-def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], list[dict]]:
-    """Process CE pages -> content_files and sit_detections lists."""
+def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], list[dict], list[dict]]:
+    """Process CE pages -> (content_files, sit_detections, record_index).
+
+    The record_index entries carry (page_file, page_offset) for each record so
+    downstream consumers can locate the raw source record without re-scanning
+    every page file.
+    """
     pages = find_ce_pages(input_dir)
     if not pages:
-        return [], []
+        return [], [], []
 
     ingested_at = _now_iso()
     content_files = []
     sit_detections_by_key: dict[tuple[str, str], dict] = {}
+    record_index: list[dict] = []
+    export_dir_str = str(input_dir)
 
     for page_path in pages:
-        records = load_page_records(page_path)
+        positioned_records = load_page_records_with_positions(page_path)
+
+        # Page file path relative to the export root, so the index stays portable
+        try:
+            rel_page_file = str(page_path.relative_to(input_dir))
+        except ValueError:
+            rel_page_file = str(page_path)
 
         # Try to get tag info from page wrapper (.json only; JSONL has no wrapper
         # but records carry _ExportTagType / _ExportTagName)
@@ -46,7 +59,7 @@ def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], li
             except Exception:
                 pass
 
-        for raw in records:
+        for page_offset, raw in positioned_records:
             renamed, extra = _rename_record(raw, CONTENT_RENAMES, excluded_keys=CE_METADATA_FIELDS)
             if drift_tracker is not None:
                 drift_tracker.record("content_files", extra)
@@ -77,6 +90,24 @@ def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], li
             doc_id = renamed.get("doc_id")
             if not doc_id:
                 continue
+
+            # Record index row: makes file_url -> (page_file, page_offset) lookups
+            # cheap and enables row-level delta detection on future incremental runs.
+            record_index.append({
+                "doc_id": doc_id,
+                "file_url": renamed.get("file_url"),
+                "source_url": renamed.get("source_url"),
+                "file_name": renamed.get("file_name"),
+                "tag_type": renamed.get("tag_type"),
+                "tag_name": renamed.get("tag_name"),
+                "workload": renamed.get("workload"),
+                "location": renamed.get("source_url") or renamed.get("file_url"),
+                "page_file": rel_page_file,
+                "page_offset": page_offset,
+                "_ingested_at": ingested_at,
+                "_source_export_dir": export_dir_str,
+                "_source_tool": "cmdletexport",
+            })
 
             # Each CE record carries a per-document SensitiveInfoTypesData payload listing
             # every SIT detected on that doc (not just the export's tag). When the same doc
@@ -152,4 +183,5 @@ def process_content(input_dir: Path, drift_tracker=None) -> tuple[list[dict], li
     sit_detections = list(sit_detections_by_key.values())
     print(f"  Content files: {len(content_files)} records")
     print(f"  Content SIT detections: {len(sit_detections)} records")
-    return content_files, sit_detections
+    print(f"  Content record index: {len(record_index)} rows")
+    return content_files, sit_detections, record_index
