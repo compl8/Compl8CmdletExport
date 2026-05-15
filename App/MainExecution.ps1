@@ -314,6 +314,8 @@ switch ($script:SelectedMode) {
         Write-Host "  Workers: $WorkerCount"
         if ($CEAllSITs) {
             Write-Host "  Scope: ALL Sensitive Information Types (full tenant scan)"
+        } elseif ($CEAllTCs) {
+            Write-Host "  Scope: ALL Trainable Classifiers (full tenant scan)"
         } else {
             Write-Host "  Scope: From config file"
         }

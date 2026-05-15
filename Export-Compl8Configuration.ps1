@@ -132,6 +132,9 @@ param(
     [switch]$CEAllSITs,  # Auto-discover and export ALL SITs
 
     [Parameter(ParameterSetName = "ContentExplorer")]
+    [switch]$CEAllTCs,  # Auto-discover and export ALL Trainable Classifiers (skips other tag types)
+
+    [Parameter(ParameterSetName = "ContentExplorer")]
     [ValidateSet("Exchange", "SharePoint", "OneDrive", "Teams")]
     [string[]]$CEWorkloads,
 
@@ -231,6 +234,10 @@ if ($Incremental) {
 if ($ForceFullRebuild) {
     $env:COMPL8_FORCE_FULL_REBUILD = "1"
 }
+if ($CEAllSITs -and $CEAllTCs) {
+    Write-Error "  -CEAllSITs and -CEAllTCs are mutually exclusive. Choose one."
+    exit 1
+}
 if ($RefreshTrainableClassifiers) {
     Write-Host ""
     Write-Host "Refreshing trainable classifier cache via Helpers/Get-TrainableClassifiers.py..." -ForegroundColor Cyan
@@ -282,6 +289,8 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host "Content Explorer Options:" -ForegroundColor Yellow
     Write-Host "  -WorkerCount <2-16>"
     Write-Host "  -CEAllSITs"
+    Write-Host "  -CEAllTCs                    Auto-discover and export ALL trainable classifiers."
+    Write-Host "                               Mutually exclusive with -CEAllSITs."
     Write-Host "  -CEResumeDir <export-dir>"
     Write-Host "  -CERetryDir <export-dir>"
     Write-Host "  -CETasksCsv <tasks.csv>"

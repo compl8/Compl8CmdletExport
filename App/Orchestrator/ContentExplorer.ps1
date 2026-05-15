@@ -2055,6 +2055,7 @@ function Invoke-ContentExplorerExport {
     Save-ExportSettings -ExportRunDirectory $script:ExportRunDirectory -ExportType "ContentExplorer" -Settings @{
         Workloads = $workloads
         CEAllSITs = [bool]$CEAllSITs
+        CEAllTCs  = [bool]$CEAllTCs
         BatchSize = $batchSize
         PageSize  = $cePageSize
         LargeAllSITDetailThreshold = $largeAllSITDetailThreshold
@@ -2066,6 +2067,9 @@ function Invoke-ContentExplorerExport {
     Write-ExportLog -Message ("Workloads: {0}" -f ($workloads -join ', ')) -Level Info
     if ($CEAllSITs) {
         Write-ExportLog -Message "MODE: All SITs - Auto-discovering all Sensitive Information Types" -Level Info
+    }
+    elseif ($CEAllTCs) {
+        Write-ExportLog -Message "MODE: All TCs - Auto-discovering all Trainable Classifiers (other tag types skipped)" -Level Info
     }
 
     # Create progress log file for tailing
@@ -2139,6 +2143,11 @@ function Invoke-ContentExplorerExport {
             Write-ExportLog -Message ("`n--- {0} --- (skipped in All SITs mode)" -f $tagType) -Level Info
             continue
         }
+        # CEAllTCs mode: only process TrainableClassifier
+        if ($CEAllTCs -and $tagType -ne "TrainableClassifier") {
+            Write-ExportLog -Message ("`n--- {0} --- (skipped in All TCs mode)" -f $tagType) -Level Info
+            continue
+        }
 
         Write-ExportLog -Message ("`n--- {0} ---" -f $tagType) -Level Info
 
@@ -2154,6 +2163,10 @@ function Invoke-ContentExplorerExport {
         if ($CEAllSITs -and $tagType -eq "SensitiveInformationType") {
             $autoDiscover = $true
             Write-ExportLog -Message "  All SITs mode: forcing auto-discovery" -Level Info
+        }
+        elseif ($CEAllTCs -and $tagType -eq "TrainableClassifier") {
+            $autoDiscover = $true
+            Write-ExportLog -Message "  All TCs mode: forcing auto-discovery from cache" -Level Info
         }
         elseif ($sectionConfig -and $sectionConfig._AutoDiscover -eq "False") {
             $autoDiscover = $false
