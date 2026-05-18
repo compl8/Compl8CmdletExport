@@ -439,82 +439,85 @@ function Export-ActivityExplorerWithProgress {
             }
         }
         elseif (-not $cookieChanged) {
-            # Same cookie returned - retry with delays
-            $sameCookieRetries++
+            # Same cookie returned by the API. Run a bounded inner retry loop so
+            # the budget actually accumulates: the outer page loop only advances
+            # once the cookie moves, content arrives, or retries are exhausted.
+            # The previous implementation reset $sameCookieRetries each outer
+            # iteration and fell through after a single attempt, which could
+            # produce duplicate/stale pages indefinitely.
+            $cookieResolved = $false
+            $finalAttemptTried = $false
 
-            if ($sameCookieRetries -gt $maxRetries) {
-                # Same cookie exhausted all retries
-                $msg = "  Page {0}: Same PageCookie returned {1} times - saving progress" -f ($pageNumber + 1), $sameCookieRetries
-                Write-ExportLog -Message $msg -Level Error
-                Write-ProgressEntry -Path $ProgressLogPath -Message $msg
+            while (-not $cookieResolved) {
+                $sameCookieRetries++
 
-                Add-PartialError -Tracker $Tracker -PageNumber ($pageNumber + 1) `
-                    -ErrorMessage "Same PageCookie returned after $sameCookieRetries retries" `
-                    -ErrorType "SameCookieRetryExhausted"
-
-                if ($sameCookieRetries -eq $maxRetries + 1) {
-                    # One final attempt after 120s
+                if ($sameCookieRetries -le $maxRetries) {
+                    $delay = 60
+                    $msg = "  Page {0}: Same PageCookie (retry {1}/{2}) - waiting {3}s" -f ($pageNumber + 1), $sameCookieRetries, $maxRetries, $delay
+                    Write-ExportLog -Message $msg -Level Warning
+                    Write-ProgressEntry -Path $ProgressLogPath -Message $msg
+                    Start-Sleep -Seconds $delay
+                }
+                elseif (-not $finalAttemptTried) {
+                    $finalAttemptTried = $true
                     $msg = "  Page {0}: Final attempt after 120s wait" -f ($pageNumber + 1)
                     Write-ExportLog -Message $msg -Level Warning
                     Write-ProgressEntry -Path $ProgressLogPath -Message $msg
                     Start-Sleep -Seconds 120
+                }
+                else {
+                    # Retries exhausted including final attempt - save what we have
+                    $attemptsMade = $sameCookieRetries - 1
+                    $msg = "  Page {0}: Same PageCookie returned {1} times - saving progress" -f ($pageNumber + 1), $attemptsMade
+                    Write-ExportLog -Message $msg -Level Error
+                    Write-ProgressEntry -Path $ProgressLogPath -Message $msg
 
-                    try {
-                        $finalResult = Export-ActivityExplorerData @exportParams
-                        $finalCookie = $finalResult.WaterMark
-                        if ($finalCookie -ne $newWaterMark -or (Test-PageHasContent -Result $finalResult)) {
-                            $result = $finalResult
-                            $sameCookieRetries = 0
-                            continue
-                        }
+                    Add-PartialError -Tracker $Tracker -PageNumber ($pageNumber + 1) `
+                        -ErrorMessage "Same PageCookie returned after $attemptsMade retries" `
+                        -ErrorType "SameCookieRetryExhausted"
+
+                    $Tracker['PartialFailure'] = $true
+                    $Tracker['Status'] = "PartialFailure"
+                    Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
+
+                    return @{
+                        TotalRecords   = $totalRecords
+                        PageCount      = $pageNumber
+                        ResumedFrom    = $resumedFrom
+                        Status         = "PartialFailure"
+                        PartialFailure = $true
+                        PartialErrors  = $Tracker.PartialErrors
                     }
-                    catch {
-                        # Final attempt also failed - will fall through to PartialFailure handling below
-                        Write-ExportLog -Message ("  Page {0}: Final attempt also failed: {1}" -f ($pageNumber + 1), $_.Exception.Message) -Level Warning
+                }
+
+                $retryResult = $null
+                try {
+                    $retryResult = Export-ActivityExplorerData @exportParams
+                }
+                catch {
+                    $errorMsg = Get-PageErrorMessage -ErrorRecord $_
+                    Add-PartialError -Tracker $Tracker -PageNumber ($pageNumber + 1) -ErrorMessage $errorMsg -ErrorType "SameCookieRetryError"
+
+                    # Auth error - propagate for caller to handle
+                    $sameCookieErrorInfo = Get-HttpErrorExplanation -ErrorMessage $errorMsg -ErrorRecord $_
+                    if ($sameCookieErrorInfo.Category -eq "AuthError") {
+                        throw
                     }
+
+                    # Non-auth error: count this attempt and loop. Do NOT assign $result
+                    # from stale data; the inner loop will retry or eventually exhaust.
+                    continue
                 }
 
-                $Tracker['PartialFailure'] = $true
-                $Tracker['Status'] = "PartialFailure"
-                Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
+                $retryCookie = $retryResult.WaterMark
+                $retryHasContent = Test-PageHasContent -Result $retryResult
 
-                return @{
-                    TotalRecords   = $totalRecords
-                    PageCount      = $pageNumber
-                    ResumedFrom    = $resumedFrom
-                    Status         = "PartialFailure"
-                    PartialFailure = $true
-                    PartialErrors  = $Tracker.PartialErrors
+                if ($retryCookie -ne $newWaterMark -or $retryHasContent) {
+                    # Progress: cookie changed or content arrived
+                    $result = $retryResult
+                    $cookieResolved = $true
                 }
-            }
-
-            # Retry with 60s delay
-            $delay = 60
-            $msg = "  Page {0}: Same PageCookie (retry {1}/{2}) - waiting {3}s" -f ($pageNumber + 1), $sameCookieRetries, $maxRetries, $delay
-            Write-ExportLog -Message $msg -Level Warning
-            Write-ProgressEntry -Path $ProgressLogPath -Message $msg
-            Start-Sleep -Seconds $delay
-
-            try {
-                $retryResult = Export-ActivityExplorerData @exportParams
-                $result = $retryResult
-                # Reset same-cookie counter if cookie changed
-                if ($retryResult.WaterMark -ne $newWaterMark) {
-                    $sameCookieRetries = 0
-                }
-            }
-            catch {
-                $errorMsg = Get-PageErrorMessage -ErrorRecord $_
-                Add-PartialError -Tracker $Tracker -PageNumber ($pageNumber + 1) -ErrorMessage $errorMsg -ErrorType "SameCookieRetryError"
-
-                # Auth error - throw
-                $sameCookieErrorInfo = Get-HttpErrorExplanation -ErrorMessage $errorMsg -ErrorRecord $_
-                if ($sameCookieErrorInfo.Category -eq "AuthError") {
-                    throw
-                }
-
-                # Continue retry loop
-                $result = $nextResult
+                # else: still same cookie with no content - loop again
             }
         }
         else {
