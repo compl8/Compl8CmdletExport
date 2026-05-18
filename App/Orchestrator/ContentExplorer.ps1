@@ -462,17 +462,10 @@
                 Export-ContentExplorerWithProgress -Task $detailTask -PageSize $taskPageSize -ProgressLogPath $progressLogPath -Telemetry $telemetry -TelemetryDatabasePath $telemetryDbPath -OutputDirectory $classifierDir @locationParams | Out-Null
 
                 $exportedCount = if ($detailTask.ExportedCount) { $detailTask.ExportedCount } else { 0 }
+                $taskStatus = if ($detailTask.Status) { [string]$detailTask.Status } else { "Completed" }
+                $isFailureOutcome = ($taskStatus -eq "Failed" -or $taskStatus -eq "PartialFailure")
 
-                if ($exportedCount -gt 0) {
-                    Write-ExportLog -Message ("    -> Exported {0} records to {1}" -f $exportedCount, $classifierDir) -Level Success
-                }
-                else {
-                    Write-ExportLog -Message ("    -> No records exported for {0}" -f $taskKey) -Level Info
-                }
-
-                Write-ProgressEntry -Path $progressLogPath -Message ("Detail complete: {0} -> {1} records" -f $taskKey, $exportedCount)
-
-                # Update run tracker
+                # Update run tracker regardless of outcome (partial data on disk is still useful)
                 if (-not $tracker.CompletedTasks) { $tracker.CompletedTasks = @() }
                 $tracker.CompletedTasks += $taskKey
                 $tracker.TotalExported = ($tracker.TotalExported -as [int]) + $exportedCount
@@ -485,27 +478,61 @@
                         RecordCount     = $exportedCount
                         Pages           = $detailTask.TotalPages
                         CompletedTime   = (Get-Date).ToString("o")
+                        Status          = $taskStatus
                     }
                 }
 
                 Save-ContentExplorerRunTracker -Tracker $tracker -TrackerPath $trackerPath
 
-                # Write detail-done signal file (orchestrator watches for these)
                 $detailTaskElapsed = ((Get-Date) - $detailTaskStartTime).TotalSeconds
-                $donePayload = @{
-                    TagType        = $taskTagType
-                    TagName        = $taskTagName
-                    Workload       = $taskWorkload
-                    Location       = if ($task.Location) { $task.Location } else { "" }
-                    LocationType   = if ($task.LocationType) { $task.LocationType } else { "" }
-                    RecordCount    = $exportedCount
-                    ElapsedSeconds = [Math]::Round($detailTaskElapsed, 1)
-                    Timestamp      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff")
-                }
-                $doneJson = ConvertTo-SignedEnvelopeJson -Payload $donePayload -SigningKey $signalSigningKey
-                [System.IO.File]::WriteAllText($detailDonePath, $doneJson, [System.Text.Encoding]::UTF8)
 
-                $tasksExported++
+                if ($isFailureOutcome) {
+                    # Export function set Failed/PartialFailure without throwing - route to error signal
+                    $errMsg = "Detail export status={0} after {1} records, {2} pages" -f $taskStatus, $exportedCount, $detailTask.TotalPages
+                    Write-ExportLog -Message ("    DETAIL {0}: {1} records (partial data preserved)" -f $taskStatus.ToUpper(), $exportedCount) -Level Error
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Detail {0}: {1} -> {2} records" -f $taskStatus, $taskKey, $exportedCount)
+
+                    $errorPayload = @{
+                        Timestamp    = (Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff")
+                        TaskKey      = $taskKey
+                        TagType      = $taskTagType
+                        TagName      = $taskTagName
+                        Workload     = $taskWorkload
+                        Location     = if ($task.Location) { $task.Location } else { "" }
+                        LocationType = if ($task.LocationType) { $task.LocationType } else { "" }
+                        Error        = $errMsg
+                        RecordCount  = $exportedCount
+                        Status       = $taskStatus
+                    }
+                    $errorJson = ConvertTo-SignedEnvelopeJson -Payload $errorPayload -SigningKey $signalSigningKey
+                    [System.IO.File]::WriteAllText($detailErrorPath, $errorJson, [System.Text.Encoding]::UTF8)
+                }
+                else {
+                    if ($exportedCount -gt 0) {
+                        Write-ExportLog -Message ("    -> Exported {0} records to {1}" -f $exportedCount, $classifierDir) -Level Success
+                    }
+                    else {
+                        Write-ExportLog -Message ("    -> No records exported for {0}" -f $taskKey) -Level Info
+                    }
+
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Detail complete: {0} -> {1} records" -f $taskKey, $exportedCount)
+
+                    # Write detail-done signal file (orchestrator watches for these)
+                    $donePayload = @{
+                        TagType        = $taskTagType
+                        TagName        = $taskTagName
+                        Workload       = $taskWorkload
+                        Location       = if ($task.Location) { $task.Location } else { "" }
+                        LocationType   = if ($task.LocationType) { $task.LocationType } else { "" }
+                        RecordCount    = $exportedCount
+                        ElapsedSeconds = [Math]::Round($detailTaskElapsed, 1)
+                        Timestamp      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss.fff")
+                    }
+                    $doneJson = ConvertTo-SignedEnvelopeJson -Payload $donePayload -SigningKey $signalSigningKey
+                    [System.IO.File]::WriteAllText($detailDonePath, $doneJson, [System.Text.Encoding]::UTF8)
+
+                    $tasksExported++
+                }
             }
             catch {
                 $detailError = $_.Exception.Message

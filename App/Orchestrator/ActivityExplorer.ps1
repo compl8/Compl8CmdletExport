@@ -128,22 +128,48 @@ function Invoke-ActivityExplorerWorker {
             $exportResult = Export-ActivityExplorerWithProgress @exportParams
             $taskElapsed = (Get-Date) - $taskStart
 
-            Write-ExportLog -Message ("  Day {0} complete: {1} records, {2} pages in {3}" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount, (Format-TimeSpan -Seconds $taskElapsed.TotalSeconds)) -Level Success
-            Write-ProgressEntry -Path $progressLogPath -Message ("Day {0} complete: {1} records, {2} pages" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount)
-
-            # Write completion signal
             $completionsDir = Get-CompletionsDir $exportDir
             if (-not (Test-Path $completionsDir)) {
                 New-Item -ItemType Directory -Force -Path $completionsDir | Out-Null
             }
-            $doneFile = Join-Path $completionsDir ("ae-done-{0}-{1}.txt" -f $taskDay, $PID)
-            $donePayload = @{
-                Day            = $taskDay
-                RecordCount    = $exportResult.TotalRecords
-                PageCount      = $exportResult.PageCount
-                ElapsedSeconds = [int]$taskElapsed.TotalSeconds
+
+            $resultStatus = if ($exportResult.Status) { [string]$exportResult.Status } else { "Completed" }
+            $isPartialFailure = ($exportResult.PartialFailure -eq $true) -or ($resultStatus -ne "Completed")
+
+            if ($isPartialFailure) {
+                $partialErrorSummary = $null
+                if ($exportResult.PartialErrors -and $exportResult.PartialErrors.Count -gt 0) {
+                    $partialErrorSummary = ($exportResult.PartialErrors | Select-Object -Last 1).ErrorMessage
+                }
+                $errMessage = "Day {0} export status={1} after {2} pages ({3} records). Last error: {4}" -f `
+                    $taskDay, $resultStatus, $exportResult.PageCount, $exportResult.TotalRecords, $partialErrorSummary
+
+                Write-ExportLog -Message ("  Day {0} {1}: {2} records, {3} pages in {4} - emitting error signal" -f $taskDay, $resultStatus, $exportResult.TotalRecords, $exportResult.PageCount, (Format-TimeSpan -Seconds $taskElapsed.TotalSeconds)) -Level Error
+                Write-ProgressEntry -Path $progressLogPath -Message ("Day {0} {1}: {2} records, {3} pages" -f $taskDay, $resultStatus, $exportResult.TotalRecords, $exportResult.PageCount)
+
+                $errorFile = Join-Path $completionsDir ("error-ae-{0}-{1}.txt" -f $taskDay, $PID)
+                $errorPayload = @{
+                    Day          = $taskDay
+                    ErrorMessage = $errMessage
+                    ErrorType    = $resultStatus
+                    RecordCount  = $exportResult.TotalRecords
+                    PageCount    = $exportResult.PageCount
+                }
+                (ConvertTo-SignedEnvelopeJson -Payload $errorPayload -SigningKey $signalSigningKey) | Set-Content -Path $errorFile -Encoding UTF8
             }
-            (ConvertTo-SignedEnvelopeJson -Payload $donePayload -SigningKey $signalSigningKey) | Set-Content -Path $doneFile -Encoding UTF8
+            else {
+                Write-ExportLog -Message ("  Day {0} complete: {1} records, {2} pages in {3}" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount, (Format-TimeSpan -Seconds $taskElapsed.TotalSeconds)) -Level Success
+                Write-ProgressEntry -Path $progressLogPath -Message ("Day {0} complete: {1} records, {2} pages" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount)
+
+                $doneFile = Join-Path $completionsDir ("ae-done-{0}-{1}.txt" -f $taskDay, $PID)
+                $donePayload = @{
+                    Day            = $taskDay
+                    RecordCount    = $exportResult.TotalRecords
+                    PageCount      = $exportResult.PageCount
+                    ElapsedSeconds = [int]$taskElapsed.TotalSeconds
+                }
+                (ConvertTo-SignedEnvelopeJson -Payload $donePayload -SigningKey $signalSigningKey) | Set-Content -Path $doneFile -Encoding UTF8
+            }
 
         }
         catch {

@@ -170,9 +170,12 @@ function Export-ActivityExplorerWithProgress {
                 Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
 
                 return @{
-                    TotalRecords = $totalRecords
-                    PageCount    = $pageNumber
-                    ResumedFrom  = $resumedFrom
+                    TotalRecords   = $totalRecords
+                    PageCount      = $pageNumber
+                    ResumedFrom    = $resumedFrom
+                    Status         = "Failed"
+                    PartialFailure = $true
+                    PartialErrors  = $Tracker.PartialErrors
                 }
             }
         }
@@ -184,9 +187,11 @@ function Export-ActivityExplorerWithProgress {
         $Tracker['Status'] = "Completed"
         Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
         return @{
-            TotalRecords = 0
-            PageCount    = 0
-            ResumedFrom  = $resumedFrom
+            TotalRecords   = 0
+            PageCount      = 0
+            ResumedFrom    = $resumedFrom
+            Status         = "Completed"
+            PartialFailure = $false
         }
     }
 
@@ -371,9 +376,12 @@ function Export-ActivityExplorerWithProgress {
                     Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
 
                     return @{
-                        TotalRecords = $totalRecords
-                        PageCount    = $pageNumber
-                        ResumedFrom  = $resumedFrom
+                        TotalRecords   = $totalRecords
+                        PageCount      = $pageNumber
+                        ResumedFrom    = $resumedFrom
+                        Status         = "PartialFailure"
+                        PartialFailure = $true
+                        PartialErrors  = $Tracker.PartialErrors
                     }
                 }
 
@@ -471,9 +479,12 @@ function Export-ActivityExplorerWithProgress {
                 Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
 
                 return @{
-                    TotalRecords = $totalRecords
-                    PageCount    = $pageNumber
-                    ResumedFrom  = $resumedFrom
+                    TotalRecords   = $totalRecords
+                    PageCount      = $pageNumber
+                    ResumedFrom    = $resumedFrom
+                    Status         = "PartialFailure"
+                    PartialFailure = $true
+                    PartialErrors  = $Tracker.PartialErrors
                 }
             }
 
@@ -524,9 +535,11 @@ function Export-ActivityExplorerWithProgress {
     Write-ProgressEntry -Path $ProgressLogPath -Message $completionMsg
 
     return @{
-        TotalRecords = $totalRecords
-        PageCount    = $pageNumber
-        ResumedFrom  = $resumedFrom
+        TotalRecords   = $totalRecords
+        PageCount      = $pageNumber
+        ResumedFrom    = $resumedFrom
+        Status         = "Completed"
+        PartialFailure = $false
     }
 }
 
