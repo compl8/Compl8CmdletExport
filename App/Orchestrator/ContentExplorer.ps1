@@ -2593,6 +2593,34 @@ function Invoke-ContentExplorerExport {
         # aggregate data (one per location, or a WorkloadFallback if no locations).
         $ceOnGenerate = {
             param($CompletedTask, $CompletionData, $Context)
+
+            if ($CompletedTask.Phase -eq "Detail") {
+                # Preserve the original expected count, overwrite ExpectedCount with
+                # the actual exported record count. This matches single-terminal
+                # behavior (see Invoke-ContentExplorerResume / Invoke-ContentExplorerExport
+                # single-pass loop) and is what Get-RetryBucketTasks expects when
+                # reading the completed DetailTasks.csv back in.
+                if (-not $CompletedTask.OriginalExpectedCount -or ($CompletedTask.OriginalExpectedCount -as [int]) -eq 0) {
+                    $CompletedTask.OriginalExpectedCount = $CompletedTask.ExpectedCount
+                }
+                $actualCount = 0
+                if ($CompletionData -and $CompletionData.ContainsKey('RecordCount')) {
+                    $actualCount = $CompletionData.RecordCount -as [int]
+                    if ($null -eq $actualCount) { $actualCount = 0 }
+                }
+                $CompletedTask.ExpectedCount = $actualCount
+
+                # Populate the summary/aggregate-progress map so the multi-terminal
+                # summary (Get-ContentExplorerAggregateProgress at end of run) sees
+                # the same per-task counts that the single-terminal path tracks.
+                if ($Context.CompletedTaskCounts) {
+                    $locKey = if ($CompletedTask.Location) { $CompletedTask.Location } else { "" }
+                    $taskKey = "{0}|{1}|{2}|{3}" -f $CompletedTask.TagType, $CompletedTask.TagName, $CompletedTask.Workload, $locKey
+                    $Context.CompletedTaskCounts[$taskKey] = $actualCount
+                }
+                return @()
+            }
+
             # Only generate detail tasks for aggregate completions
             if ($CompletedTask.Phase -ne "Aggregate") { return @() }
 
@@ -2989,6 +3017,7 @@ function Invoke-ContentExplorerExport {
             ProcessedAggErrorKeys = @{}
             PhaseTransitioned     = $false
             DetailWorkloadFallbackWorkloads = @($largeAllSITDetailFallbackWorkloads)
+            CompletedTaskCounts   = $completedTaskCounts
         }
 
         $ceLoopResult = Invoke-DispatchLoop `
