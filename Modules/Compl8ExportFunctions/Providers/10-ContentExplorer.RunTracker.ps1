@@ -84,15 +84,14 @@ function Save-ContentExplorerRunTracker {
         $serializableTracker = ConvertTo-SerializableObject -InputObject $Tracker
         $json = $serializableTracker | ConvertTo-Json -Depth 20
 
-        # Atomic write: write to temp file then rename
+        # Atomic write: write to temp file then atomic-replace.
+        # The 3-arg File.Move (overwrite=true) is atomic on NTFS under .NET 5+,
+        # which PowerShell 7 uses. Closes the delete-before-move crash window
+        # in which a process death between Delete and Move would lose the
+        # previous good tracker.
         $tempPath = $TrackerPath + ".tmp." + [System.IO.Path]::GetRandomFileName()
         Set-Content -Path $tempPath -Value $json -Encoding UTF8 -ErrorAction Stop
-
-        # Rename (atomic on NTFS)
-        if (Test-Path $TrackerPath) {
-            [System.IO.File]::Delete($TrackerPath)
-        }
-        [System.IO.File]::Move($tempPath, $TrackerPath)
+        [System.IO.File]::Move($tempPath, $TrackerPath, $true)
     }
     catch {
         Write-ExportLog -Message ("Failed to save run tracker: " + $_.Exception.Message) -Level Warning

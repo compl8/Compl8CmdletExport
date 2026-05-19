@@ -86,19 +86,17 @@ function Save-ActivityExplorerRunTracker {
     # Update the save timestamp
     $Tracker['LastSaveTime'] = (Get-Date).ToString("o")
 
-    # Atomic write: temp file then rename
-    $tempPath = $TrackerPath + ".tmp"
+    # Atomic write: temp file then atomic-replace.
+    # Per-PID temp path prevents two workers from colliding on a shared .tmp
+    # file. 3-arg File.Move (overwrite=true) is atomic on NTFS under .NET 5+
+    # and closes the delete-before-move crash window.
+    $tempPath = "{0}.tmp.{1}" -f $TrackerPath, $PID
 
     try {
         $serializableTracker = ConvertTo-SerializableObject -InputObject $Tracker
         $json = $serializableTracker | ConvertTo-Json -Depth 10
         Set-Content -Path $tempPath -Value $json -Encoding UTF8 -ErrorAction Stop
-
-        # Rename (atomic on NTFS)
-        if (Test-Path $TrackerPath) {
-            Remove-Item -Path $TrackerPath -Force -ErrorAction Stop
-        }
-        Rename-Item -Path $tempPath -NewName (Split-Path $TrackerPath -Leaf) -Force -ErrorAction Stop
+        [System.IO.File]::Move($tempPath, $TrackerPath, $true)
     }
     catch {
         # Clean up temp file on failure

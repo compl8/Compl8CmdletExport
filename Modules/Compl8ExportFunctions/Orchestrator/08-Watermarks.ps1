@@ -77,8 +77,9 @@ function Write-Watermarks {
     $tmpPath = $path + ".tmp.$PID"
     try {
         $payload | ConvertTo-Json -Depth 6 | Set-Content -Path $tmpPath -Encoding UTF8
-        if (Test-Path $path) { [System.IO.File]::Delete($path) }
-        [System.IO.File]::Move($tmpPath, $path)
+        # 3-arg File.Move (overwrite=true) is atomic on NTFS under .NET 5+
+        # and closes the delete-before-move crash window.
+        [System.IO.File]::Move($tmpPath, $path, $true)
     }
     catch {
         Write-Warning ("Could not save watermarks: {0}" -f $_.Exception.Message)
