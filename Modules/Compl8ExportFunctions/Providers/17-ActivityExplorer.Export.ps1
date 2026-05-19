@@ -252,12 +252,17 @@ function Export-ActivityExplorerWithProgress {
                 Write-Verbose "Timestamp parsing failed for page $pageNumber : $($_.Exception.Message)"
             }
 
-            # Save page file immediately (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1)
+            # Save page file immediately (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1).
+            # Use a same-directory temp file + atomic Move so a partial write
+            # (disk full, AV lock, mid-write crash) never leaves a half-written
+            # final file. Only count the page after the rename succeeds.
             $useJsonl = $env:COMPL8_JSONL_OUTPUT -eq "1"
             $pageExt = if ($useJsonl) { "jsonl" } else { "json" }
             $pageFileName = "Page-{0:D3}.{1}" -f $pageNumber, $pageExt
             $pageFilePath = Join-Path $OutputDirectory $pageFileName
+            $pageTempPath = "{0}.tmp.{1}" -f $pageFilePath, $PID
 
+            $pageWriteSucceeded = $false
             try {
                 if ($useJsonl) {
                     $sb = [System.Text.StringBuilder]::new()
@@ -265,7 +270,7 @@ function Export-ActivityExplorerWithProgress {
                         $serRec = ConvertTo-SerializableObject -InputObject $rec
                         [void]$sb.AppendLine(($serRec | ConvertTo-Json -Depth 20 -Compress))
                     }
-                    [System.IO.File]::WriteAllText($pageFilePath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+                    [System.IO.File]::WriteAllText($pageTempPath, $sb.ToString(), [System.Text.Encoding]::UTF8)
                 }
                 else {
                     $pageData = @{
@@ -278,16 +283,39 @@ function Export-ActivityExplorerWithProgress {
                     }
                     $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
                     $pageJson = $serializablePage | ConvertTo-Json -Depth 20
-                    Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                    [System.IO.File]::WriteAllText($pageTempPath, $pageJson, [System.Text.Encoding]::UTF8)
                 }
+                [System.IO.File]::Move($pageTempPath, $pageFilePath, $true)
+                $pageWriteSucceeded = $true
             }
             catch {
-                $msg = "  Page {0}: Failed to save page file: {1}" -f $pageNumber, $_.Exception.Message
+                $writeErr = "Failed to save page file: {0}" -f $_.Exception.Message
+                $msg = "  Page {0}: {1}" -f $pageNumber, $writeErr
                 Write-ExportLog -Message $msg -Level Error
                 Write-ProgressEntry -Path $ProgressLogPath -Message $msg
+
+                if (Test-Path $pageTempPath) {
+                    try { Remove-Item -Path $pageTempPath -Force -ErrorAction Stop } catch { }
+                }
+
+                Add-PartialError -Tracker $Tracker -PageNumber $pageNumber -ErrorMessage $writeErr -ErrorType "PageWriteFailed"
+                $Tracker['PartialFailure'] = $true
+                $Tracker['Status'] = "PartialFailure"
+                Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
+
+                return @{
+                    TotalRecords   = $totalRecords
+                    PageCount      = $pageNumber - 1
+                    ResumedFrom    = $resumedFrom
+                    Status         = "PartialFailure"
+                    PartialFailure = $true
+                    PartialErrors  = $Tracker.PartialErrors
+                }
             }
 
-            $totalRecords += $recordCount
+            if ($pageWriteSucceeded) {
+                $totalRecords += $recordCount
+            }
         }
 
         # Update tracker

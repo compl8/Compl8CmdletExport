@@ -271,12 +271,17 @@ function Export-ContentExplorerWithProgress {
                     }
                 }
 
-                # Write per-page file (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1)
+                # Write per-page file (JSON array by default, JSONL when COMPL8_JSONL_OUTPUT=1).
+                # Use a same-directory temp file + atomic Move so a partial write
+                # (disk full, AV lock, mid-write crash) never leaves a half-written
+                # final file. Only count the page after the rename succeeds.
                 $useJsonl = $env:COMPL8_JSONL_OUTPUT -eq "1"
                 $pageExt = if ($useJsonl) { "jsonl" } else { "json" }
                 $pageFileName = "{0}-{1:D3}.{2}" -f $pageFilePrefix, $pageNumber, $pageExt
                 $pageFilePath = Join-Path $OutputDirectory $pageFileName
+                $pageTempPath = "{0}.tmp.{1}" -f $pageFilePath, $PID
 
+                $pageWriteSucceeded = $false
                 try {
                     if ($useJsonl) {
                         # JSONL: one record per line. Tag metadata is already on each
@@ -286,7 +291,7 @@ function Export-ContentExplorerWithProgress {
                             $serRec = ConvertTo-SerializableObject -InputObject $rec
                             [void]$sb.AppendLine(($serRec | ConvertTo-Json -Depth 20 -Compress))
                         }
-                        [System.IO.File]::WriteAllText($pageFilePath, $sb.ToString(), [System.Text.Encoding]::UTF8)
+                        [System.IO.File]::WriteAllText($pageTempPath, $sb.ToString(), [System.Text.Encoding]::UTF8)
                     }
                     else {
                         $pageData = @{
@@ -300,11 +305,36 @@ function Export-ContentExplorerWithProgress {
                         }
                         $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
                         $pageJson = $serializablePage | ConvertTo-Json -Depth 20
-                        Set-Content -Path $pageFilePath -Value $pageJson -Encoding UTF8
+                        [System.IO.File]::WriteAllText($pageTempPath, $pageJson, [System.Text.Encoding]::UTF8)
                     }
+                    [System.IO.File]::Move($pageTempPath, $pageFilePath, $true)
+                    $pageWriteSucceeded = $true
                 }
                 catch {
-                    Write-ExportLog -Message ("      Page {0}: Failed to save page file: {1}" -f $pageNumber, $_.Exception.Message) -Level Error
+                    $writeErr = "Failed to save page file: {0}" -f $_.Exception.Message
+                    Write-ExportLog -Message ("      Page {0}: {1}" -f $pageNumber, $writeErr) -Level Error
+                    $logMsg = "[{0}] Page {1} WRITE-FAIL: {2}" -f (Get-Date).ToString("HH:mm:ss"), $pageNumber, $writeErr
+                    Write-ProgressEntry -LogPath $ProgressLogPath -Message $logMsg
+
+                    # Clean up any partial temp file
+                    if (Test-Path $pageTempPath) {
+                        try { Remove-Item -Path $pageTempPath -Force -ErrorAction Stop } catch { }
+                    }
+
+                    $Task.PartialErrors += @{
+                        Page         = $pageNumber
+                        ErrorMessage = $writeErr
+                        IsTransient  = $false
+                        Timestamp    = (Get-Date).ToString("o")
+                        PageCookie   = $pageCookie
+                        Location     = if ($SiteUrl) { $SiteUrl } elseif ($UserPrincipalName) { $UserPrincipalName } else { "" }
+                    }
+                    $Task.Status = "PartialFailure"
+                }
+
+                if (-not $pageWriteSucceeded) {
+                    # Do not count this page. Stop the export so callers see partial state.
+                    break
                 }
 
                 $Task.ExportedCount += $recordsInPage
