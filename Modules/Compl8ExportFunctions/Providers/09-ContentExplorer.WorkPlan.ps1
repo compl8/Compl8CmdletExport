@@ -91,7 +91,14 @@ function New-ContentExplorerWorkPlan {
 
                     # Check for more pages
                     if ($metadata.MorePagesAvailable -eq $true -or $metadata.MorePagesAvailable -eq "True") {
-                        $pageCookie = $metadata.PageCookie
+                        $newAggCookie = $metadata.PageCookie
+                        if ([string]::IsNullOrEmpty($newAggCookie)) {
+                            throw "MorePagesAvailable=true but PageCookie is null/empty - cannot advance aggregate cursor"
+                        }
+                        if ($newAggCookie -eq $pageCookie) {
+                            throw "API returned same PageCookie as previous aggregate page - cursor stuck"
+                        }
+                        $pageCookie = $newAggCookie
                     }
                     else {
                         break

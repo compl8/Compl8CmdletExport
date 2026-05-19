@@ -358,7 +358,44 @@ function Export-ContentExplorerWithProgress {
                 }
             }
 
-            $previousCookie = $pageCookie
+            # Guard: API claims more pages but cookie cannot advance the cursor.
+            # Without this, a null cookie would restart export from page 1 (duplicating
+            # everything via the `if ($pageCookie)` test at exportParams build), and an
+            # unchanged cookie would infinite-loop on the same response.
+            if ([string]::IsNullOrEmpty($newCookie)) {
+                $cookieErr = "MorePagesAvailable=true but PageCookie is null/empty - cannot advance cursor"
+                Write-ExportLog -Message ("      Page " + $pageNumber + ": " + $cookieErr) -Level Error
+                $logMsg = "[{0}] Page {1} STUCK: null PageCookie" -f (Get-Date).ToString("HH:mm:ss"), $pageNumber
+                Write-ProgressEntry -LogPath $ProgressLogPath -Message $logMsg
+                $Task.PartialErrors += @{
+                    Page         = $pageNumber
+                    ErrorMessage = $cookieErr
+                    IsTransient  = $false
+                    Timestamp    = (Get-Date).ToString("o")
+                    PageCookie   = $pageCookie
+                    Location     = if ($SiteUrl) { $SiteUrl } elseif ($UserPrincipalName) { $UserPrincipalName } else { "" }
+                }
+                $Task.Status = "PartialFailure"
+                break
+            }
+
+            if ($newCookie -eq $pageCookie) {
+                $cookieErr = "API returned same PageCookie as previous page - cursor not advancing"
+                Write-ExportLog -Message ("      Page " + $pageNumber + ": " + $cookieErr) -Level Error
+                $logMsg = "[{0}] Page {1} STUCK: same PageCookie" -f (Get-Date).ToString("HH:mm:ss"), $pageNumber
+                Write-ProgressEntry -LogPath $ProgressLogPath -Message $logMsg
+                $Task.PartialErrors += @{
+                    Page         = $pageNumber
+                    ErrorMessage = $cookieErr
+                    IsTransient  = $false
+                    Timestamp    = (Get-Date).ToString("o")
+                    PageCookie   = $pageCookie
+                    Location     = if ($SiteUrl) { $SiteUrl } elseif ($UserPrincipalName) { $UserPrincipalName } else { "" }
+                }
+                $Task.Status = "PartialFailure"
+                break
+            }
+
             $pageCookie = $newCookie
 
         } while ($true)
