@@ -319,8 +319,11 @@
                     [void]$csvSb.AppendLine($csvLine)
                 }
 
-                # Write per-worker aggregate CSV
-                [System.IO.File]::WriteAllText($aggCsvPath, $csvSb.ToString(), [System.Text.Encoding]::UTF8)
+                # Write per-worker aggregate CSV atomically (temp+move) so the
+                # orchestrator never reads a partial-but-parseable file mid-write.
+                $aggTempPath = "{0}.tmp.{1}" -f $aggCsvPath, $PID
+                [System.IO.File]::WriteAllText($aggTempPath, $csvSb.ToString(), [System.Text.Encoding]::UTF8)
+                [System.IO.File]::Move($aggTempPath, $aggCsvPath, $true)
 
                 $msg = "    -> {0} files ({1} matches) in {2} locations" -f $fileCount, $matchCount, $allAggregates.Count
                 Write-ExportLog -Message $msg -Level Success
@@ -340,14 +343,16 @@
                     Write-ExportLog -Message ("    AGGREGATE FAILED: {0}" -f $aggError) -Level Error
                     Write-ProgressEntry -Path $progressLogPath -Message ("Aggregate FAILED: {0} -> {1}" -f $taskKey, $aggError)
 
-                    # Write per-worker aggregate CSV with error row
+                    # Write per-worker aggregate CSV with error row (atomic temp+move)
                     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
                     $escapedError = $aggError -replace '"', '""'
                     $csvSb = [System.Text.StringBuilder]::new()
                     [void]$csvSb.AppendLine("Timestamp,TagType,TagName,Workload,Location,Count,Error")
                     $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $timestamp, $taskTagType, $taskTagName, $taskWorkload, $escapedError
                     [void]$csvSb.AppendLine($errorCsvLine)
-                    [System.IO.File]::WriteAllText($aggCsvPath, $csvSb.ToString(), [System.Text.Encoding]::UTF8)
+                    $aggErrorTempPath = "{0}.tmp.{1}" -f $aggCsvPath, $PID
+                    [System.IO.File]::WriteAllText($aggErrorTempPath, $csvSb.ToString(), [System.Text.Encoding]::UTF8)
+                    [System.IO.File]::Move($aggErrorTempPath, $aggCsvPath, $true)
 
                     # Write error file as JSON (orchestrator parses with ConvertFrom-Json)
                     $errorPayload = @{
@@ -2402,8 +2407,21 @@ function Invoke-ContentExplorerExport {
             if (Test-Path $aggDataDir) {
                 $aggOutputFiles = @(Get-ChildItem -Path $aggDataDir -Filter "agg-*.csv" -File -ErrorAction SilentlyContinue)
                 foreach ($aggFile in $aggOutputFiles) {
+                    # Claim the worker file before reading: rename .csv -> .processing.
+                    # If we later crash or Add-Content throws, the next scan won't see
+                    # the same file as .csv and re-import it, so central aggregate CSV
+                    # rows can't be duplicated. On success we rename .processing -> .done.
+                    $processingPath = $aggFile.FullName -replace '\.csv$', '.processing'
                     try {
-                        $aggFileContent = @(Import-Csv -Path $aggFile.FullName -Encoding UTF8 -ErrorAction Stop)
+                        [System.IO.File]::Move($aggFile.FullName, $processingPath, $true)
+                    }
+                    catch {
+                        Write-ExportLog -Message ("  Warning: Could not claim aggregate file {0}: {1}" -f $aggFile.Name, $_.Exception.Message) -Level Warning -LogOnly
+                        continue
+                    }
+
+                    try {
+                        $aggFileContent = @(Import-Csv -Path $processingPath -Encoding UTF8 -ErrorAction Stop)
                         if ($aggFileContent.Count -gt 0) {
                             $fileTagType = $aggFileContent[0].TagType
                             $fileTagName = $aggFileContent[0].TagName
@@ -2459,10 +2477,18 @@ function Invoke-ContentExplorerExport {
                                 }
                             }
                         }
-                        Rename-Item -Path $aggFile.FullName -NewName ($aggFile.Name -replace '\.csv$', '.done') -Force -ErrorAction SilentlyContinue
+                        # Success: rename .processing -> .done. Leave .processing in
+                        # place on any exception so the operator can diagnose.
+                        $donePath = $aggFile.FullName -replace '\.csv$', '.done'
+                        try {
+                            [System.IO.File]::Move($processingPath, $donePath, $true)
+                        }
+                        catch {
+                            Write-ExportLog -Message ("  Warning: Could not finalize aggregate file {0} -> .done: {1}" -f $aggFile.Name, $_.Exception.Message) -Level Warning -LogOnly
+                        }
                     }
                     catch {
-                        Write-ExportLog -Message ("  Warning: Could not read aggregate output {0}: {1}" -f $aggFile.Name, $_.Exception.Message) -Level Warning -LogOnly
+                        Write-ExportLog -Message ("  Warning: Could not process aggregate output {0} (left at .processing for diagnosis): {1}" -f $aggFile.Name, $_.Exception.Message) -Level Warning -LogOnly
                     }
                 }
 
