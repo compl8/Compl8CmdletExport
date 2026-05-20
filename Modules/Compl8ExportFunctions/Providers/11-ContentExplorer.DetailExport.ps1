@@ -431,6 +431,15 @@ function Export-ContentExplorerWithProgress {
         } while ($true)
     }
     catch {
+        # Auth errors must propagate so the worker can attempt silent reconnect
+        # (cert auth) or exit and let the orchestrator reclaim the task. Swallowing
+        # them as Status="Failed" would permanently error the task on a transient
+        # token expiry.
+        $catchErrorInfo = Get-HttpErrorExplanation -ErrorMessage $_.Exception.Message -ErrorRecord $_
+        if ($catchErrorInfo.Category -eq "AuthError") {
+            Write-ExportLog -Message ("      AUTH ERROR during export - propagating to worker: " + $_.Exception.Message) -Level Error
+            throw
+        }
         Write-ExportLog -Message ("      Export exception: " + $_.Exception.Message) -Level Error
         $Task.Status = "Failed"
     }

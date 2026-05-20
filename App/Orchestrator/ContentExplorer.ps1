@@ -549,8 +549,23 @@
             catch {
                 $detailError = $_.Exception.Message
                 $isCmdletNotFound = $_.Exception -is [System.Management.Automation.CommandNotFoundException]
+                $detailErrInfo = Get-HttpErrorExplanation -ErrorMessage $detailError -ErrorRecord $_
+                $isAuthError = ($detailErrInfo.Category -eq "AuthError")
 
-                if ($isCmdletNotFound) {
+                if ($isAuthError) {
+                    # Auth/token expiry: do NOT write an error signal (so the task is
+                    # reclaimed as Pending). Attempt a silent reconnect; if it fails
+                    # (interactive auth / no params), exit so the orchestrator reclaims
+                    # this worker's task.
+                    Write-ExportLog -Message ("    DETAIL AUTH EXPIRED: {0} - attempting reconnect, task will be reassigned" -f $taskKey) -Level Warning
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Auth expired: {0} -> task returned to queue" -f $taskKey)
+                    if (-not (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {
+                        Write-ExportLog -Message "Worker exiting: auth recovery failed (task returned to queue)" -Level Error
+                        Complete-WorkerTask -WorkerDir $workerDir
+                        break
+                    }
+                }
+                elseif ($isCmdletNotFound) {
                     # Bad session: don't write error output so orchestrator reclaims this task as Pending
                     $cmdletNotFoundCount++
                     Write-ExportLog -Message ("    DETAIL SKIPPED (bad session #{0}): {1} - task will be reassigned" -f $cmdletNotFoundCount, $taskKey) -Level Warning

@@ -144,5 +144,58 @@ function Invoke-WithAuthRecovery {
     }
 }
 
+function Invoke-WorkerReconnect {
+    <#
+    .SYNOPSIS
+        Attempts to silently re-authenticate from a spawned worker after an auth
+        or lost-session error. Workers cannot prompt interactively.
+
+    .DESCRIPTION
+        Only certificate auth can be recovered silently. If AuthParams describe a
+        certificate connection, the worker disconnects and reconnects. For
+        interactive auth (or missing params), recovery is impossible from a worker
+        and the function returns $false so the caller can exit and let the
+        orchestrator reclaim the in-flight task.
+
+    .PARAMETER AuthParams
+        Hashtable of authentication parameters (same format as Connect-Compl8Compliance).
+
+    .OUTPUTS
+        [bool] $true if reconnected, $false if the worker should exit.
+    #>
+    [CmdletBinding()]
+    param(
+        [hashtable]$AuthParams
+    )
+
+    if (-not $AuthParams -or $AuthParams.Count -eq 0) {
+        Write-ExportLog -Message "    Worker has no stored auth params - cannot re-authenticate" -Level Error
+        return $false
+    }
+
+    $isCertAuth = $AuthParams.ContainsKey('AppId') -and
+                  ($AuthParams.ContainsKey('CertificateThumbprint') -or $AuthParams.ContainsKey('Certificate'))
+
+    if (-not $isCertAuth) {
+        Write-ExportLog -Message "    Worker uses interactive auth - cannot re-authenticate silently" -Level Error
+        return $false
+    }
+
+    try {
+        Disconnect-Compl8Compliance -LogOnly
+        $reconnected = Connect-Compl8Compliance @AuthParams -LogOnly
+        if ($reconnected) {
+            Write-ExportLog -Message "    Worker re-authentication successful" -Level Success
+            return $true
+        }
+        Write-ExportLog -Message "    Worker re-authentication returned false" -Level Error
+        return $false
+    }
+    catch {
+        Write-ExportLog -Message ("    Worker re-authentication failed: {0}" -f $_.Exception.Message) -Level Error
+        return $false
+    }
+}
+
 #endregion
 

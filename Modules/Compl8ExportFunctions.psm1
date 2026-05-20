@@ -116,6 +116,7 @@ Export-ModuleMember -Function @(
 
     # Auth Recovery
     'Invoke-WithAuthRecovery',
+    'Invoke-WorkerReconnect',
 
     # Utility
     'Format-TimeSpan',

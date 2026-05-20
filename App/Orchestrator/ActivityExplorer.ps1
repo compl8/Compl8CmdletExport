@@ -174,10 +174,34 @@ function Invoke-ActivityExplorerWorker {
         }
         catch {
             $taskElapsed = (Get-Date) - $taskStart
-            Write-ExportLog -Message ("  Day {0} FAILED: {1}" -f $taskDay, $_.Exception.Message) -Level Error
-            Write-ProgressEntry -Path $progressLogPath -Message ("Day {0} FAILED: {1}" -f $taskDay, $_.Exception.Message)
+            $aeErrMsg = $_.Exception.Message
+            $errorInfo = Get-HttpErrorExplanation -ErrorMessage $aeErrMsg -ErrorRecord $_
+            $isAuthError = ($errorInfo.Category -eq "AuthError") -or ($_.Exception -is [System.Management.Automation.CommandNotFoundException])
 
-            # Write error signal
+            if ($isAuthError) {
+                # Auth/token expiry: try a silent reconnect BEFORE signalling so we
+                # don't permanently error a day that was only interrupted by an
+                # expired token. On success, do NOT write an error signal - leave
+                # the task for the orchestrator to reclaim. On failure, exit the
+                # worker (task is reclaimed when the worker process dies).
+                Write-ExportLog -Message ("  Day {0}: AUTH/CONNECTION error - attempting recovery before signalling" -f $taskDay) -Level Warning
+                Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth error - attempting recovery" -f $taskDay)
+                if (Invoke-WorkerReconnect -AuthParams $script:AuthParams) {
+                    Write-ExportLog -Message ("  Day {0}: recovery successful - task returned to queue" -f $taskDay) -Level Success
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth recovered, task returned to queue" -f $taskDay)
+                    Complete-WorkerTask -WorkerDir $workerDir
+                    $lastWorkerActivity = Get-Date
+                    continue
+                }
+                Write-ExportLog -Message ("  Day {0}: recovery failed - worker exiting (task returned to queue)" -f $taskDay) -Level Error
+                Complete-WorkerTask -WorkerDir $workerDir
+                break
+            }
+
+            # Non-auth error: write error signal so the orchestrator records the failure.
+            Write-ExportLog -Message ("  Day {0} FAILED: {1}" -f $taskDay, $aeErrMsg) -Level Error
+            Write-ProgressEntry -Path $progressLogPath -Message ("Day {0} FAILED: {1}" -f $taskDay, $aeErrMsg)
+
             $completionsDir = Get-CompletionsDir $exportDir
             if (-not (Test-Path $completionsDir)) {
                 New-Item -ItemType Directory -Force -Path $completionsDir | Out-Null
@@ -185,47 +209,16 @@ function Invoke-ActivityExplorerWorker {
             $errorFile = Join-Path $completionsDir ("error-ae-{0}-{1}.txt" -f $taskDay, $PID)
             $errorPayload = @{
                 Day          = $taskDay
-                ErrorMessage = $_.Exception.Message
+                ErrorMessage = $aeErrMsg
                 ErrorType    = $_.Exception.GetType().Name
             }
             (ConvertTo-SignedEnvelopeJson -Payload $errorPayload -SigningKey $signalSigningKey) | Set-Content -Path $errorFile -Encoding UTF8
 
-            # Error logging
             if ($script:ErrorLogPath) {
                 Write-ExportErrorLog -ErrorLogPath $script:ErrorLogPath -Context "AE Worker Day Export" -TaskKey $taskDay -ErrorRecord $_ -AdditionalData @{ Day = $taskDay }
             }
             if ($script:WorkerErrorLogPath) {
                 Write-ExportErrorLog -ErrorLogPath $script:WorkerErrorLogPath -Context "AE Worker Day Export" -TaskKey $taskDay -ErrorRecord $_ -AdditionalData @{ Day = $taskDay }
-            }
-
-            # Auth errors: attempt reconnect
-            $errorInfo = Get-HttpErrorExplanation -ErrorMessage $_.Exception.Message -ErrorRecord $_
-            if ($errorInfo.Category -eq "AuthError" -or $_.Exception -is [System.Management.Automation.CommandNotFoundException]) {
-                Write-ExportLog -Message "    AUTH/CONNECTION error - attempting recovery..." -Level Warning
-                try {
-                    Disconnect-Compl8Compliance
-                    if ($script:AuthParams -and $script:AuthParams.Count -gt 0) {
-                        $reAuthResult = Connect-Compl8Compliance @script:AuthParams
-                        if ($reAuthResult) {
-                            Write-ExportLog -Message "    Recovery successful" -Level Success
-                        }
-                        else {
-                            Write-ExportLog -Message "    Recovery failed - worker exiting" -Level Error
-                            Complete-WorkerTask -WorkerDir $workerDir
-                            break
-                        }
-                    }
-                    else {
-                        Write-ExportLog -Message "    No auth params - worker exiting" -Level Error
-                        Complete-WorkerTask -WorkerDir $workerDir
-                        break
-                    }
-                }
-                catch {
-                    Write-ExportLog -Message ("    Recovery exception: {0} - worker exiting" -f $_.Exception.Message) -Level Error
-                    Complete-WorkerTask -WorkerDir $workerDir
-                    break
-                }
             }
         }
 
