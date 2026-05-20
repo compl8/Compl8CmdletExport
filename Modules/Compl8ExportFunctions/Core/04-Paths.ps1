@@ -305,16 +305,30 @@ function Write-AEManifest {
     $totalPages = 0
 
     foreach ($dayDir in $dayDirs) {
-        $pageFiles = @(Get-ChildItem -Path $dayDir.FullName -Filter "Page-*.json" -ErrorAction SilentlyContinue)
+        # Match both Page-*.json and Page-*.jsonl. Use a regex over the names rather
+        # than -Filter, whose legacy 8.3 matching makes "Page-*.json" unreliable for
+        # the .jsonl extension.
+        $pageFiles = @(Get-ChildItem -Path $dayDir.FullName -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match '^Page-\d+\.(json|jsonl)$' })
         $dayRecords = [long]0
 
         foreach ($pf in $pageFiles) {
             try {
-                # Read only the first few lines to extract RecordCount without parsing entire file
-                $head = Get-Content -Path $pf.FullName -TotalCount 10 -ErrorAction Stop
-                $match = ($head -join "`n") | Select-String -Pattern '"RecordCount"\s*:\s*(\d+)'
-                if ($match) {
-                    $dayRecords += ($match.Matches[0].Groups[1].Value -as [long])
+                if ($pf.Extension -eq '.jsonl') {
+                    # JSONL: one record per non-empty line.
+                    $lineCount = [long]0
+                    foreach ($line in [System.IO.File]::ReadLines($pf.FullName)) {
+                        if (-not [string]::IsNullOrWhiteSpace($line)) { $lineCount++ }
+                    }
+                    $dayRecords += $lineCount
+                }
+                else {
+                    # Read only the first few lines to extract RecordCount without parsing entire file
+                    $head = Get-Content -Path $pf.FullName -TotalCount 10 -ErrorAction Stop
+                    $match = ($head -join "`n") | Select-String -Pattern '"RecordCount"\s*:\s*(\d+)'
+                    if ($match) {
+                        $dayRecords += ($match.Matches[0].Groups[1].Value -as [long])
+                    }
                 }
             }
             catch {

@@ -605,9 +605,12 @@ function Merge-ActivityExplorerPages {
         $OutputPath = Join-Path (Get-AEDataDir $ExportDirectory) "ActivityExplorer-Combined.json"
     }
 
-    # Find all page files in Data/ActivityExplorer/ day directories
+    # Find all page files in Data/ActivityExplorer/ day directories. Match both
+    # Page-*.json and Page-*.jsonl via a name regex (the legacy -Filter 8.3 match
+    # is unreliable for the .jsonl extension).
     $aeDataDir = Get-AEDataDir $ExportDirectory
-    $pageFiles = @(Get-ChildItem -Path $aeDataDir -Recurse -Filter "Page-*.json" -ErrorAction SilentlyContinue |
+    $pageFiles = @(Get-ChildItem -Path $aeDataDir -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^Page-\d+\.(json|jsonl)$' } |
         Sort-Object FullName)
 
     if ($pageFiles.Count -eq 0) {
@@ -630,13 +633,12 @@ function Merge-ActivityExplorerPages {
 
     foreach ($pageFile in $pageFiles) {
         try {
-            $pageData = Get-Content -Raw -Path $pageFile.FullName -ErrorAction Stop | ConvertFrom-Json
-            if ($null -eq $pageData) {
-                Write-Warning ("Page file {0} parsed as null, skipping" -f $pageFile.Name)
-                continue
-            }
-            if ($pageData.Records) {
-                foreach ($record in $pageData.Records) {
+            if ($pageFile.Extension -eq '.jsonl') {
+                # JSONL: one record per non-empty line, no wrapper object.
+                foreach ($line in [System.IO.File]::ReadLines($pageFile.FullName)) {
+                    if ([string]::IsNullOrWhiteSpace($line)) { continue }
+                    $record = $line | ConvertFrom-Json
+                    if ($null -eq $record) { continue }
                     $totalRecords++
                     $identity = $record.RecordIdentity
                     if ($identity -and $seenIdentities.ContainsKey($identity)) {
@@ -646,6 +648,26 @@ function Merge-ActivityExplorerPages {
                         $seenIdentities[$identity] = $true
                     }
                     [void]$allRecords.Add($record)
+                }
+            }
+            else {
+                $pageData = Get-Content -Raw -Path $pageFile.FullName -ErrorAction Stop | ConvertFrom-Json
+                if ($null -eq $pageData) {
+                    Write-Warning ("Page file {0} parsed as null, skipping" -f $pageFile.Name)
+                    continue
+                }
+                if ($pageData.Records) {
+                    foreach ($record in $pageData.Records) {
+                        $totalRecords++
+                        $identity = $record.RecordIdentity
+                        if ($identity -and $seenIdentities.ContainsKey($identity)) {
+                            continue  # Duplicate
+                        }
+                        if ($identity) {
+                            $seenIdentities[$identity] = $true
+                        }
+                        [void]$allRecords.Add($record)
+                    }
                 }
             }
             $pagesProcessed++
