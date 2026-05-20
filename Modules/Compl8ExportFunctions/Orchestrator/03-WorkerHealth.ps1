@@ -7,15 +7,24 @@ function Test-WorkerAlive {
     .DESCRIPTION
         First checks if the OS process exists. If WorkerDir is provided, uses a
         two-tier approach:
-        1. If currenttask file exists, the worker is actively processing — always alive
-           (API calls can block for 15+ minutes per page, during which nothing updates)
-        2. Otherwise, checks staleness of Progress.log and output files.
-           A stale worker with no active task means the script loop has exited
+        1. If currenttask file exists, the worker is processing a task. A single
+           API page can block 15+ minutes, so the worker is trusted until a
+           generous lease (LeaseMinutes) elapses with NO sign of life. The most
+           recent of (currenttask mtime, Progress.log mtime) is the heartbeat:
+           Progress.log is written per page, and currenttask mtime marks task
+           pickup. If neither has advanced within the lease, the worker is hung
+           (e.g. a network partition with no socket timeout) and is declared dead
+           so the orchestrator can reclaim the task.
+        2. With no active task, a stale Progress.log means the script loop exited
            (e.g. crashed between iterations, or pwsh -NoExit keeping process alive).
+    .PARAMETER LeaseMinutes
+        Maximum minutes a worker may hold an active task with no progress before
+        it is declared hung. Default 30 (double the ~15-min worst-case page).
     #>
     param(
         [Parameter(Mandatory)][int]$WorkerPID,
-        [string]$WorkerDir
+        [string]$WorkerDir,
+        [int]$LeaseMinutes = 30
     )
     try {
         $proc = Get-Process -Id $WorkerPID -ErrorAction SilentlyContinue
@@ -25,30 +34,40 @@ function Test-WorkerAlive {
 
     # Process is alive — if WorkerDir provided, check for active task or staleness
     if ($WorkerDir) {
-        # If currenttask exists, worker is actively processing a task.
-        # API calls (Export-ContentExplorerData, Export-ActivityExplorerData) can block
-        # for 15+ minutes per page. No progress updates happen during this time.
-        # Trust the process — it's working.
         # Use try/catch instead of Test-Path to avoid TOCTOU race.
         $currentTaskPath = Join-Path $WorkerDir "currenttask"
+        $progPath = Join-Path $WorkerDir "Progress.log"
+        $hasCurrentTask = $false
+        $lastSignOfLife = [datetime]::MinValue
+
         try {
-            $null = [System.IO.File]::GetAttributes($currentTaskPath)
-            return $true  # currenttask exists — worker is busy
+            $ctTime = [System.IO.File]::GetLastWriteTime($currentTaskPath)
+            $hasCurrentTask = $true
+            if ($ctTime.Year -gt 1601 -and $ctTime -gt $lastSignOfLife) { $lastSignOfLife = $ctTime }
         }
         catch [System.IO.FileNotFoundException], [System.IO.DirectoryNotFoundException] {
             # No active task — fall through to staleness checks
         }
 
-        # No active task — check staleness of Progress.log
-        $progPath = Join-Path $WorkerDir "Progress.log"
-        $lastWrite = [datetime]::MinValue
+        # Progress.log mtime acts as the per-page heartbeat for both branches.
         try {
             $progTime = [System.IO.File]::GetLastWriteTime($progPath)
-            if ($progTime.Year -gt 1601 -and $progTime -gt $lastWrite) { $lastWrite = $progTime }
+            if ($progTime.Year -gt 1601 -and $progTime -gt $lastSignOfLife) { $lastSignOfLife = $progTime }
         }
         catch { <# Progress.log inaccessible — skip #> }
-        if ($lastWrite -ne [datetime]::MinValue) {
-            $staleness = (Get-Date) - $lastWrite
+
+        if ($hasCurrentTask) {
+            # Active task: trust the worker until the lease expires with no progress.
+            if ($lastSignOfLife -ne [datetime]::MinValue) {
+                $idle = (Get-Date) - $lastSignOfLife
+                if ($idle.TotalMinutes -gt $LeaseMinutes) { return $false }
+            }
+            return $true
+        }
+
+        # No active task — a stale Progress.log means the loop has exited.
+        if ($lastSignOfLife -ne [datetime]::MinValue) {
+            $staleness = (Get-Date) - $lastSignOfLife
             if ($staleness.TotalMinutes -gt 15) { return $false }
         }
         # No files yet = worker just started, treat as alive
