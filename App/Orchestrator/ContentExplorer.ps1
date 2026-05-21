@@ -2917,7 +2917,11 @@ function Invoke-ContentExplorerExport {
                     try {
                         Disconnect-Compl8Compliance -LogOnly
                         if ($Context.AuthParams -and $Context.AuthParams.Count -gt 0) {
-                            Connect-Compl8Compliance @($Context.AuthParams) -LogOnly
+                            # Splat the hashtable by named keys. @($Context.AuthParams)
+                            # wraps it in a one-element array and splats positionally,
+                            # so cert-auth params were effectively dropped.
+                            $keepaliveAuthParams = $Context.AuthParams
+                            Connect-Compl8Compliance @keepaliveAuthParams -LogOnly
                             $Context.LastKeepalive = Get-Date
                         }
                     } catch {
