@@ -323,11 +323,25 @@ function Write-AEManifest {
                     $dayRecords += $lineCount
                 }
                 else {
-                    # Read only the first few lines to extract RecordCount without parsing entire file
+                    # Fast path: RecordCount is written before Records (ordered page
+                    # object), so a short head scan finds it without parsing the file.
                     $head = Get-Content -Path $pf.FullName -TotalCount 10 -ErrorAction Stop
                     $match = ($head -join "`n") | Select-String -Pattern '"RecordCount"\s*:\s*(\d+)'
                     if ($match) {
                         $dayRecords += ($match.Matches[0].Groups[1].Value -as [long])
+                    }
+                    else {
+                        # Fallback for older/unordered pages where RecordCount may
+                        # appear after a large Records array (or be absent): full parse.
+                        $parsed = Get-Content -Raw -Path $pf.FullName -ErrorAction Stop | ConvertFrom-Json
+                        if ($null -ne $parsed) {
+                            if ($null -ne $parsed.RecordCount) {
+                                $dayRecords += ($parsed.RecordCount -as [long])
+                            }
+                            elseif ($parsed.Records) {
+                                $dayRecords += (@($parsed.Records).Count -as [long])
+                            }
+                        }
                     }
                 }
             }

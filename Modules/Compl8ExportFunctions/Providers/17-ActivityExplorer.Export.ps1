@@ -273,12 +273,16 @@ function Export-ActivityExplorerWithProgress {
                     [System.IO.File]::WriteAllText($pageTempPath, $sb.ToString(), [System.Text.Encoding]::UTF8)
                 }
                 else {
-                    $pageData = @{
+                    # Ordered so RecordCount serializes before the (large) Records
+                    # array - the manifest reads it from the file head. A plain
+                    # hashtable has no key order, so Records could precede
+                    # RecordCount and push it past the head window.
+                    $pageData = [ordered]@{
                         PageNumber      = $pageNumber
                         ExportTimestamp = (Get-Date).ToString("o")
-                        RecordTimeRange = $recordTimeRange
                         RecordCount     = $recordCount
                         WaterMark       = $result.WaterMark
+                        RecordTimeRange = $recordTimeRange
                         Records         = $pageRecords
                     }
                     $serializablePage = ConvertTo-SerializableObject -InputObject $pageData
