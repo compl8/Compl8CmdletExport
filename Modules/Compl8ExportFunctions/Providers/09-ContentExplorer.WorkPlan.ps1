@@ -143,7 +143,7 @@ function New-ContentExplorerWorkPlan {
                         if ($locationName -match '[,"]') {
                             $locationName = '"' + $locationName + '"'
                         }
-                        $line = $timestamp + "," + $TagType + "," + $tagName + "," + $workload + "," + $locationName + "," + $agg.Count
+                        $line = $timestamp + "," + $TagType + "," + (ConvertTo-CsvField $tagName) + "," + $workload + "," + $locationName + "," + $agg.Count
                         [void]$csvLines.Add($line)
                     }
 
@@ -160,7 +160,7 @@ function New-ContentExplorerWorkPlan {
                 else {
                     # Write error row
                     $escapedError = $aggError -replace '"', '""'
-                    $errorLine = $timestamp + "," + $TagType + "," + $tagName + "," + $workload + ',ERROR,0,"' + $escapedError + '"'
+                    $errorLine = $timestamp + "," + $TagType + "," + (ConvertTo-CsvField $tagName) + "," + $workload + ',ERROR,0,"' + $escapedError + '"'
                     try {
                         [System.IO.File]::AppendAllText($AggregateCsvPath, $errorLine + [Environment]::NewLine, [System.Text.Encoding]::UTF8)
                     }

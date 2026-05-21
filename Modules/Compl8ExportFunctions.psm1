@@ -75,6 +75,7 @@ foreach ($section in $sectionFiles) {
 Export-ModuleMember -Function @(
     # Export Directory Path Helpers
     'ConvertTo-SafeDirectoryName',
+    'ConvertTo-CsvField',
     'Get-DeterministicNameHash',
     'Get-CoordinationDir',
     'Get-CompletionsDir',

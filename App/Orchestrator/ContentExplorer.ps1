@@ -284,7 +284,7 @@
                     $matchCount += $agg.Count
                     $locationName = $agg.Name -replace '"', '""'
                     if ($locationName -match '[,"]') { $locationName = ('"' + $locationName + '"') }
-                    $csvLine = "{0},{1},{2},{3},{4},{5}," -f $timestamp, $taskTagType, $taskTagName, $taskWorkload, $locationName, $agg.Count
+                    $csvLine = "{0},{1},{2},{3},{4},{5}," -f $timestamp, $taskTagType, (ConvertTo-CsvField $taskTagName), $taskWorkload, $locationName, $agg.Count
                     [void]$csvSb.AppendLine($csvLine)
                 }
 
@@ -310,12 +310,12 @@
                 $totalCount = $fileCount
 
                 # Write _FILECOUNT row so planning phase can use file-level counts
-                $csvLine = "{0},{1},{2},{3},_FILECOUNT,{4}," -f $timestamp, $taskTagType, $taskTagName, $taskWorkload, $fileCount
+                $csvLine = "{0},{1},{2},{3},_FILECOUNT,{4}," -f $timestamp, $taskTagType, (ConvertTo-CsvField $taskTagName), $taskWorkload, $fileCount
                 [void]$csvSb.AppendLine($csvLine)
 
                 # Write marker row for zero-result tasks so orchestrator can identify and complete them
                 if ($allAggregates.Count -eq 0) {
-                    $csvLine = "{0},{1},{2},{3},NONE,0," -f $timestamp, $taskTagType, $taskTagName, $taskWorkload
+                    $csvLine = "{0},{1},{2},{3},NONE,0," -f $timestamp, $taskTagType, (ConvertTo-CsvField $taskTagName), $taskWorkload
                     [void]$csvSb.AppendLine($csvLine)
                 }
 
@@ -348,7 +348,7 @@
                     $escapedError = $aggError -replace '"', '""'
                     $csvSb = [System.Text.StringBuilder]::new()
                     [void]$csvSb.AppendLine("Timestamp,TagType,TagName,Workload,Location,Count,Error")
-                    $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $timestamp, $taskTagType, $taskTagName, $taskWorkload, $escapedError
+                    $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $timestamp, $taskTagType, (ConvertTo-CsvField $taskTagName), $taskWorkload, $escapedError
                     [void]$csvSb.AppendLine($errorCsvLine)
                     $aggErrorTempPath = "{0}.tmp.{1}" -f $aggCsvPath, $PID
                     [System.IO.File]::WriteAllText($aggErrorTempPath, $csvSb.ToString(), [System.Text.Encoding]::UTF8)
@@ -788,7 +788,7 @@ function Invoke-ContentExplorerResume {
                     foreach ($agg in $allAggregates) {
                         $locationName = $agg.Name -replace '"', '""'
                         if ($locationName -match '[,"]') { $locationName = ('"' + $locationName + '"') }
-                        $csvLine = "{0},{1},{2},{3},{4},{5}," -f $timestamp, $aggTask.TagType, $aggTask.TagName, $aggTask.Workload, $locationName, $agg.Count
+                        $csvLine = "{0},{1},{2},{3},{4},{5}," -f $timestamp, $aggTask.TagType, (ConvertTo-CsvField $aggTask.TagName), $aggTask.Workload, $locationName, $agg.Count
                         [System.IO.File]::AppendAllText($aggregateCsvPath, ($csvLine + "`r`n"), [System.Text.Encoding]::UTF8)
                     }
 
@@ -816,7 +816,7 @@ function Invoke-ContentExplorerResume {
                     }
 
                     # Write _FILECOUNT row to central CSV
-                    $fcLine = "{0},{1},{2},{3},_FILECOUNT,{4}," -f $timestamp, $aggTask.TagType, $aggTask.TagName, $aggTask.Workload, $fileCount
+                    $fcLine = "{0},{1},{2},{3},_FILECOUNT,{4}," -f $timestamp, $aggTask.TagType, (ConvertTo-CsvField $aggTask.TagName), $aggTask.Workload, $fileCount
                     [System.IO.File]::AppendAllText($aggregateCsvPath, ($fcLine + "`r`n"), [System.Text.Encoding]::UTF8)
 
                     $aggTask.Status = "Completed"
@@ -2450,7 +2450,7 @@ function Invoke-ContentExplorerExport {
                             if ($errorRow) {
                                 $errMsg = if ($errorRow.Error) { $errorRow.Error } else { "Aggregate failed (error CSV from worker)" }
                                 # Write error to central aggregate CSV
-                                $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $errorRow.Timestamp, $fileTagType, $fileTagName, $fileWorkload, ($errMsg -replace '"', '""')
+                                $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $errorRow.Timestamp, $fileTagType, (ConvertTo-CsvField $fileTagName), $fileWorkload, ($errMsg -replace '"', '""')
                                 Add-Content -Path $aggCsvPath -Value $errorCsvLine -Encoding UTF8
 
                                 $errors += @{
@@ -2478,7 +2478,7 @@ function Invoke-ContentExplorerExport {
                                     if ($row.Location -eq 'NONE') { continue }
                                     $locationName = $row.Location -replace '"', '""'
                                     if ($locationName -match '[,"]') { $locationName = '"{0}"' -f $locationName }
-                                    $csvLine = "{0},{1},{2},{3},{4},{5}" -f $row.Timestamp, $row.TagType, $row.TagName, $row.Workload, $locationName, $row.Count
+                                    $csvLine = "{0},{1},{2},{3},{4},{5}" -f $row.Timestamp, $row.TagType, (ConvertTo-CsvField $row.TagName), $row.Workload, $locationName, $row.Count
                                     [void]$csvBatch.AppendLine($csvLine)
                                 }
                                 if ($csvBatch.Length -gt 0) {
@@ -2521,7 +2521,7 @@ function Invoke-ContentExplorerExport {
                         $errData = ConvertFrom-SignedEnvelopeJson -Json $errContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("aggregate error file {0}" -f $errFile.Name)
                         if ($null -ne $errData) {
                             $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-                            $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $timestamp, $errData.TagType, $errData.TagName, $errData.Workload, ($errData.Error -replace '"', '""')
+                            $errorCsvLine = '{0},{1},{2},{3},ERROR,0,"{4}"' -f $timestamp, $errData.TagType, (ConvertTo-CsvField $errData.TagName), $errData.Workload, ($errData.Error -replace '"', '""')
                             Add-Content -Path $aggCsvPath -Value $errorCsvLine -Encoding UTF8
 
                             $errors += @{

@@ -1,5 +1,23 @@
 ﻿#region Task CSV I/O
 
+function ConvertTo-CsvField {
+    <#
+    .SYNOPSIS
+        Escapes a single value for safe inclusion in a comma-separated CSV field.
+    .DESCRIPTION
+        Wraps the value in double quotes (doubling any embedded quotes) when it
+        contains a comma, quote, or newline; returns it unchanged otherwise. Used
+        for user-defined fields such as TagName that can contain commas and would
+        otherwise shift columns when the row is read back with Import-Csv.
+    #>
+    param([AllowNull()][string]$Value)
+    if ([string]::IsNullOrEmpty($Value)) { return "" }
+    if ($Value -match '[,"\r\n]') {
+        return '"' + ($Value -replace '"', '""') + '"'
+    }
+    return $Value
+}
+
 function Write-AETaskCsv {
     <#
     .SYNOPSIS
