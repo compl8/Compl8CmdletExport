@@ -102,10 +102,13 @@ function Export-ContentExplorerWithProgress {
     $Task.TotalTimeMs = 0
     if (-not $Task.ContainsKey('PartialErrors')) { $Task.PartialErrors = @() }
 
-    # Build per-page filename prefix
+    # Build per-page filename prefix. Use a deterministic SHA256-based hash, not
+    # String.GetHashCode() which is randomized per-process in .NET 5+ and would
+    # produce a different suffix on resume in a new process - orphaning page files
+    # and breaking signal-name matching with the worker.
     $locationSuffix = ""
-    if ($SiteUrl) { $locationSuffix = "-" + ([Math]::Abs($SiteUrl.GetHashCode())).ToString("X8") }
-    elseif ($UserPrincipalName) { $locationSuffix = "-" + ([Math]::Abs($UserPrincipalName.GetHashCode())).ToString("X8") }
+    if ($SiteUrl) { $locationSuffix = "-" + (Get-DeterministicNameHash -Name $SiteUrl) }
+    elseif ($UserPrincipalName) { $locationSuffix = "-" + (Get-DeterministicNameHash -Name $UserPrincipalName) }
     $pageFilePrefix = "{0}{1}" -f $workload, $locationSuffix
 
     # Ensure output directory exists

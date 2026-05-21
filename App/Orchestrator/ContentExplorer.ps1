@@ -391,7 +391,10 @@
 
         # ── Detail phase ──
         if ($taskPhase -eq "Detail") {
-            $locationSuffix = if ($task.Location) { "-" + ([Math]::Abs($task.Location.GetHashCode())).ToString("X8") } else { "" }
+            # Deterministic SHA256 hash (not GetHashCode, which is randomized
+            # per-process in .NET 5+) so the suffix matches the page-file prefix
+            # built inside Export-ContentExplorerWithProgress across processes.
+            $locationSuffix = if ($task.Location) { "-" + (Get-DeterministicNameHash -Name $task.Location) } else { "" }
             $classifierDir = Get-CEClassifierDir $exportDir $taskTagType $taskTagName
             $completionsDir = Get-CompletionsDir $exportDir
             if (-not (Test-Path $completionsDir)) { New-Item -Path $completionsDir -ItemType Directory -Force | Out-Null }
