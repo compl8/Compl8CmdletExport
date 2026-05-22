@@ -485,7 +485,13 @@
             $detailTaskStartTime = Get-Date
             try {
                 $telemetry = New-ContentExplorerTelemetry -TagType $taskTagType -TagName $taskTagName -Workload $taskWorkload
-                Export-ContentExplorerWithProgress -Task $detailTask -PageSize $taskPageSize -ProgressLogPath $progressLogPath -Telemetry $telemetry -TelemetryDatabasePath $telemetryDbPath -OutputDirectory $classifierDir @locationParams | Out-Null
+                # On an auth-recovery retry (attempt > 0), clear the failed attempt's
+                # partial pages before re-running. First attempts and other callers
+                # (resume, retry-bucket) do NOT pass this so existing pages are
+                # preserved - protects retry-bucket from losing records on a shrink.
+                $cleanFlag = @{}
+                if ($authRecoveryAttempts -gt 0) { $cleanFlag['CleanPriorPages'] = $true }
+                Export-ContentExplorerWithProgress -Task $detailTask -PageSize $taskPageSize -ProgressLogPath $progressLogPath -Telemetry $telemetry -TelemetryDatabasePath $telemetryDbPath -OutputDirectory $classifierDir @locationParams @cleanFlag | Out-Null
 
                 $exportedCount = if ($detailTask.ExportedCount) { $detailTask.ExportedCount } else { 0 }
                 $taskStatus = if ($detailTask.Status) { [string]$detailTask.Status } else { "Completed" }

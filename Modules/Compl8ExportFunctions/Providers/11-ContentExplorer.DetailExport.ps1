@@ -28,6 +28,13 @@ function Export-ContentExplorerWithProgress {
         Directory where per-page JSON files are written. Each page creates a separate file
         named {Workload}-{NNN}.json (or {Workload}-{LocationHash}-{NNN}.json for location-filtered tasks).
         Each file contains: {PageNumber, ExportTimestamp, TagType, TagName, Workload, RecordCount, Records}.
+    .PARAMETER CleanPriorPages
+        If set, delete any existing {prefix}-NNN.json/jsonl files for this task's prefix
+        before re-exporting, so a re-run starts from a clean slate. Used by the worker's
+        auth-recovery retry path to drop a failed attempt's partial pages. NOT set on
+        first attempts, resume, or retry-bucket re-exports - those overwrite pages in
+        place so any pages the new run would not reach are preserved on disk (downstream
+        dedup on RecordIdentity handles any duplicates).
     .OUTPUTS
         Exported record count (int).
     #>
@@ -51,7 +58,9 @@ function Export-ContentExplorerWithProgress {
 
         [string]$SiteUrl,
 
-        [string]$UserPrincipalName
+        [string]$UserPrincipalName,
+
+        [switch]$CleanPriorPages
     )
 
     # Early parameter validation
@@ -116,19 +125,38 @@ function Export-ContentExplorerWithProgress {
         New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
     }
 
-    # Clear any page files left by a prior attempt for THIS prefix so a re-run
-    # (auth-recovery retry, resume, or retry-bucket re-export) starts clean and
-    # never leaves an orphaned page if the new run produces fewer pages. Match only
-    # this prefix's numbered page files ({prefix}-NNN.json/jsonl); the digit anchor
-    # avoids deleting a different task's location-suffixed files in the same dir.
-    $pagePattern = "^{0}-\d{{3,}}\.(json|jsonl)$" -f [regex]::Escape($pageFilePrefix)
-    try {
-        Get-ChildItem -LiteralPath $OutputDirectory -File -ErrorAction Stop |
-            Where-Object { $_.Name -match $pagePattern } |
-            ForEach-Object { [System.IO.File]::Delete($_.FullName) }
+    # Opt-in cleanup of stale page files for THIS prefix. Only enabled when the caller
+    # passes -CleanPriorPages (the worker's auth-recovery retry path, where partial
+    # pages from a failed attempt should be dropped before re-running). Resume and
+    # retry-bucket callers do NOT pass it: they overwrite pages in place so any pages
+    # the new run does not reach are preserved on disk (downstream dedup handles any
+    # duplicates) - critical for retry-bucket, where a shrinking re-export must not
+    # destroy records the original successfully wrote.
+    #
+    # Scope: pattern {prefix}-NNN.(json|jsonl) with a \d{3,} anchor; only matches this
+    # task's own numbered page files. Does NOT clean up orphans from a prior run that
+    # used a different page-prefix strategy (e.g. WorkloadFallback <-> location-scoped
+    # for the same TagType/TagName/Workload) - cross-strategy orphans are a separate
+    # concern not addressed here.
+    if ($CleanPriorPages) {
+        $pagePattern = "^{0}-\d{{3,}}\.(json|jsonl)$" -f [regex]::Escape($pageFilePrefix)
+        $stalePages = @()
+        try {
+            $stalePages = @(
+                Get-ChildItem -LiteralPath $OutputDirectory -File -ErrorAction Stop |
+                    Where-Object { $_.Name -match $pagePattern }
+            )
+        }
+        catch [System.IO.DirectoryNotFoundException] { }
+        catch { Write-Verbose ("Page-file enumeration skipped: {0}" -f $_.Exception.Message) }
+        # Per-item try/catch: one locked file (AV/indexer/dashboard) must not abort
+        # the rest of the cleanup, or stale pages would survive - the exact outcome
+        # we're trying to prevent.
+        foreach ($stale in $stalePages) {
+            try { [System.IO.File]::Delete($stale.FullName) }
+            catch { Write-Verbose ("Could not delete stale page {0}: {1}" -f $stale.Name, $_.Exception.Message) }
+        }
     }
-    catch [System.IO.DirectoryNotFoundException] { }
-    catch { Write-Verbose ("Page-file cleanup skipped: {0}" -f $_.Exception.Message) }
 
     $pageCookie = $null
     $previousCookie = $null
