@@ -444,6 +444,17 @@
                 $taskLocations = @($task.Locations)
             }
 
+            # Bounded retry-in-place for auth/token recovery (see AE worker for
+            # rationale): a reconnected worker stays alive, so the orchestrator's
+            # dead-worker reclaim never fires - the task must be finished here.
+            # $detailTask is rebuilt each attempt so its Status/ExportedCount reset.
+            $authRecoveryAttempts = 0
+            $maxAuthRecovery = 3
+            $retryTask = $true
+            $workerShouldExit = $false
+            while ($retryTask) {
+            $retryTask = $false
+
             $detailTask = @{
                 TaskId        = $taskKey
                 TagType       = $taskTagType
@@ -556,17 +567,22 @@
                 $isAuthError = ($detailErrInfo.Category -eq "AuthError")
 
                 if ($isAuthError) {
-                    # Auth/token expiry: do NOT write an error signal (so the task is
-                    # reclaimed as Pending). Attempt a silent reconnect; if it fails
-                    # (interactive auth / no params), exit so the orchestrator reclaims
-                    # this worker's task.
-                    Write-ExportLog -Message ("    DETAIL AUTH EXPIRED: {0} - attempting reconnect, task will be reassigned" -f $taskKey) -Level Warning
-                    Write-ProgressEntry -Path $progressLogPath -Message ("Auth expired: {0} -> task returned to queue" -f $taskKey)
-                    if (-not (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {
-                        Write-ExportLog -Message "Worker exiting: auth recovery failed (task returned to queue)" -Level Error
-                        Complete-WorkerTask -WorkerDir $workerDir
-                        break
+                    # Auth/token expiry: attempt a silent reconnect, then RE-RUN the
+                    # same task in place. A reconnected worker stays alive, so the
+                    # orchestrator never reclaims its in-progress task; retrying here
+                    # is the only way the task gets finished. On failure or once
+                    # retries are exhausted, exit so the dead-worker path reclaims it.
+                    Write-ExportLog -Message ("    DETAIL AUTH EXPIRED: {0} - attempting reconnect" -f $taskKey) -Level Warning
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Auth expired: {0} -> attempting recovery" -f $taskKey)
+                    if (($authRecoveryAttempts -lt $maxAuthRecovery) -and (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {
+                        $authRecoveryAttempts++
+                        Write-ExportLog -Message ("    DETAIL recovery successful - retrying same task (attempt {0}/{1})" -f $authRecoveryAttempts, $maxAuthRecovery) -Level Success
+                        Write-ProgressEntry -Path $progressLogPath -Message ("Auth recovered: {0} -> retrying task (attempt {1}/{2})" -f $taskKey, $authRecoveryAttempts, $maxAuthRecovery)
+                        $retryTask = $true
+                        continue
                     }
+                    Write-ExportLog -Message "Worker exiting: auth recovery failed/exhausted (task returned to queue)" -Level Error
+                    $workerShouldExit = $true
                 }
                 elseif ($isCmdletNotFound) {
                     # Bad session: don't write error output so orchestrator reclaims this task as Pending
@@ -601,9 +617,11 @@
                     }
                 }
             }
+            }  # end retry-in-place loop
 
             Complete-WorkerTask -WorkerDir $workerDir
             $lastWorkerActivity = Get-Date
+            if ($workerShouldExit) { break }
 
             # Bad session: exit worker after more than 3 tasks fail with cmdlet not found
             if ($cmdletNotFoundCount -gt 3) {

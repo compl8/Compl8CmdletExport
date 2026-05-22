@@ -104,6 +104,19 @@ function Invoke-ActivityExplorerWorker {
 
         # Initialize per-day tracker
         $trackerPath = Join-Path $dayDir "RunTracker.json"
+
+        # Bounded retry-in-place for auth/token recovery: on a successful silent
+        # reconnect we re-run the SAME task rather than abandoning it. A reconnected
+        # worker stays alive, so the orchestrator's dead-worker reclaim never fires;
+        # retrying here is the only way the interrupted day actually gets finished.
+        $authRecoveryAttempts = 0
+        $maxAuthRecovery = 3
+        $retryTask = $true
+        $workerShouldExit = $false
+        while ($retryTask) {
+        $retryTask = $false
+
+        # (Re)load per-day tracker so a retry resumes from pages already saved.
         $tracker = Get-ActivityExplorerRunTracker -TrackerPath $trackerPath
 
         $taskStart = Get-Date
@@ -181,21 +194,22 @@ function Invoke-ActivityExplorerWorker {
             if ($isAuthError) {
                 # Auth/token expiry: try a silent reconnect BEFORE signalling so we
                 # don't permanently error a day that was only interrupted by an
-                # expired token. On success, do NOT write an error signal - leave
-                # the task for the orchestrator to reclaim. On failure, exit the
-                # worker (task is reclaimed when the worker process dies).
+                # expired token. On success, RE-RUN the same task in place (a
+                # reconnected worker stays alive, so the orchestrator never reclaims
+                # its in-progress task). On failure or once retries are exhausted,
+                # exit the worker so the task is reclaimed by the dead-worker path.
                 Write-ExportLog -Message ("  Day {0}: AUTH/CONNECTION error - attempting recovery before signalling" -f $taskDay) -Level Warning
                 Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth error - attempting recovery" -f $taskDay)
-                if (Invoke-WorkerReconnect -AuthParams $script:AuthParams) {
-                    Write-ExportLog -Message ("  Day {0}: recovery successful - task returned to queue" -f $taskDay) -Level Success
-                    Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth recovered, task returned to queue" -f $taskDay)
-                    Complete-WorkerTask -WorkerDir $workerDir
+                if (($authRecoveryAttempts -lt $maxAuthRecovery) -and (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {
+                    $authRecoveryAttempts++
+                    Write-ExportLog -Message ("  Day {0}: recovery successful - retrying same task (attempt {1}/{2})" -f $taskDay, $authRecoveryAttempts, $maxAuthRecovery) -Level Success
+                    Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth recovered, retrying task (attempt {1}/{2})" -f $taskDay, $authRecoveryAttempts, $maxAuthRecovery)
                     $lastWorkerActivity = Get-Date
+                    $retryTask = $true
                     continue
                 }
-                Write-ExportLog -Message ("  Day {0}: recovery failed - worker exiting (task returned to queue)" -f $taskDay) -Level Error
-                Complete-WorkerTask -WorkerDir $workerDir
-                break
+                Write-ExportLog -Message ("  Day {0}: recovery failed/exhausted - worker exiting (task returned to queue)" -f $taskDay) -Level Error
+                $workerShouldExit = $true
             }
 
             # Non-auth error: write error signal so the orchestrator records the failure.
@@ -221,9 +235,11 @@ function Invoke-ActivityExplorerWorker {
                 Write-ExportErrorLog -ErrorLogPath $script:WorkerErrorLogPath -Context "AE Worker Day Export" -TaskKey $taskDay -ErrorRecord $_ -AdditionalData @{ Day = $taskDay }
             }
         }
+        }  # end retry-in-place loop
 
         Complete-WorkerTask -WorkerDir $workerDir
         $lastWorkerActivity = Get-Date
+        if ($workerShouldExit) { break }
     }
 
     Write-ExportLog -Message "AE Worker PID $PID finished" -Level Info
