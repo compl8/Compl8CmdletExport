@@ -571,7 +571,8 @@
                     # same task in place. A reconnected worker stays alive, so the
                     # orchestrator never reclaims its in-progress task; retrying here
                     # is the only way the task gets finished. On failure or once
-                    # retries are exhausted, exit so the dead-worker path reclaims it.
+                    # retries are exhausted, exit so the stale-worker lease reclaims
+                    # it (Progress.log goes stale once the loop exits).
                     Write-ExportLog -Message ("    DETAIL AUTH EXPIRED: {0} - attempting reconnect" -f $taskKey) -Level Warning
                     Write-ProgressEntry -Path $progressLogPath -Message ("Auth expired: {0} -> attempting recovery" -f $taskKey)
                     if (($authRecoveryAttempts -lt $maxAuthRecovery) -and (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {

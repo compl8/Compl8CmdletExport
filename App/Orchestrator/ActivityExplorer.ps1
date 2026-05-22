@@ -197,7 +197,9 @@ function Invoke-ActivityExplorerWorker {
                 # expired token. On success, RE-RUN the same task in place (a
                 # reconnected worker stays alive, so the orchestrator never reclaims
                 # its in-progress task). On failure or once retries are exhausted,
-                # exit the worker so the task is reclaimed by the dead-worker path.
+                # exit the worker so the task is reclaimed via the stale-worker lease
+                # (Progress.log goes stale once the loop exits). Do NOT also write an
+                # error signal here, or the day would be permanently errored.
                 Write-ExportLog -Message ("  Day {0}: AUTH/CONNECTION error - attempting recovery before signalling" -f $taskDay) -Level Warning
                 Write-ProgressEntry -Path $progressLogPath -Message ("Day {0}: auth error - attempting recovery" -f $taskDay)
                 if (($authRecoveryAttempts -lt $maxAuthRecovery) -and (Invoke-WorkerReconnect -AuthParams $script:AuthParams)) {
@@ -211,6 +213,7 @@ function Invoke-ActivityExplorerWorker {
                 Write-ExportLog -Message ("  Day {0}: recovery failed/exhausted - worker exiting (task returned to queue)" -f $taskDay) -Level Error
                 $workerShouldExit = $true
             }
+            else {
 
             # Non-auth error: write error signal so the orchestrator records the failure.
             Write-ExportLog -Message ("  Day {0} FAILED: {1}" -f $taskDay, $aeErrMsg) -Level Error
@@ -234,6 +237,7 @@ function Invoke-ActivityExplorerWorker {
             if ($script:WorkerErrorLogPath) {
                 Write-ExportErrorLog -ErrorLogPath $script:WorkerErrorLogPath -Context "AE Worker Day Export" -TaskKey $taskDay -ErrorRecord $_ -AdditionalData @{ Day = $taskDay }
             }
+            }  # end non-auth error else
         }
         }  # end retry-in-place loop
 

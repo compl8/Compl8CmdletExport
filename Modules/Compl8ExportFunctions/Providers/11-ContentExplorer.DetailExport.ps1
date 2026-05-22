@@ -116,6 +116,20 @@ function Export-ContentExplorerWithProgress {
         New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
     }
 
+    # Clear any page files left by a prior attempt for THIS prefix so a re-run
+    # (auth-recovery retry, resume, or retry-bucket re-export) starts clean and
+    # never leaves an orphaned page if the new run produces fewer pages. Match only
+    # this prefix's numbered page files ({prefix}-NNN.json/jsonl); the digit anchor
+    # avoids deleting a different task's location-suffixed files in the same dir.
+    $pagePattern = "^{0}-\d{{3,}}\.(json|jsonl)$" -f [regex]::Escape($pageFilePrefix)
+    try {
+        Get-ChildItem -LiteralPath $OutputDirectory -File -ErrorAction Stop |
+            Where-Object { $_.Name -match $pagePattern } |
+            ForEach-Object { [System.IO.File]::Delete($_.FullName) }
+    }
+    catch [System.IO.DirectoryNotFoundException] { }
+    catch { Write-Verbose ("Page-file cleanup skipped: {0}" -f $_.Exception.Message) }
+
     $pageCookie = $null
     $previousCookie = $null
     $pageNumber = 0
