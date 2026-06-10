@@ -5,6 +5,7 @@
   "Settings": {
     "BatchSize": 10,
     "PageSize": 1000,
+    "MinLocationItems": 0,
     "Workloads": ["Exchange", "SharePoint", "OneDrive", "Teams"],
     "LargeAllSITDetailThreshold": 100,
     "LargeAllSITWorkloadFallbackWorkloads": ["Exchange", "Teams"]

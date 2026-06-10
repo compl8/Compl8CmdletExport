@@ -65,6 +65,11 @@ function Invoke-DispatchLoop {
         # Signature: { param($Tasks, $LoopState, $Context) }
         # Called at end of each iteration for CSV writes, phase updates, etc.
 
+        [scriptblock]$OnSelectNextTask = $null,
+        # Signature: { param($Tasks, $Context) }
+        # Must return: the next Pending task to dispatch, or $null
+        # Default behavior if null: first task with Status "Pending" in list order
+
         # ========== Tuning ==========
         [int]$SleepSeconds = 2,
         [int]$MaxRecentActivity = 20,
@@ -171,7 +176,12 @@ function Invoke-DispatchLoop {
                 if (Test-WorkerParked -WorkerDir $w.WorkerDir) { continue }
                 $state = Get-WorkerState -WorkerDir $w.WorkerDir -WorkerPID $w.PID
                 if ($state -eq "Idle") {
-                    $nextTask = $Tasks | Where-Object { $_.Status -eq "Pending" } | Select-Object -First 1
+                    $nextTask = if ($null -ne $OnSelectNextTask) {
+                        & $OnSelectNextTask $Tasks $Context
+                    }
+                    else {
+                        $Tasks | Where-Object { $_.Status -eq "Pending" } | Select-Object -First 1
+                    }
                     if ($null -ne $nextTask) {
                         $sent = & $OnDispatchTask $w $nextTask $Context
                         if ($sent) {
@@ -236,6 +246,37 @@ function Invoke-DispatchLoop {
 
     # Return loop state for caller to inspect
     return $loopState
+}
+
+function Select-LargestPendingTask {
+    <#
+    .SYNOPSIS
+        Dispatch-order callback: pending Aggregate tasks first, then the largest
+        pending task by ExpectedCount.
+    .DESCRIPTION
+        For Invoke-DispatchLoop -OnSelectNextTask (pass as
+        ${function:Select-LargestPendingTask}). Aggregates dispatch ahead of detail
+        tasks so discovery keeps feeding the continuous pipeline; detail tasks then
+        run largest-first regardless of generation order. Without this, dispatch is
+        list-ordered, which in the CE unified pipeline is only sorted within each
+        aggregate's generation batch - a tiny location from an early aggregate
+        would dispatch before a huge location from a later one.
+    #>
+    param(
+        [Parameter(Mandatory)]$Tasks,
+        $Context = $null
+    )
+
+    $bestTask = $null
+    $bestCount = [long]-1
+    foreach ($t in $Tasks) {
+        if ($t.Status -ne "Pending") { continue }
+        if ($t.Phase -eq "Aggregate") { return $t }
+        $count = $t.ExpectedCount -as [long]
+        if ($null -eq $count) { $count = 0 }
+        if ($count -gt $bestCount) { $bestCount = $count; $bestTask = $t }
+    }
+    return $bestTask
 }
 
 #endregion

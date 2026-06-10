@@ -249,6 +249,7 @@ Export-ModuleMember -Function @(
 
     # Dispatch Loop Engine
     'Invoke-DispatchLoop',
+    'Select-LargestPendingTask',
 
     # DLP
     'Export-DlpPolicies',

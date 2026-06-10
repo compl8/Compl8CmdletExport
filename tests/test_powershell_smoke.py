@@ -132,6 +132,75 @@ def test_large_all_sit_detail_tasks_fallback_only_for_exchange_and_teams() -> No
     assert "ONEDRIVE_LOCATION=True" in output
 
 
+def test_min_location_items_filters_small_locations() -> None:
+    """MinLocationItems drops sub-threshold locations but never WorkloadFallback tasks."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $workPlan = @(
+            @{{
+                TagType = 'SensitiveInformationType'; TagName = 'Credit Card'; Workload = 'OneDrive'; TotalCount = 121;
+                Locations = @(
+                    @{{ Name = 'https://contoso-my.sharepoint.com/personal/u1'; ExpectedCount = 100 }},
+                    @{{ Name = 'https://contoso-my.sharepoint.com/personal/u2'; ExpectedCount = 9 }},
+                    @{{ Name = 'https://contoso-my.sharepoint.com/personal/u3'; ExpectedCount = 2 }},
+                    @{{ Name = 'https://contoso-my.sharepoint.com/personal/u4'; ExpectedCount = 10 }}
+                )
+            }},
+            @{{
+                TagType = 'SensitiveInformationType'; TagName = 'Credit Card'; Workload = 'Exchange'; TotalCount = 5;
+                Locations = @(@{{ Name = 'u5@contoso.com'; ExpectedCount = 5 }})
+            }}
+        )
+
+        $filtered = @(New-ContentExplorerDetailTasks -WorkPlanTasks $workPlan -DefaultPageSize 1000 -WorkloadFallbackWorkloads @('Exchange') -MinLocationItems 10)
+        $od = @($filtered | Where-Object {{ $_.Workload -eq 'OneDrive' }})
+        $ex = @($filtered | Where-Object {{ $_.Workload -eq 'Exchange' }})
+        Write-Output ('OD_COUNT=' + $od.Count)
+        Write-Output ('OD_MIN=' + (($od | ForEach-Object {{ [int]$_.ExpectedCount }} | Measure-Object -Minimum).Minimum))
+        Write-Output ('EX_FALLBACK_KEPT=' + (($ex.Count -eq 1) -and $ex[0].LocationType -eq 'WorkloadFallback'))
+
+        $unfiltered = @(New-ContentExplorerDetailTasks -WorkPlanTasks $workPlan -DefaultPageSize 1000 -WorkloadFallbackWorkloads @('Exchange'))
+        Write-Output ('DEFAULT_KEEPS_ALL=' + (@($unfiltered | Where-Object {{ $_.Workload -eq 'OneDrive' }}).Count -eq 4))
+        """
+    )
+
+    output = run_pwsh(script)
+    assert "OD_COUNT=2" in output, f"expected 2 OneDrive tasks (>=10 items), got: {output}"
+    assert "OD_MIN=10" in output
+    assert "EX_FALLBACK_KEPT=True" in output
+    assert "DEFAULT_KEEPS_ALL=True" in output
+
+
+def test_select_largest_pending_task_prioritizes_aggregates_then_largest() -> None:
+    """Dispatch-order callback: pending aggregates win; otherwise largest pending ExpectedCount."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $tasks = [System.Collections.ArrayList]@(
+            @{{ Phase = 'Detail'; Status = 'Completed'; ExpectedCount = 99999 }},
+            @{{ Phase = 'Detail'; Status = 'Pending'; ExpectedCount = 50 }},
+            @{{ Phase = 'Detail'; Status = 'Pending'; ExpectedCount = '12000' }},
+            @{{ Phase = 'Detail'; Status = 'Pending'; ExpectedCount = 5000 }}
+        )
+        $pick = Select-LargestPendingTask -Tasks $tasks
+        Write-Output ('LARGEST=' + $pick.ExpectedCount)
+
+        [void]$tasks.Add(@{{ Phase = 'Aggregate'; Status = 'Pending'; ExpectedCount = 1 }})
+        $pick2 = Select-LargestPendingTask -Tasks $tasks
+        Write-Output ('AGG_FIRST=' + ($pick2.Phase -eq 'Aggregate'))
+
+        $none = Select-LargestPendingTask -Tasks @(@{{ Phase = 'Detail'; Status = 'Completed'; ExpectedCount = 1 }})
+        Write-Output ('NONE=' + ($null -eq $none))
+        """
+    )
+
+    output = run_pwsh(script)
+    assert "LARGEST=12000" in output, f"expected string-typed 12000 to win, got: {output}"
+    assert "AGG_FIRST=True" in output
+    assert "NONE=True" in output
+
+
 def test_content_explorer_export_assigns_large_all_sit_settings() -> None:
     source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.ps1").read_text(encoding="utf-8")
     assert "$largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold" in source

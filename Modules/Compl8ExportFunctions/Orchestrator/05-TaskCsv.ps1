@@ -155,10 +155,16 @@ function New-ContentExplorerDetailTasks {
         [Parameter(Mandatory)][array]$WorkPlanTasks,
         [int]$DefaultPageSize = 1000,
         [string[]]$WorkloadFallbackWorkloads = @(),
+        # Locations with fewer items than this get no detail task at all (0 = keep
+        # everything). Applies only to location-scoped tasks; WorkloadFallback tasks
+        # cover a whole workload and are never filtered.
+        [int]$MinLocationItems = 0,
         [switch]$Sort
     )
 
     $detailTasks = @()
+    $skippedLocationCount = 0
+    $skippedRecordCount = [long]0
     $fallbackLookup = @{}
     foreach ($workload in @($WorkloadFallbackWorkloads)) {
         if (-not [string]::IsNullOrWhiteSpace($workload)) {
@@ -199,6 +205,11 @@ function New-ContentExplorerDetailTasks {
                 $locationName = $loc.Name
                 $locExpected = $loc.ExpectedCount -as [int]
                 if ($null -eq $locExpected -or $locExpected -le 0) { continue }
+                if ($MinLocationItems -gt 0 -and $locExpected -lt $MinLocationItems) {
+                    $skippedLocationCount++
+                    $skippedRecordCount += $locExpected
+                    continue
+                }
 
                 $detailTasks += @{
                     Phase                 = 'Detail'
@@ -234,6 +245,10 @@ function New-ContentExplorerDetailTasks {
             AssignedPID           = 0
             ErrorMessage          = if ($hasError) { 'Aggregate failed' } else { '' }
         }
+    }
+
+    if ($skippedLocationCount -gt 0) {
+        Write-ExportLog -Message ("  MinLocationItems={0}: skipped {1} location(s) totalling {2} record(s) below the threshold" -f $MinLocationItems, $skippedLocationCount, $skippedRecordCount) -Level Info -LogOnly
     }
 
     if ($Sort -and $detailTasks.Count -gt 1) {

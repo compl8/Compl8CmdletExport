@@ -744,6 +744,7 @@ function Invoke-ContentExplorerResume {
     $ceSettings = Get-ContentExplorerSettings -ConfigObject $ceConfig -SavedSettings $savedSettings -DefaultBatchSize $script:CEDefaultBatchSize -DefaultWorkloads $script:CEDefaultWorkloads -DefaultPageSize $cePageSize
     $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
     $largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)
+    $minLocationItems = $ceSettings.MinLocationItems
     $savedCEAllSITs = ($savedSettings -and $savedSettings.CEAllSITs -eq $true)
 
     $sitsToSkipPath = Join-Path $scriptRoot "ConfigFiles" "SITstoSkip.json"
@@ -904,7 +905,7 @@ function Invoke-ContentExplorerResume {
                     }
                 }
 
-                $script:AllWorkPlanTasks = @(New-ContentExplorerDetailTasks -WorkPlanTasks $allAggregateTaskData -DefaultPageSize $cePageSize -WorkloadFallbackWorkloads $resumeFallbackWorkloads -Sort)
+                $script:AllWorkPlanTasks = @(New-ContentExplorerDetailTasks -WorkPlanTasks $allAggregateTaskData -DefaultPageSize $cePageSize -WorkloadFallbackWorkloads $resumeFallbackWorkloads -MinLocationItems $minLocationItems -Sort)
 
                 Write-ExportLog -Message ("Built work plan: {0} detail tasks" -f $script:AllWorkPlanTasks.Count) -Level Info
             }
@@ -1256,6 +1257,7 @@ function Invoke-ContentExplorerResume {
                         -OnShowDashboard $ceResumeOnDashboard `
                         -OnAllWorkersDead $ceResumeOnAllDead `
                         -OnIterationComplete $ceResumeOnIterComplete `
+                        -OnSelectNextTask ${function:Select-LargestPendingTask} `
                         -SleepSeconds 2
 
                     # Save final task state
@@ -1912,6 +1914,7 @@ function Invoke-ContentExplorerFromTasksCsv {
             -OnShowDashboard $csvOnDashboard `
             -OnAllWorkersDead $csvOnAllDead `
             -OnIterationComplete $csvOnIterComplete `
+            -OnSelectNextTask ${function:Select-LargestPendingTask} `
             -SleepSeconds 2
 
         # Save final task state
@@ -2129,10 +2132,15 @@ function Invoke-ContentExplorerExport {
     $cePageSize = $ceSettings.PageSize
     $largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold
     $largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)
+    $minLocationItems = $ceSettings.MinLocationItems
 
     # Apply menu/CLI workload selection (overrides config)
     if ($CEWorkloads) {
         $workloads = @($CEWorkloads)
+    }
+    # CLI threshold override (-1 = not specified; 0 = explicit "export everything")
+    if ($CEMinLocationItems -ge 0) {
+        $minLocationItems = $CEMinLocationItems
     }
 
     # Save export settings manifest for resume consistency
@@ -2142,12 +2150,16 @@ function Invoke-ContentExplorerExport {
         CEAllTCs  = [bool]$CEAllTCs
         BatchSize = $batchSize
         PageSize  = $cePageSize
+        MinLocationItems = $minLocationItems
         LargeAllSITDetailThreshold = $largeAllSITDetailThreshold
         LargeAllSITWorkloadFallbackWorkloads = $largeAllSITFallbackCandidates
         JsonlOutput = ($env:COMPL8_JSONL_OUTPUT -eq "1")
     }
 
     Write-ExportLog -Message ("Default page size: {0} (adaptive sizing selects optimal size per workload)" -f $cePageSize) -Level Info
+    if ($minLocationItems -gt 0) {
+        Write-ExportLog -Message ("Minimum location size: {0} item(s) - smaller locations are skipped at planning" -f $minLocationItems) -Level Info
+    }
     Write-ExportLog -Message ("Workloads: {0}" -f ($workloads -join ', ')) -Level Info
     if ($CEAllSITs) {
         Write-ExportLog -Message "MODE: All SITs - Auto-discovering all Sensitive Information Types" -Level Info
@@ -2718,7 +2730,8 @@ function Invoke-ContentExplorerExport {
                 $newTasks = @(New-ContentExplorerDetailTasks `
                     -WorkPlanTasks @($importResult.TaskData.Values) `
                     -DefaultPageSize $cePageSize `
-                    -WorkloadFallbackWorkloads $detailFallbackWorkloads)
+                    -WorkloadFallbackWorkloads $detailFallbackWorkloads `
+                    -MinLocationItems ([int]$Context.MinLocationItems))
 
                 if ($useWorkloadFallbackDetail) {
                     foreach ($taskData in @($importResult.TaskData.Values)) {
@@ -3082,6 +3095,7 @@ function Invoke-ContentExplorerExport {
             ExportDir             = $script:SharedExportDirectory
             ExportRunDirectory    = $script:SharedExportDirectory
             DefaultPageSize       = $cePageSize
+            MinLocationItems      = $minLocationItems
             ExportStartTime       = $exportStartTime
             PipelineStartTime     = $pipelineStartTime
             DispatchTimes         = @{}
@@ -3112,6 +3126,7 @@ function Invoke-ContentExplorerExport {
             -OnCheckComplete $ceOnCheckComplete `
             -OnAllWorkersDead $ceOnAllDead `
             -OnIterationComplete $ceOnIterComplete `
+            -OnSelectNextTask ${function:Select-LargestPendingTask} `
             -SleepSeconds 2
 
         # Save final task CSVs
@@ -3237,6 +3252,7 @@ function Invoke-ContentExplorerExport {
             -WorkPlanTasks @($script:AllWorkPlanTasks) `
             -DefaultPageSize $cePageSize `
             -WorkloadFallbackWorkloads $largeAllSITDetailFallbackWorkloads `
+            -MinLocationItems $minLocationItems `
             -Sort)
 
         $singleDetailCsvPath = Join-Path (Get-CoordinationDir $script:SharedExportDirectory) "DetailTasks.csv"

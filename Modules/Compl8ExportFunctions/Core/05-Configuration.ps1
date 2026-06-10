@@ -79,7 +79,8 @@ function Get-ContentExplorerSettings {
         [string[]]$DefaultWorkloads = @("SharePoint", "OneDrive"),
         [int]$DefaultPageSize = 100,
         [int]$DefaultLargeAllSITDetailThreshold = 100,
-        [string[]]$DefaultLargeAllSITWorkloadFallbackWorkloads = @("Exchange", "Teams")
+        [string[]]$DefaultLargeAllSITWorkloadFallbackWorkloads = @("Exchange", "Teams"),
+        [int]$DefaultMinLocationItems = 0
     )
 
     $configSettings = if ($ConfigObject -and $ConfigObject.Settings) { $ConfigObject.Settings } else { $null }
@@ -148,12 +149,25 @@ function Get-ContentExplorerSettings {
         $largeAllSITWorkloadFallbackWorkloads = @($DefaultLargeAllSITWorkloadFallbackWorkloads)
     }
 
+    # 0 is a valid value (filter off), so check for presence rather than truthiness.
+    $minLocationItems = $null
+    if ($SavedSettings -and $null -ne $SavedSettings.MinLocationItems) {
+        $minLocationItems = $SavedSettings.MinLocationItems -as [int]
+    }
+    elseif ($configSettings -and $null -ne $configSettings.MinLocationItems) {
+        $minLocationItems = $configSettings.MinLocationItems -as [int]
+    }
+    if ($null -eq $minLocationItems -or $minLocationItems -lt 0) {
+        $minLocationItems = $DefaultMinLocationItems
+    }
+
     return [PSCustomObject]@{
         BatchSize                            = $batchSize
         Workloads                            = @($workloads)
         PageSize                             = $pageSize
         LargeAllSITDetailThreshold           = $largeAllSITDetailThreshold
         LargeAllSITWorkloadFallbackWorkloads = @($largeAllSITWorkloadFallbackWorkloads)
+        MinLocationItems                     = $minLocationItems
     }
 }
 

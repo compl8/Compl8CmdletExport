@@ -151,6 +151,15 @@ param(
     [Parameter(ParameterSetName = "ContentExplorer")]
     [string]$CETasksCsv,
 
+    # Minimum item count for a location to get its own CE detail task. Locations
+    # below the threshold are skipped at planning (skip totals are logged). Big win
+    # on tenants with thousands of tiny OneDrive locations. Overrides
+    # ContentExplorerClassifiers.json Settings.MinLocationItems; 0 = export
+    # everything. Default -1 = not specified (config/manifest value applies).
+    [Parameter(ParameterSetName = "ContentExplorer")]
+    [ValidateRange(0, 10000000)]
+    [int]$CEMinLocationItems = -1,
+
     # Activity Explorer options
     [Parameter(ParameterSetName = "ActivityExplorer")]
     [Parameter(ParameterSetName = "Full")]
