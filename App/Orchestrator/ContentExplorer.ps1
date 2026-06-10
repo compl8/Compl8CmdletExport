@@ -983,8 +983,9 @@ function Invoke-ContentExplorerResume {
                     Write-ExportLog -Message "  No pending detail tasks - skipping to completion" -Level Info
                 }
                 else {
-                    # Spawn workers
-                    $workerProcesses = Start-WorkerTerminals -ExportRunDirectory $ExportDir -Count $WorkerCount
+                    # Spawn workers. Collect into a real ArrayList: the dispatch loop and the
+                    # W-hotkey [ref] must share this exact instance for dynamic adds to work.
+                    $workerProcesses = [System.Collections.ArrayList]@(Start-WorkerTerminals -ExportRunDirectory $ExportDir -Count $WorkerCount)
                     if ($workerProcesses.Count -eq 0) {
                         Write-ExportLog -Message "  No workers spawned - aborting multi-terminal resume" -Level Error
                         Write-Host "  ERROR: No workers were spawned. Re-run without -WorkerCount for single-terminal mode." -ForegroundColor Red
@@ -1706,7 +1707,8 @@ function Invoke-ContentExplorerFromTasksCsv {
         $detailTasks = @($detailTasks | Sort-Object { [int]$_.ExpectedCount } -Descending)
         Write-TaskCsv -Path $detailCsvPath -Tasks $inputTasks
 
-        $workerProcesses = Start-WorkerTerminals -ExportRunDirectory $exportDir -Count $WorkerCount
+        # Collect into a real ArrayList: the dispatch loop must share this exact instance.
+        $workerProcesses = [System.Collections.ArrayList]@(Start-WorkerTerminals -ExportRunDirectory $exportDir -Count $WorkerCount)
         if ($workerProcesses.Count -eq 0) {
             Write-ExportLog -Message "  No workers spawned - aborting" -Level Error
             Write-Host "  ERROR: No workers were spawned." -ForegroundColor Red
@@ -2382,7 +2384,9 @@ function Invoke-ContentExplorerExport {
     $workerProcesses = [System.Collections.ArrayList]::new()
     if ($isMultiTerminal) {
         Write-ExportLog -Message ("Multi-terminal mode: spawning {0} worker(s)" -f $WorkerCount) -Level Info
-        $workerProcesses = Start-WorkerTerminals -ExportRunDirectory $script:SharedExportDirectory -Count $WorkerCount
+        # Collect into a real ArrayList: the dispatch loop and the W-hotkey [ref] must
+        # share this exact instance for dynamically added workers to be dispatchable.
+        $workerProcesses = [System.Collections.ArrayList]@(Start-WorkerTerminals -ExportRunDirectory $script:SharedExportDirectory -Count $WorkerCount)
     }
 
     #endregion
@@ -2956,11 +2960,13 @@ function Invoke-ContentExplorerExport {
                 }
             }
 
-            # Dynamic worker spawning via W hotkey
+            # Dynamic worker spawning via W hotkey. Pass the original [ref]s straight
+            # through: re-wrapping with [ref]$Context.X.Value creates a ref to a temporary,
+            # so NextWorkerNumber increments would be silently lost.
             Test-AddWorkerKeypress -ExportRunDirectory $Context.ExportRunDirectory `
-                -WorkerProcesses ([ref]$Context.WorkerProcessesRef.Value) -NextWorkerNumber ([ref]$Context.NextWorkerNumberRef.Value)
-            # WorkerProcesses is now an ArrayList (reference type) — new workers added via
-            # Test-AddWorkerKeypress are visible to the dispatch engine immediately.
+                -WorkerProcesses $Context.WorkerProcessesRef -NextWorkerNumber $Context.NextWorkerNumberRef
+            # WorkerProcessesRef wraps the same ArrayList instance the dispatch engine
+            # iterates, so workers added here are dispatchable on the next iteration.
 
             try {
                 Show-OrchestratorDashboard `

@@ -724,6 +724,9 @@ function Start-WorkerTerminals {
         Write-ExportLog -Message "  No workers were spawned" -Level Warning
     }
 
+    # PowerShell unrolls this ArrayList into individual worker hashtables on return.
+    # Callers re-collect with [System.Collections.ArrayList]@(...) — do NOT change this
+    # to `return ,$workerProcesses`: the callers' @() wrap would then nest the list.
     return $workerProcesses
 }
 
@@ -805,8 +808,16 @@ function Test-AddWorkerKeypress {
         if ($key.Key -eq 'W') {
             $newWorker = Add-WorkerToExport -ExportRunDirectory $ExportRunDirectory -NextWorkerNumber $NextWorkerNumber.Value
             if ($newWorker) {
-                [void]$WorkerProcesses.Value.Add($newWorker)
-                $NextWorkerNumber.Value++
+                try {
+                    [void]$WorkerProcesses.Value.Add($newWorker)
+                    $NextWorkerNumber.Value++
+                }
+                catch {
+                    # If the pool is not a growable list (e.g. a fixed-size array slipped in),
+                    # the worker is spawned but undispatchable. Fail loudly: the dispatch
+                    # loop's iteration catch would otherwise swallow this as a generic error.
+                    Write-ExportLog -Message ("  Worker PID {0} spawned but could NOT be added to the dispatch pool: {1}. It will never receive tasks - close its terminal manually." -f $newWorker.PID, $_.Exception.Message) -Level Error
+                }
             }
         }
         # else: consume and discard non-W keys

@@ -477,8 +477,9 @@ function Invoke-AEMultiExport {
 
     Write-ExportLog -Message ("Task CSV: {0}" -f $aeTaskCsvPath) -Level Info
 
-    # Spawn workers
-    $workerProcesses = Start-WorkerTerminals -ExportRunDirectory $exportDir -Count $actualWorkers
+    # Spawn workers. Collect into a real ArrayList: the dispatch loop must share this
+    # exact instance (matches the CE orchestrator paths).
+    $workerProcesses = [System.Collections.ArrayList]@(Start-WorkerTerminals -ExportRunDirectory $exportDir -Count $actualWorkers)
     if (-not $workerProcesses -or $workerProcesses.Count -eq 0) {
         Write-ExportLog -Message "No workers spawned - aborting" -Level Error
         return
