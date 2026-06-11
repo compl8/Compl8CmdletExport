@@ -3,14 +3,15 @@
 Usage:
     py -m parquet_builder.star.convert --input-dir <export-dir>
         [--output-dir <dir>] [--risk-workbook X.xlsx] [--department-csv Y.csv]
+        [--sit-names <CurrentTenantSITs.json>]
         [--archive-raw | --no-archive-raw] [--allow-unenriched]
         [--derive-target-domain | --no-derive-target-domain]
         [--sit-exclusions <json>] [--org-mapping <json>] [--batch-size N]
 
 Default output: <input-dir>/PowerBI-AE-Parquet-v6. Writes schema.json (from
-the SSOT), manifest.json (row counts, enrichment provenance, resolved org
-mapping, exclusion and drift summaries) and SchemaDrift.json (when unknown
-raw keys were seen).
+the SSOT), manifest.json (row counts, enrichment provenance, SIT name
+resolution per source, resolved org mapping, exclusion and drift summaries)
+and SchemaDrift.json (when unknown raw keys were seen).
 """
 
 from __future__ import annotations
@@ -27,7 +28,9 @@ from .enrich import (
     RiskLookup,
     load_department_mapping,
     load_risk_workbook,
+    load_sit_name_map,
     resolve_enrichment_inputs,
+    resolve_sit_names_path,
 )
 from .org_mapping import OrgMapping, default_org_mapping, load_org_mapping
 from .pipeline import StarPipeline
@@ -37,6 +40,9 @@ _DEFAULT_OUTPUT_NAME = "PowerBI-AE-Parquet-v6"
 _CONFIG_DIR = Path(__file__).resolve().parents[2] / "ConfigFiles"
 _DEFAULT_EXCLUSIONS = _CONFIG_DIR / "AEStarSITExclusions.json"
 _DEFAULT_ORG_MAPPING = _CONFIG_DIR / "AEStarOrgMapping.local.json"
+# Tenant GUID->name map the export tool auto-generates on SIT export
+# (gitignored: tenant data). Names observed SITs the workbook lacks.
+_DEFAULT_SIT_NAMES = _CONFIG_DIR / "CurrentTenantSITs.json"
 
 
 def resolve_org_mapping(path: Path | None) -> OrgMapping:
@@ -73,6 +79,7 @@ def load_sit_exclusions(path: Path | None) -> tuple[list[str], Path | None]:
 
 def convert(input_dir: Path, output_dir: Path | None = None, *,
             risk_workbook: Path | None = None, department_csv: Path | None = None,
+            sit_names: Path | None = None,
             archive_raw: bool = True, allow_unenriched: bool = False,
             derive_target_domain: bool = True, sit_exclusions: Path | None = None,
             org_mapping: Path | None = None, batch_size: int = 50_000) -> dict:
@@ -97,6 +104,8 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
     department_mappings = (
         load_department_mapping(dept_path, org_map) if dept_path else {})
     excluded_names, exclusions_path = load_sit_exclusions(sit_exclusions)
+    sit_names_path = resolve_sit_names_path(input_dir, sit_names, _DEFAULT_SIT_NAMES)
+    sit_name_map = load_sit_name_map(sit_names_path) if sit_names_path else {}
 
     primary_mappings = sum(
         1 for entry in department_mappings.values() if not entry.get("is_alias"))
@@ -109,17 +118,33 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
           f"{alias_mappings} mail aliases)")
     print(f"Org map:    {org_map.source_label}")
     print(f"Exclusions: {exclusions_path} ({len(excluded_names)} SIT names)")
+    if sit_names_path:
+        print(f"SIT names:  {sit_names_path} ({len(sit_name_map)} GUID->name entries)")
+    else:
+        print("SIT names:  none found (observed SITs missing from the workbook "
+              "fall back to GUID labels)")
     print()
 
     drift_tracker = SchemaDriftTracker()
     pipeline = StarPipeline(
         input_dir=input_dir, output_dir=output_dir, risk=risk,
         department_mappings=department_mappings,
-        excluded_sit_names=excluded_names, archive_raw=archive_raw,
+        excluded_sit_names=excluded_names, sit_names=sit_name_map,
+        archive_raw=archive_raw,
         derive_domains=derive_target_domain, batch_size=batch_size,
         drift_tracker=drift_tracker,
     )
     stats = pipeline.run()
+
+    name_stats = stats["sit_name_resolution"]
+    resolved_by = name_stats["resolved_by"]
+    print()
+    print(f"SIT display names ({name_stats['observed_sits']} observed SITs): "
+          f"workbook {resolved_by['workbook']}, "
+          f"raw payload {resolved_by['raw_payload']}, "
+          f"tenant map {resolved_by['tenant_map']}, "
+          f"unresolved GUIDs {name_stats['unresolved_guids']} "
+          f"(bridged to workbook rows: {name_stats['bridged_to_workbook']})")
 
     emit_schema_json(output_dir / "schema.json")
     drift_path = write_schema_drift_report(output_dir, drift_tracker, input_dir)
@@ -146,6 +171,11 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
         "missing_record_identity": stats["missing_record_identity"],
         "row_counts": stats["row_counts"],
         "enrichment": enrichment,
+        "sit_name_resolution": {
+            "tenant_sit_map": str(sit_names_path) if sit_names_path else None,
+            "tenant_sit_map_entries": len(sit_name_map),
+            **name_stats,
+        },
         "org_mapping": org_map.to_manifest(),
         "sit_exclusions": {
             "config": str(exclusions_path) if exclusions_path else None,
@@ -187,6 +217,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="SIT risk workbook (.xlsx). Searched in the export root and one level below when omitted.")
     parser.add_argument("--department-csv", default=None,
                         help="GAL/department mapping CSV/XLSX. Searched like the risk workbook when omitted.")
+    parser.add_argument("--sit-names", default=None,
+                        help="Tenant SIT GUID->name map (CurrentTenantSITs.json shape) used to "
+                             "name observed SITs the risk workbook has no GUID row for. "
+                             "Default: CurrentTenantSITs.json in the export root or one level "
+                             "below, else ConfigFiles/CurrentTenantSITs.json if present.")
     parser.add_argument("--archive-raw", action=argparse.BooleanOptionalAction, default=True,
                         help="Write archive_raw.parquet with raw nested payloads (default: on).")
     parser.add_argument("--allow-unenriched", action="store_true",
@@ -215,6 +250,7 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.output_dir) if args.output_dir else None,
             risk_workbook=Path(args.risk_workbook) if args.risk_workbook else None,
             department_csv=Path(args.department_csv) if args.department_csv else None,
+            sit_names=Path(args.sit_names) if args.sit_names else None,
             archive_raw=args.archive_raw,
             allow_unenriched=args.allow_unenriched,
             derive_target_domain=args.derive_target_domain,

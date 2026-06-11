@@ -15,14 +15,14 @@ fork's robustness fixes:
 from __future__ import annotations
 
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from ..helpers import _safe_str
 from ..loaders import find_ae_pages
-from .enrich import RiskLookup, _norm_text, sit_key_for_detected_id
+from .enrich import RiskLookup, _norm_text, resolve_detected_sit
 from .finalize import write_aggregates, write_dimensions
 from .keys import stable_int_id
 from .records import (
@@ -113,6 +113,7 @@ class StarPipeline:
     def __init__(self, *, input_dir: Path, output_dir: Path, risk: RiskLookup,
                  department_mappings: dict[str, dict[str, Any]],
                  excluded_sit_names: list[str] | None = None,
+                 sit_names: dict[str, str] | None = None,
                  archive_raw: bool = True, derive_domains: bool = True,
                  batch_size: int = 50_000, drift_tracker=None) -> None:
         self.input_dir = input_dir
@@ -120,6 +121,7 @@ class StarPipeline:
         self.risk = risk
         self.department_mappings = department_mappings
         self.excluded_norm = {_norm_text(name) for name in (excluded_sit_names or [])}
+        self.sit_names = sit_names or {}
         self.archive_raw = archive_raw
         self.derive_domains = derive_domains
         self.batch_size = batch_size
@@ -128,6 +130,12 @@ class StarPipeline:
         self.registry = IdRegistry()
         self.seen_record_ids: set[str] = set()
         self.seen_sit_keys: set[str] = set()
+        # sit_key -> name source ("workbook"/"raw_payload"/"tenant_map"/"unresolved")
+        self.sit_name_sources: dict[str, str] = {}
+        # keys whose raw/tenant name bridged them onto a workbook row
+        self.sit_bridged_keys: set[str] = set()
+        # non-workbook keys: sit_key -> (display name, source) for dim_sit
+        self.resolved_sit_names: dict[str, tuple[str, str]] = {}
         self.dates: dict[int, Any] = {}
         self.processed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         self.stats: dict[str, int] = defaultdict(int)
@@ -168,8 +176,10 @@ class StarPipeline:
         counts.update(write_dimensions(
             self.output_dir, self.registry, self.department_mappings,
             self.dates, self.risk, self.seen_sit_keys,
+            resolved_sit_names=self.resolved_sit_names,
         ))
         counts.update(write_aggregates(self.output_dir, self.aggregates))
+        source_counts = Counter(self.sit_name_sources.values())
         return {
             "row_counts": counts,
             "raw_records_scanned": self.stats["raw_records"],
@@ -177,6 +187,15 @@ class StarPipeline:
             "missing_record_identity": self.stats["missing_record_identity"],
             "sit_rows_before_exclusions": self.stats["sit_rows_total"],
             "excluded_sit_rows": self.stats["sit_rows_excluded"],
+            "sit_name_resolution": {
+                "observed_sits": len(self.seen_sit_keys),
+                "resolved_by": {
+                    source: source_counts.get(source, 0)
+                    for source in ("workbook", "raw_payload", "tenant_map")
+                },
+                "unresolved_guids": source_counts.get("unresolved", 0),
+                "bridged_to_workbook": len(self.sit_bridged_keys),
+            },
         }
 
     # --------------------------------------------------------------- record
@@ -355,9 +374,19 @@ class StarPipeline:
         max_risk = 0
         for sit in sit_rows:
             sit_id = _safe_str(sit.get("SensitiveInfoTypeId"))
-            sit_key = sit_key_for_detected_id(sit_id, self.risk)
+            raw_name = _safe_str(_raw_first(
+                sit, ("SensitiveInfoTypeName", "SitName", "DisplayName", "Name")))
+            sit_key, risk_row, name_source, display_name, bridged = resolve_detected_sit(
+                sit_id, raw_name, self.risk, self.sit_names)
             self.seen_sit_keys.add(sit_key)
-            risk_row = self.risk.by_key.get(sit_key)
+            source = name_source or "unresolved"
+            previous = self.sit_name_sources.get(sit_key)
+            if previous is None or (previous == "unresolved" and source != "unresolved"):
+                self.sit_name_sources[sit_key] = source
+            if bridged:
+                self.sit_bridged_keys.add(sit_key)
+            elif display_name and risk_row is None:
+                self.resolved_sit_names.setdefault(sit_key, (display_name, source))
             risk_score = (risk_row or {}).get("risk_score") or 0
             match_count = _int_or_none(sit.get("Count")) or 0
             confidence = _int_or_none(sit.get("Confidence"))
@@ -369,7 +398,10 @@ class StarPipeline:
             max_risk = max(max_risk, risk_score)
             self.stats["sit_rows_total"] += 1
 
-            if risk_row is not None and _norm_text(risk_row.get("sit_name")) in self.excluded_norm:
+            # Exclusion keys on the RESOLVED display name: workbook rows match
+            # exactly as before; raw-payload/tenant-map names are newly
+            # excludable; unresolved GUIDs never match the name-based list.
+            if display_name and _norm_text(display_name) in self.excluded_norm:
                 self.stats["sit_rows_excluded"] += 1
                 continue
 

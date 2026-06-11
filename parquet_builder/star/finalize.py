@@ -44,8 +44,23 @@ def build_date_rows(dates: dict[int, date_type]) -> list[dict[str, Any]]:
     return rows
 
 
-def build_sit_rows(risk: RiskLookup, seen_sit_keys: set[str]) -> list[dict[str, Any]]:
-    """All workbook rows (observed flag) plus generated rows for unknown SITs."""
+_NAME_SOURCE_SHEETS = {
+    "raw_payload": "Generated (name from AE raw payload)",
+    "tenant_map": "Generated (name from tenant SIT map)",
+}
+
+
+def build_sit_rows(
+    risk: RiskLookup, seen_sit_keys: set[str],
+    resolved_sit_names: dict[str, tuple[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    """All workbook rows (observed flag) plus generated rows for unknown SITs.
+
+    Generated rows take their display name from ``resolved_sit_names``
+    (raw-payload / tenant-map resolution recorded by the pipeline) and fall
+    back to the GUID; source_sheet records which source named the row.
+    """
+    resolved_sit_names = resolved_sit_names or {}
     sit_rows_by_key: dict[str, dict[str, Any]] = {}
     for row in risk.rows:
         dim_row = dict(row)
@@ -55,13 +70,20 @@ def build_sit_rows(risk: RiskLookup, seen_sit_keys: set[str]) -> list[dict[str, 
         if sit_key in sit_rows_by_key:
             continue
         sit_id = sit_key if GUID_RE.match(sit_key) else None
+        name, source = resolved_sit_names.get(sit_key, (None, None))
+        if name:
+            source_sheet = _NAME_SOURCE_SHEETS.get(
+                source, "Generated from Activity Explorer export")
+        else:
+            name = sit_key if sit_key != "unknown" else "Unknown SIT"
+            source_sheet = "Generated from Activity Explorer export"
         sit_rows_by_key[sit_key] = {
             "sit_key": sit_key,
-            "sit_name": sit_key if sit_key != "unknown" else "Unknown SIT",
+            "sit_name": name,
             "sit_id": sit_id,
             "sit_slug": None if sit_id else sit_key,
             "risk_band": "Unrated",
-            "source_sheet": "Generated from Activity Explorer export",
+            "source_sheet": source_sheet,
             "is_unrated": True,
             "observed": True,
         }
@@ -71,7 +93,9 @@ def build_sit_rows(risk: RiskLookup, seen_sit_keys: set[str]) -> list[dict[str, 
 def write_dimensions(output_dir: Path, registry: IdRegistry,
                      department_mappings: dict[str, dict[str, Any]],
                      dates: dict[int, date_type], risk: RiskLookup,
-                     seen_sit_keys: set[str]) -> dict[str, int]:
+                     seen_sit_keys: set[str],
+                     resolved_sit_names: dict[str, tuple[str, str]] | None = None,
+                     ) -> dict[str, int]:
     """Materialize every dimension table; returns row counts."""
     # Union the full GAL population into dim_user (has_activity=False).
     # Mail-alias keys are skipped: one dim_user row per person (UPN), not one
@@ -86,7 +110,7 @@ def write_dimensions(output_dir: Path, registry: IdRegistry,
         "dim_date": build_date_rows(dates),
         "dim_department": [registry.department_rows[k] for k in sorted(registry.department_rows)],
         "dim_user": [registry.user_rows[k] for k in sorted(registry.user_rows)],
-        "dim_sit": build_sit_rows(risk, seen_sit_keys),
+        "dim_sit": build_sit_rows(risk, seen_sit_keys, resolved_sit_names),
         "dim_activity_type": [registry.activity_type_rows[k] for k in sorted(registry.activity_type_rows)],
         "dim_workload": [registry.workload_rows[k] for k in sorted(registry.workload_rows)],
         "dim_location": [registry.location_rows[k] for k in sorted(registry.location_rows)],
