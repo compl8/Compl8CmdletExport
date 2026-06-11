@@ -1,0 +1,192 @@
+{
+  "name": "626b829d9ede53a396f9",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 436,
+        "z": 7000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "fact_activity_detail.agent_name"
+        },
+        {
+          "queryRef": "fact_activity_detail.target_agent_name"
+        },
+        {
+          "queryRef": "dim_activity_type.activity"
+        },
+        {
+          "queryRef": "fact_activity.Raw Activities"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "fact_activity_detail",
+          "Type": 0
+        },
+        {
+          "Name": "d",
+          "Entity": "dim_activity_type",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "fact_activity",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "agent_name"
+          },
+          "Name": "fact_activity_detail.agent_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "target_agent_name"
+          },
+          "Name": "fact_activity_detail.target_agent_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "activity"
+          },
+          "Name": "dim_activity_type.activity"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Raw Activities"
+          },
+          "Name": "fact_activity.Raw Activities"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Raw Activities"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "fact_activity_detail.agent_name": {
+        "displayName": "Agent"
+      },
+      "fact_activity_detail.target_agent_name": {
+        "displayName": "Target Agent"
+      },
+      "dim_activity_type.activity": {
+        "displayName": "Activity"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Agent Names by Activity'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

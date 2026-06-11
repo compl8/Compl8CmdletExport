@@ -1,0 +1,228 @@
+{
+  "name": "d44135d48f8a59e29c1a",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 7000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_policy.rule_name"
+        },
+        {
+          "queryRef": "dim_policy.policy_name"
+        },
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "queryRef": "fact_activity_sit.Weighted Risk Score"
+        },
+        {
+          "queryRef": "fact_activity_sit.Activities by SIT"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_policy",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "rule_name"
+          },
+          "Name": "dim_policy.rule_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "policy_name"
+          },
+          "Name": "dim_policy.policy_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Weighted Risk Score"
+          },
+          "Name": "fact_activity_sit.Weighted Risk Score"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Activities by SIT"
+          },
+          "Name": "fact_activity_sit.Activities by SIT"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Weighted Risk Score"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_policy.rule_name": {
+        "displayName": "Rule"
+      },
+      "dim_policy.policy_name": {
+        "displayName": "Policy"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "320.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_policy.rule_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_policy.policy_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Rule Risk Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

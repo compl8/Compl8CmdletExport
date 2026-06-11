@@ -1,0 +1,70 @@
+{
+  "name": "11e70584f1845821bc71",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 953.0,
+        "y": 56,
+        "z": 5000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 5000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Name'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "name": "0cc0278a6e505c5ebb04",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 6000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "pieChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "dim_department.department",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        }
+      ],
+      "Series": [
+        {
+          "queryRef": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_department",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        },
+        {
+          "Name": "i",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "department"
+          },
+          "Name": "dim_department.department"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "i"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_department.department": {
+        "displayName": "Department"
+      },
+      "dim_sit.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "objects": {
+      "legend": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Detections by Department and Classification'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

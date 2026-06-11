@@ -1,0 +1,82 @@
+/// One row per (activity, email recipient).
+table fact_email_recipient
+
+	measure 'Total Email Recipients' =
+			COUNTROWS ( fact_email_recipient )
+		formatString: #,##0
+		displayFolder: Email
+
+	measure 'External Email Recipients' =
+			CALCULATE (
+			    COUNTROWS ( fact_email_recipient ),
+			    NOT ( ISBLANK ( fact_email_recipient[recipient_domain_id] ) )
+			)
+		formatString: #,##0
+		displayFolder: Email
+
+	measure 'Unique Receiver Domains' =
+			DISTINCTCOUNT ( fact_email_recipient[recipient_domain_id] )
+		formatString: #,##0
+		displayFolder: Email
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_email_address (inactive relationship).
+	column sender_email_address_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: sender_email_address_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_email_address.
+	column recipient_email_address_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: recipient_email_address_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_domain.
+	column recipient_domain_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: recipient_domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_email_recipient = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_email_recipient.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "sender_email_address_id", "recipient_email_address_id", "recipient_domain_id"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"sender_email_address_id", Int64.Type}, {"recipient_email_address_id", Int64.Type}, {"recipient_domain_id", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

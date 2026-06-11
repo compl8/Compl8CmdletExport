@@ -1,0 +1,403 @@
+/// One row per unique Activity Explorer record (RecordIdentity).
+table fact_activity
+
+	/// One per unique Activity Explorer record.
+	measure 'Raw Activities' =
+			COUNTROWS ( fact_activity )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	/// Legacy alias of [Raw Activities].
+	measure 'Total Activities' =
+			COUNTROWS ( fact_activity )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	measure 'Unique Users' =
+			DISTINCTCOUNT ( fact_activity[user_id] )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	measure 'Unique Files' =
+			DISTINCTCOUNT ( fact_activity[file_id] )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	measure 'DLP Rule Matches' =
+			CALCULATE ( [Raw Activities], fact_activity[has_policy] = TRUE () )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	measure 'Activities with SIT Data' =
+			CALCULATE ( [Raw Activities], fact_activity[has_sit] = TRUE () )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	measure 'Total File Size (GB)' =
+			DIVIDE ( SUM ( fact_activity[file_size_bytes] ), 1073741824, 0 )
+		formatString: #,##0.00
+		displayFolder: Key Metrics
+
+	measure 'Avg File Size (KB)' =
+			DIVIDE ( AVERAGE ( fact_activity[file_size_bytes] ), 1024, 0 )
+		formatString: #,##0.0
+		displayFolder: Key Metrics
+
+	measure 'Email Activities' =
+			CALCULATE ( [Raw Activities], fact_activity[has_email] = TRUE () )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
+	/// Legacy COUNT of the activity timestamp.
+	measure HappCount =
+			COUNT ( fact_activity[happened_at] )
+		formatString: 0
+		displayFolder: Key Metrics
+
+	measure 'Endpoint Activities' =
+			CALCULATE ( [Raw Activities], dim_workload[workload] = "Endpoint devices" )
+		formatString: #,##0
+		displayFolder: Workload
+
+	measure 'Exchange Activities' =
+			CALCULATE ( [Raw Activities], dim_workload[workload] = "Exchange" )
+		formatString: #,##0
+		displayFolder: Workload
+
+	measure 'SharePoint Activities' =
+			CALCULATE ( [Raw Activities], dim_workload[workload] = "SharePoint" )
+		formatString: #,##0
+		displayFolder: Workload
+
+	measure 'Teams Activities' =
+			CALCULATE ( [Raw Activities], dim_workload[workload] = "MicrosoftTeams" )
+		formatString: #,##0
+		displayFolder: Workload
+
+	/// Precomputed at ETL: sum of risk_score * match_count per record (replaces the legacy SUMX + LOOKUPVALUE iterator).
+	measure 'Activity Risk Score' =
+			SUM ( fact_activity[activity_risk_score] )
+		formatString: #,##0
+		displayFolder: Risk
+
+	/// Legacy alias used by the Sankey/graph gates.
+	measure TotalRisk =
+			SUM ( fact_activity[activity_risk_score] )
+		formatString: 0
+		displayFolder: Risk
+
+	measure 'High Risk Activities' =
+			CALCULATE ( [Raw Activities], fact_activity[activity_risk_score] >= 50 )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'Avg Activity Risk Score' =
+			AVERAGE ( fact_activity[activity_risk_score] )
+		formatString: #,##0.0
+		displayFolder: Risk
+
+	/// Average of the highest single SIT risk per record.
+	measure 'Average Activity Risk' =
+			AVERAGE ( fact_activity[max_sit_risk_score] )
+		formatString: 0.0
+		displayFolder: Risk
+
+	/// Activities on the most recent data date (anchored to the data, not the wall clock).
+	measure 'Activities Today' =
+			VAR LastDataDate = CALCULATE ( MAX ( dim_date[date] ), REMOVEFILTERS () )
+			RETURN CALCULATE ( [Raw Activities], dim_date[date] = LastDataDate )
+		formatString: #,##0
+		displayFolder: Time Intelligence
+
+	measure 'Activities Last 7 Days' =
+			VAR LastDataDate = CALCULATE ( MAX ( dim_date[date] ), REMOVEFILTERS () )
+			RETURN CALCULATE (
+			    [Raw Activities],
+			    DATESINPERIOD ( dim_date[date], LastDataDate, -7, DAY )
+			)
+		formatString: #,##0
+		displayFolder: Time Intelligence
+
+	measure 'Activities Last 30 Days' =
+			VAR LastDataDate = CALCULATE ( MAX ( dim_date[date] ), REMOVEFILTERS () )
+			RETURN CALCULATE (
+			    [Raw Activities],
+			    DATESINPERIOD ( dim_date[date], LastDataDate, -30, DAY )
+			)
+		formatString: #,##0
+		displayFolder: Time Intelligence
+
+	measure 'Daily Activity Average' =
+			AVERAGEX ( VALUES ( dim_date[date] ), [Raw Activities] )
+		formatString: #,##0.0
+		displayFolder: Time Intelligence
+
+	/// Counts activities by their TARGET folder (inactive relationship).
+	measure 'Target Location Activities' =
+			CALCULATE (
+			    [Raw Activities],
+			    USERELATIONSHIP ( fact_activity[target_location_id], dim_location[location_id] )
+			)
+		formatString: #,##0
+		displayFolder: Domain Analysis
+
+	measure 'External Domain Activities' =
+			CALCULATE ( [Raw Activities], NOT ( ISBLANK ( fact_activity[target_domain_id] ) ) )
+		formatString: #,##0
+		displayFolder: Domain Analysis
+
+	measure 'Unique Target Domains' =
+			DISTINCTCOUNT ( fact_activity[target_domain_id] )
+		formatString: #,##0
+		displayFolder: Domain Analysis
+
+	measure 'Originating Domain Activities' =
+			CALCULATE (
+			    [Raw Activities],
+			    USERELATIONSHIP ( fact_activity[originating_domain_id], dim_domain[domain_id] ),
+			    NOT ( ISBLANK ( fact_activity[originating_domain_id] ) )
+			)
+		formatString: #,##0
+		displayFolder: Domain Analysis
+
+	measure 'Policy Match Count' =
+			CALCULATE ( [Raw Activities], NOT ( ISBLANK ( fact_activity[policy_rule_id] ) ) )
+		formatString: #,##0
+		displayFolder: Policy
+
+	measure 'Unique Policies Triggered' =
+			CALCULATE ( DISTINCTCOUNT ( dim_policy[policy_name] ), fact_policy_activity )
+		formatString: #,##0
+		displayFolder: Policy
+
+	measure 'Unique Rules Triggered' =
+			CALCULATE ( DISTINCTCOUNT ( dim_policy[rule_name] ), fact_policy_activity )
+		formatString: #,##0
+		displayFolder: Policy
+
+	/// Stable surrogate from RecordIdentity.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date (yyyymmdd).
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Activity timestamp (UTC).
+	column happened_at
+		dataType: dateTime
+		formatString: yyyy-MM-dd HH:mm:ss
+		summarizeBy: none
+		sourceColumn: happened_at
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_user.
+	column user_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_department.
+	column department_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_activity_type.
+	column activity_type_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_type_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_workload.
+	column workload_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: workload_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_location (FilePath folder).
+	column source_location_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: source_location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_location (TargetFilePath folder; inactive relationship).
+	column target_location_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: target_location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_file.
+	column file_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_policy (first matched policy).
+	column policy_rule_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: policy_rule_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_domain (explicit or derived target).
+	column target_domain_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: target_domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_domain (inactive relationship).
+	column originating_domain_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: originating_domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_app_identity.
+	column app_identity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: app_identity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw UserType (Regular/Admin/System/...).
+	column user_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_type
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw DataPlatform.
+	column data_platform
+		dataType: string
+		summarizeBy: none
+		sourceColumn: data_platform
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FileSize in bytes.
+	column file_size_bytes
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: file_size_bytes
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Record carried SIT detections.
+	column has_sit
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: has_sit
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Record carried DLP policy matches.
+	column has_policy
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: has_policy
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Record carried EmailInfo.
+	column has_email
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: has_email
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Distinct SIT detections on the record.
+	column sit_type_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: sit_type_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Sum of risk_score*match_count over all SIT detections.
+	column activity_risk_score
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: activity_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Highest single SIT risk rating on the record.
+	column max_sit_risk_score
+		dataType: int64
+		formatString: #,0
+		summarizeBy: max
+		sourceColumn: max_sit_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_activity = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_activity.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "happened_at", "user_id", "department_id", "activity_type_id", "workload_id", "source_location_id", "target_location_id", "file_id", "policy_rule_id", "target_domain_id", "originating_domain_id", "app_identity_id", "user_type", "data_platform", "file_size_bytes", "has_sit", "has_policy", "has_email", "sit_type_count", "activity_risk_score", "max_sit_risk_score"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"happened_at", type datetime}, {"user_id", Int64.Type}, {"department_id", Int64.Type}, {"activity_type_id", Int64.Type}, {"workload_id", Int64.Type}, {"source_location_id", Int64.Type}, {"target_location_id", Int64.Type}, {"file_id", Int64.Type}, {"policy_rule_id", Int64.Type}, {"target_domain_id", Int64.Type}, {"originating_domain_id", Int64.Type}, {"app_identity_id", Int64.Type}, {"user_type", type text}, {"data_platform", type text}, {"file_size_bytes", Int64.Type}, {"has_sit", type logical}, {"has_policy", type logical}, {"has_email", type logical}, {"sit_type_count", Int64.Type}, {"activity_risk_score", Int64.Type}, {"max_sit_risk_score", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

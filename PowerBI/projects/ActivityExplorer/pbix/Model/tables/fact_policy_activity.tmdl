@@ -1,0 +1,84 @@
+/// One row per (activity, matched policy rule).
+table fact_policy_activity
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_user.
+	column user_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_department.
+	column department_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_policy.
+	column policy_rule_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: policy_rule_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_activity_type.
+	column activity_type_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_type_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_workload.
+	column workload_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: workload_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_policy_activity = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_policy_activity.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "user_id", "department_id", "policy_rule_id", "activity_type_id", "workload_id"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"user_id", Int64.Type}, {"department_id", Int64.Type}, {"policy_rule_id", Int64.Type}, {"activity_type_id", Int64.Type}, {"workload_id", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

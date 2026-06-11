@@ -1,0 +1,32 @@
+[
+  {
+    "name": "c86f575df9cf5bffbd05",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_sit"
+          }
+        },
+        "Property": "sit_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "a29b3ebc787c57109943",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_user"
+          }
+        },
+        "Property": "user_upn"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]

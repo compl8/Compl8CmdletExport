@@ -1,0 +1,108 @@
+{
+  "name": "cfd155df22d55fb8b803",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 441.3333333333333,
+        "y": 184,
+        "z": 8000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "treemap",
+    "projections": {
+      "Group": [
+        {
+          "queryRef": "dim_department.department",
+          "active": true
+        }
+      ],
+      "Values": [
+        {
+          "queryRef": "agg_department_sit_day.Department Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_department",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "agg_department_sit_day",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "department"
+          },
+          "Name": "dim_department.department"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Department Risk Pressure"
+          },
+          "Name": "agg_department_sit_day.Department Risk Pressure"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Department Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_department.department": {
+        "displayName": "Department"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Department Risk Pressure'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

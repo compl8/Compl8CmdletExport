@@ -1,0 +1,65 @@
+/// Observed activity users UNION the full GAL population.
+table dim_user
+
+	/// Surrogate key.
+	column user_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// User principal name (uppercased).
+	column user_upn
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_upn
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Domain part of the UPN.
+	column user_domain
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_domain
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_department.
+	column department_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Matches service-account naming patterns.
+	column is_service_account
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_service_account
+
+		annotation SummarizationSetBy = Automatic
+
+	/// True when the user appears in the activity data; False for GAL-only rows.
+	column has_activity
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: has_activity
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_user = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_user.parquet")),
+				    Columns = Table.SelectColumns(Source, {"user_id", "user_upn", "user_domain", "department_id", "is_service_account", "has_activity"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"user_id", Int64.Type}, {"user_upn", type text}, {"user_domain", type text}, {"department_id", Int64.Type}, {"is_service_account", type logical}, {"has_activity", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

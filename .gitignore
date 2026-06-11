@@ -31,6 +31,10 @@ PowerBI/_archive*/
 # Generated smoke project (ActivityExplorer/ContentExplorerSITRisk projects ARE tracked)
 PowerBI/projects/_smoke/
 
+# Compiled report artifacts (regenerate via Build-PowerBI.ps1)
+PowerBI/projects/**/*.pbit
+PowerBI/projects/**/*.bim
+
 # Build artifacts
 *.zip
 

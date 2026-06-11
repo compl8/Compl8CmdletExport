@@ -1,0 +1,117 @@
+/// Continuous calendar covering min..max activity dates (no holes).
+table dim_date
+	dataCategory: Time
+
+	/// Date as yyyymmdd integer.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Calendar date (mark as PBI date table key).
+	column date
+		dataType: dateTime
+		isKey
+		formatString: yyyy-MM-dd
+		summarizeBy: none
+		sourceColumn: date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Calendar year.
+	column year
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: year
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Month number 1-12.
+	column month
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: month
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Full month name.
+	column month_name
+		dataType: string
+		sortByColumn: month
+		summarizeBy: none
+		sourceColumn: month_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Abbreviated month name (Jan..Dec).
+	column month_short
+		dataType: string
+		sortByColumn: month
+		summarizeBy: none
+		sourceColumn: month_short
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Calendar quarter 1-4.
+	column quarter
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: quarter
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ISO week of year.
+	column week_of_year
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: week_of_year
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Full weekday name.
+	column day_of_week
+		dataType: string
+		sortByColumn: day_of_week_num
+		summarizeBy: none
+		sourceColumn: day_of_week
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Weekday number, Monday=0.
+	column day_of_week_num
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: day_of_week_num
+
+		annotation SummarizationSetBy = Automatic
+
+	/// True for Saturday/Sunday.
+	column is_weekend
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_weekend
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_date = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_date.parquet")),
+				    Columns = Table.SelectColumns(Source, {"date_key", "date", "year", "month", "month_name", "month_short", "quarter", "week_of_year", "day_of_week", "day_of_week_num", "is_weekend"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"date_key", Int64.Type}, {"date", type date}, {"year", Int64.Type}, {"month", Int64.Type}, {"month_name", type text}, {"month_short", type text}, {"quarter", Int64.Type}, {"week_of_year", Int64.Type}, {"day_of_week", type text}, {"day_of_week_num", Int64.Type}, {"is_weekend", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

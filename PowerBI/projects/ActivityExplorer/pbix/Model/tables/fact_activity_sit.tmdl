@@ -1,0 +1,303 @@
+/// One row per (activity, SIT detection). Excluded SIT names are filtered at ETL.
+table fact_activity_sit
+
+	/// Workhorse: distinct activities carrying a SIT detection (replaces the legacy bidirectional CROSSFILTER).
+	measure 'Activities by SIT' =
+			DISTINCTCOUNT ( fact_activity_sit[activity_id] )
+		formatString: 0
+		displayFolder: SIT
+
+	measure 'Total SIT Detections' =
+			COUNTROWS ( fact_activity_sit )
+		formatString: #,##0
+		displayFolder: SIT
+
+	measure 'Total SIT Instance Count' =
+			SUM ( fact_activity_sit[match_count] )
+		formatString: #,##0
+		displayFolder: SIT
+
+	measure 'Avg Confidence' =
+			AVERAGE ( fact_activity_sit[confidence] )
+		formatString: #,##0
+		displayFolder: SIT
+
+	measure 'High Confidence Detections' =
+			CALCULATE ( COUNTROWS ( fact_activity_sit ), fact_activity_sit[confidence] >= 85 )
+		formatString: #,##0
+		displayFolder: SIT
+
+	measure 'Unique SIT Types Detected' =
+			DISTINCTCOUNT ( fact_activity_sit[sit_key] )
+		formatString: #,##0
+		displayFolder: SIT
+
+	measure 'High Confidence %' =
+			DIVIDE (
+			    SUM ( fact_activity_sit[high_confidence_count] ),
+			    SUM ( fact_activity_sit[match_count] )
+			)
+		formatString: 0.0%
+		displayFolder: SIT
+
+	/// Precomputed risk per detection row (replaces SUMX + RELATED).
+	measure 'Total SIT Risk' =
+			SUM ( fact_activity_sit[risk_score] )
+		formatString: #,##0
+		displayFolder: Risk
+
+	/// Precomputed risk_score * match_count (replaces SUMX + RELATED).
+	measure 'Weighted Risk Score' =
+			SUM ( fact_activity_sit[risk_weighted_count] )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'Avg Weighted Risk' =
+			DIVIDE ( [Weighted Risk Score], [Total SIT Instance Count], 0 )
+		formatString: #,##0.0
+		displayFolder: Risk
+
+	measure 'High Risk Detections' =
+			CALCULATE ( COUNTROWS ( fact_activity_sit ), dim_sit[risk_score] >= 8 )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'Protected Classification Count' =
+			CALCULATE ( COUNTROWS ( fact_activity_sit ), dim_sit[pspf_classification] = "PROTECTED" )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'Critical SIT Events' =
+			CALCULATE ( [Activities by SIT], dim_sit[risk_band] = "Critical" )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'High Critical SIT Events' =
+			CALCULATE ( [Activities by SIT], dim_sit[risk_band] IN { "High", "Critical" } )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'Unrated SIT Events' =
+			CALCULATE ( [Activities by SIT], dim_sit[is_unrated] = TRUE () )
+		formatString: #,##0
+		displayFolder: Risk
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_user.
+	column user_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_department.
+	column department_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_activity_type.
+	column activity_type_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_type_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_workload.
+	column workload_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: workload_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_location.
+	column source_location_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: source_location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_location (inactive relationship).
+	column target_location_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: target_location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_file.
+	column file_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_domain (enables domain x SIT without fact hops).
+	column target_domain_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: target_domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_policy (enables risk-by-rule without fact hops).
+	column policy_rule_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: policy_rule_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_sit.
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ClassifierType from the detection.
+	column classifier_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: classifier_type
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Detection count.
+	column match_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Unique match count.
+	column unique_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: unique_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Detection confidence.
+	column confidence
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: confidence
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Low-confidence bucket count.
+	column bucket_low
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: bucket_low
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Medium-confidence bucket count.
+	column bucket_medium
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: bucket_medium
+
+		annotation SummarizationSetBy = Automatic
+
+	/// High-confidence bucket count.
+	column bucket_high
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: bucket_high
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Risk rating of the SIT at conversion time.
+	column risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	/// risk_score * match_count.
+	column risk_weighted_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: risk_weighted_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// High bucket, else match_count when confidence >= 85.
+	column high_confidence_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: high_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_activity_sit = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_activity_sit.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "user_id", "department_id", "activity_type_id", "workload_id", "source_location_id", "target_location_id", "file_id", "target_domain_id", "policy_rule_id", "sit_key", "classifier_type", "match_count", "unique_count", "confidence", "bucket_low", "bucket_medium", "bucket_high", "risk_score", "risk_weighted_count", "high_confidence_count"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"user_id", Int64.Type}, {"department_id", Int64.Type}, {"activity_type_id", Int64.Type}, {"workload_id", Int64.Type}, {"source_location_id", Int64.Type}, {"target_location_id", Int64.Type}, {"file_id", Int64.Type}, {"target_domain_id", Int64.Type}, {"policy_rule_id", Int64.Type}, {"sit_key", type text}, {"classifier_type", type text}, {"match_count", Int64.Type}, {"unique_count", Int64.Type}, {"confidence", Int64.Type}, {"bucket_low", Int64.Type}, {"bucket_medium", Int64.Type}, {"bucket_high", Int64.Type}, {"risk_score", Int64.Type}, {"risk_weighted_count", Int64.Type}, {"high_confidence_count", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,60 @@
+{
+  "name": "b8e227c66ce2537ca994",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 276,
+        "z": 5000,
+        "width": 602.0,
+        "height": 200,
+        "tabOrder": 5000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Departments",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Department mapping: user enrichment loaded from the GAL/department mapping supplied to the conversion script.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Unmapped department: a user was present in Activity Explorer but no department mapping was found.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

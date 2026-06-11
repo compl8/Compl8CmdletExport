@@ -1,0 +1,259 @@
+relationship 20d0d791-68a7-5d69-8624-9845a6d346ac
+	fromColumn: fact_activity.date_key
+	toColumn: dim_date.date_key
+
+relationship 78ebb345-6bca-58fd-9a61-7eb848f500fa
+	fromColumn: fact_activity.user_id
+	toColumn: dim_user.user_id
+
+relationship dd42efc8-b130-5b76-a5ff-afb1594de232
+	fromColumn: fact_activity.department_id
+	toColumn: dim_department.department_id
+
+relationship cf32e8bc-a9bf-50db-b847-164d71525e3f
+	fromColumn: fact_activity.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 2a0a7bb1-177f-5d3f-8d31-d46e8af820cf
+	fromColumn: fact_activity.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship 61e66ed1-8760-515a-aef0-191f06ffd469
+	fromColumn: fact_activity.source_location_id
+	toColumn: dim_location.location_id
+
+relationship 427d2d3d-fde7-5d5d-8b41-45e99e381562
+	isActive: false
+	fromColumn: fact_activity.target_location_id
+	toColumn: dim_location.location_id
+
+relationship 3b5fca5d-a371-542b-8c6f-eba22520a140
+	fromColumn: fact_activity.file_id
+	toColumn: dim_file.file_id
+
+relationship 5e21b3a9-9b01-5f8f-99a4-1c122c66a67f
+	fromColumn: fact_activity.policy_rule_id
+	toColumn: dim_policy.policy_rule_id
+
+relationship 1f8deb92-95fd-505c-97c6-8d3bd1c21faf
+	fromColumn: fact_activity.target_domain_id
+	toColumn: dim_domain.domain_id
+
+relationship 583e1c03-6a57-5254-9225-547ba3b1307b
+	isActive: false
+	fromColumn: fact_activity.originating_domain_id
+	toColumn: dim_domain.domain_id
+
+relationship 7928d507-67a6-50a1-872c-9475c6b3a6fe
+	fromColumn: fact_activity.app_identity_id
+	toColumn: dim_app_identity.app_identity_id
+
+relationship f2dedbed-c9ba-5b1a-8d33-a3f399ca54e8
+	fromColumn: fact_activity_sit.date_key
+	toColumn: dim_date.date_key
+
+relationship 73748e56-611c-58b4-83aa-65f5f47dd134
+	fromColumn: fact_activity_sit.user_id
+	toColumn: dim_user.user_id
+
+relationship a41dadc2-7539-53b6-96b6-7f1e2b1701cf
+	fromColumn: fact_activity_sit.department_id
+	toColumn: dim_department.department_id
+
+relationship 8c1dfe78-f672-5a29-b49a-0cf4be2838ef
+	fromColumn: fact_activity_sit.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship f1e36050-8c8a-5086-890e-b89dd3214eea
+	fromColumn: fact_activity_sit.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship b873d9c6-6930-5e5d-9d50-5eeec5d2bd4a
+	fromColumn: fact_activity_sit.source_location_id
+	toColumn: dim_location.location_id
+
+relationship 646559e4-cf46-56a7-8ad4-0af3a9cbc0ec
+	isActive: false
+	fromColumn: fact_activity_sit.target_location_id
+	toColumn: dim_location.location_id
+
+relationship 5aa8ef4c-1cf3-5b45-89b8-83bc8c3c996a
+	fromColumn: fact_activity_sit.file_id
+	toColumn: dim_file.file_id
+
+relationship c263b13b-925e-5986-8936-f576c2ad1309
+	fromColumn: fact_activity_sit.target_domain_id
+	toColumn: dim_domain.domain_id
+
+relationship 503b3dc5-3438-50c3-b524-61248c40da1a
+	fromColumn: fact_activity_sit.policy_rule_id
+	toColumn: dim_policy.policy_rule_id
+
+relationship e7e97d57-5166-52e1-9c2d-2b0020e815ae
+	fromColumn: fact_activity_sit.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship 53de5787-6346-5231-b21b-e3d7b8271e94
+	fromColumn: fact_policy_activity.date_key
+	toColumn: dim_date.date_key
+
+relationship 857a2bb4-85c0-59ce-9c41-93ba199a605d
+	fromColumn: fact_policy_activity.user_id
+	toColumn: dim_user.user_id
+
+relationship 1506638f-c9ee-5414-bc86-6849fcedc978
+	fromColumn: fact_policy_activity.department_id
+	toColumn: dim_department.department_id
+
+relationship 3253fa0e-a1df-5db5-ba34-b8ba31d017d7
+	fromColumn: fact_policy_activity.policy_rule_id
+	toColumn: dim_policy.policy_rule_id
+
+relationship 7ec824b9-7330-59e8-b0d9-8059228af74e
+	fromColumn: fact_policy_activity.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 309cfb9f-505b-5d2f-b863-5b9b76e4c66e
+	fromColumn: fact_policy_activity.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship 6ab89632-1a8a-5f58-a306-c7c2013c1828
+	fromColumn: fact_email_recipient.date_key
+	toColumn: dim_date.date_key
+
+relationship a18121b1-efe1-5467-8cbe-56b13672ecf4
+	fromColumn: fact_email_recipient.recipient_email_address_id
+	toColumn: dim_email_address.email_address_id
+
+relationship 7b720c89-6890-540a-ae15-1fcc91fc4099
+	isActive: false
+	fromColumn: fact_email_recipient.sender_email_address_id
+	toColumn: dim_email_address.email_address_id
+
+relationship f7765b75-5cdd-5de8-906f-347a370e9c5a
+	fromColumn: fact_email_recipient.recipient_domain_id
+	toColumn: dim_domain.domain_id
+
+relationship d93e9cb4-07ec-5563-ac37-6bd9ef1d8e5d
+	fromColumn: fact_email_detail.date_key
+	toColumn: dim_date.date_key
+
+relationship 088e5a15-256d-5419-abb6-45c92996c627
+	fromColumn: fact_email_detail.sender_email_address_id
+	toColumn: dim_email_address.email_address_id
+
+relationship 253e01e4-1f7e-5dee-b1ed-cfacef76e274
+	fromColumn: fact_copilot_interaction.date_key
+	toColumn: dim_date.date_key
+
+relationship a26a1923-6e40-5916-b058-31414abcdc92
+	fromColumn: fact_copilot_interaction.user_id
+	toColumn: dim_user.user_id
+
+relationship 6db6a04f-d46d-5e2a-b77d-0b7c47f060cc
+	fromColumn: fact_copilot_interaction.app_identity_id
+	toColumn: dim_app_identity.app_identity_id
+
+relationship 43d7a80d-e736-50ee-ace6-f796b5983356
+	fromColumn: fact_activity_detail.activity_id
+	toColumn: fact_activity.activity_id
+
+relationship 1d7de893-6280-561e-ae5e-b7b6c045d0f5
+	fromColumn: agg_department_sit_day.date_key
+	toColumn: dim_date.date_key
+
+relationship 8fb45751-4f1f-57d7-813a-87b30d796d9d
+	fromColumn: agg_department_sit_day.department_id
+	toColumn: dim_department.department_id
+
+relationship 59236874-be3c-5c6d-b1a3-b5aba5aba98a
+	fromColumn: agg_department_sit_day.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship da4b67a1-1b11-59ff-b72e-fda713506896
+	fromColumn: agg_department_sit_day.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship dbe2f32d-9c89-5d21-8137-21d9ed2610ce
+	fromColumn: agg_department_sit_day.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 0bf60087-0b47-5f05-948a-082859da5f63
+	fromColumn: agg_user_sit_day.date_key
+	toColumn: dim_date.date_key
+
+relationship 5535c6f8-74ea-5e2a-a402-fef78bea9173
+	fromColumn: agg_user_sit_day.user_id
+	toColumn: dim_user.user_id
+
+relationship d830fd6a-afc3-5f3e-a8c0-6f3a53fa005d
+	fromColumn: agg_user_sit_day.department_id
+	toColumn: dim_department.department_id
+
+relationship 912b6f38-aa50-58d4-9dca-084910c3a206
+	fromColumn: agg_user_sit_day.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship d946461e-d992-58cd-bc1e-e0bde40fe49f
+	fromColumn: agg_user_sit_day.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship 7a95909f-0865-518c-bd95-835c6c8278e1
+	fromColumn: agg_user_sit_day.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 3a0c0e56-2875-53af-8100-bc754cce3af2
+	fromColumn: agg_location_sit_day.date_key
+	toColumn: dim_date.date_key
+
+relationship 87f83ce4-605e-57b3-81de-5dcf1c6642c7
+	fromColumn: agg_location_sit_day.source_location_id
+	toColumn: dim_location.location_id
+
+relationship 7f6b5f88-1dd3-5f1e-8549-1ee5a85702aa
+	fromColumn: agg_location_sit_day.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship 99d3b066-6800-5bec-956f-a79b16bd98e9
+	fromColumn: agg_location_sit_day.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship e77023eb-4543-53dc-bc39-3635ec405885
+	fromColumn: agg_location_sit_day.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 24d88f79-77e3-54f3-bbc3-3bc664174348
+	fromColumn: agg_activity_type_sit_day.date_key
+	toColumn: dim_date.date_key
+
+relationship d151b7e0-79a0-581f-ad91-d99c4a908d50
+	fromColumn: agg_activity_type_sit_day.activity_type_id
+	toColumn: dim_activity_type.activity_type_id
+
+relationship 01e46f16-e8fa-5a93-bc41-2f9073fc07eb
+	fromColumn: agg_activity_type_sit_day.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship fa6f1b0e-4b9e-5555-9225-aa24b03f1234
+	fromColumn: agg_activity_type_sit_day.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship 18dccd8e-6e95-5bdd-a8f3-cbb7c3bc3149
+	fromColumn: agg_domain_sit_day.date_key
+	toColumn: dim_date.date_key
+
+relationship fad7dc8f-af0e-516b-a449-20790e088dfd
+	fromColumn: agg_domain_sit_day.target_domain_id
+	toColumn: dim_domain.domain_id
+
+relationship f0ae8c95-875f-50e6-83d9-3481c4d1ef1c
+	fromColumn: agg_domain_sit_day.sit_key
+	toColumn: dim_sit.sit_key
+
+relationship f3951c03-4a4b-53d6-ad0a-966f5d5182ec
+	fromColumn: agg_domain_sit_day.workload_id
+	toColumn: dim_workload.workload_id
+
+relationship ebda9597-54ee-53ee-b46f-5f4b7b2525a8
+	fromColumn: agg_domain_sit_day.activity_type_id
+	toColumn: dim_activity_type.activity_type_id

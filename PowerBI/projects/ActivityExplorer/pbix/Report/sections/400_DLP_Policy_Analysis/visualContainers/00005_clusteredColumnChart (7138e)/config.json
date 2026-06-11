@@ -1,0 +1,108 @@
+{
+  "name": "7138ed2a04705cf6b819",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 6000,
+        "width": 602.0,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredColumnChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "dim_policy.rule_name",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_policy",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "rule_name"
+          },
+          "Name": "dim_policy.rule_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Total SIT Detections"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_policy.rule_name": {
+        "displayName": "Rule"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Detections by DLP Rule'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

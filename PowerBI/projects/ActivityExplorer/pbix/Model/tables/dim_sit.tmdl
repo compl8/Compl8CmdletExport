@@ -1,0 +1,263 @@
+/// Sensitive information types: every risk-workbook row (observed or not) plus generated rows for observed SITs missing from the workbook.
+table dim_sit
+
+	measure 'Avg Risk Rating' =
+			AVERAGE ( dim_sit[risk_score] )
+		formatString: #,##0.0
+		displayFolder: Risk
+
+	measure 'Max Risk Rating' =
+			MAX ( dim_sit[risk_score] )
+		formatString: #,##0
+		displayFolder: Risk
+
+	measure 'High Risk SITs (8+)' =
+			CALCULATE ( COUNTROWS ( dim_sit ), dim_sit[risk_score] >= 8 )
+		formatString: #,##0
+		displayFolder: Risk
+
+	/// GUID (lowercase), slug, or name:<normalized name>.
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Display name.
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SIT GUID when known.
+	column sit_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Custom SIT slug when the identifier is not a GUID.
+	column sit_slug
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_slug
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Workbook category.
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Risk rating 1-10 from the workbook.
+	column risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Low/Medium/High/Critical/Unrated.
+	column risk_band
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_band
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Workbook risk description.
+	column risk_description
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_description
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Reference URL.
+	column reference_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: reference_url
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Australian PSPF classification.
+	column pspf_classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pspf_classification
+
+		annotation SummarizationSetBy = Automatic
+
+	/// QGISCF classification.
+	column qgiscf
+		dataType: string
+		summarizeBy: none
+		sourceColumn: qgiscf
+
+		annotation SummarizationSetBy = Automatic
+
+	/// QGISCF DLM.
+	column qgiscf_dlm
+		dataType: string
+		summarizeBy: none
+		sourceColumn: qgiscf_dlm
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Label code.
+	column label_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: label_code
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Workbook classifier type.
+	column sit_classifier_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_classifier_type
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SIT source (Microsoft built-in / custom).
+	column source
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Jurisdictions.
+	column jurisdictions
+		dataType: string
+		summarizeBy: none
+		sourceColumn: jurisdictions
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Scope.
+	column scope
+		dataType: string
+		summarizeBy: none
+		sourceColumn: scope
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Workbook confidence.
+	column reference_confidence
+		dataType: string
+		summarizeBy: none
+		sourceColumn: reference_confidence
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Classification tier.
+	column classification_tier
+		dataType: string
+		summarizeBy: none
+		sourceColumn: classification_tier
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Generic classification.
+	column generic_classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: generic_classification
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Generic DLM.
+	column generic_dlm
+		dataType: string
+		summarizeBy: none
+		sourceColumn: generic_dlm
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Data categories (cross-reference sheet).
+	column data_categories
+		dataType: string
+		summarizeBy: none
+		sourceColumn: data_categories
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Regulations (cross-reference sheet).
+	column regulations
+		dataType: string
+		summarizeBy: none
+		sourceColumn: regulations
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Recommended for small tenants.
+	column small_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: small_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Recommended for medium tenants.
+	column medium_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: medium_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Recommended for large tenants.
+	column large_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: large_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Worksheet (or generator) the row came from.
+	column source_sheet
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_sheet
+
+		annotation SummarizationSetBy = Automatic
+
+	/// True when the workbook has no risk rating for this SIT.
+	column is_unrated
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_unrated
+
+		annotation SummarizationSetBy = Automatic
+
+	/// True when this SIT appeared in the activity detections.
+	column observed
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: observed
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_sit = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_sit.parquet")),
+				    Columns = Table.SelectColumns(Source, {"sit_key", "sit_name", "sit_id", "sit_slug", "category", "risk_score", "risk_band", "risk_description", "reference_url", "pspf_classification", "qgiscf", "qgiscf_dlm", "label_code", "sit_classifier_type", "source", "jurisdictions", "scope", "reference_confidence", "classification_tier", "generic_classification", "generic_dlm", "data_categories", "regulations", "small_tenant", "medium_tenant", "large_tenant", "source_sheet", "is_unrated", "observed"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"sit_key", type text}, {"sit_name", type text}, {"sit_id", type text}, {"sit_slug", type text}, {"category", type text}, {"risk_score", Int64.Type}, {"risk_band", type text}, {"risk_description", type text}, {"reference_url", type text}, {"pspf_classification", type text}, {"qgiscf", type text}, {"qgiscf_dlm", type text}, {"label_code", type text}, {"sit_classifier_type", type text}, {"source", type text}, {"jurisdictions", type text}, {"scope", type text}, {"reference_confidence", type text}, {"classification_tier", type text}, {"generic_classification", type text}, {"generic_dlm", type text}, {"data_categories", type text}, {"regulations", type text}, {"small_tenant", type logical}, {"medium_tenant", type logical}, {"large_tenant", type logical}, {"source_sheet", type text}, {"is_unrated", type logical}, {"observed", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

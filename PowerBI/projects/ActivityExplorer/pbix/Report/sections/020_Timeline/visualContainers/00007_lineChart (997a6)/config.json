@@ -1,0 +1,111 @@
+{
+  "name": "997a6801309d571d8610",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 8000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "lineChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "dim_date.date",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "fact_activity.Raw Activities"
+        },
+        {
+          "queryRef": "fact_activity_sit.Activities by SIT"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_date",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "date"
+          },
+          "Name": "dim_date.date"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Raw Activities"
+          },
+          "Name": "fact_activity.Raw Activities"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Activities by SIT"
+          },
+          "Name": "fact_activity_sit.Activities by SIT"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_date.date": {
+        "displayName": "Date"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Daily Activity Volume (All vs SIT-Bearing)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

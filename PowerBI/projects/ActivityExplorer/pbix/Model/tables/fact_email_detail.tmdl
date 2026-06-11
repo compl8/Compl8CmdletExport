@@ -1,0 +1,77 @@
+/// One row per email-bearing activity: subject/message id/attachments.
+table fact_email_detail
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_email_address.
+	column sender_email_address_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: sender_email_address_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Email subject.
+	column subject
+		dataType: string
+		summarizeBy: none
+		sourceColumn: subject
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Internet message id.
+	column message_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: message_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Number of attachments.
+	column attachment_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: attachment_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw AttachmentDetails JSON.
+	column attachment_details_json
+		dataType: string
+		summarizeBy: none
+		sourceColumn: attachment_details_json
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_email_detail = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_email_detail.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "sender_email_address_id", "subject", "message_id", "attachment_count", "attachment_details_json"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"sender_email_address_id", Int64.Type}, {"subject", type text}, {"message_id", type text}, {"attachment_count", Int64.Type}, {"attachment_details_json", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,31 @@
+table dim_workload
+
+	/// Surrogate key.
+	column workload_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: workload_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Workload (Exchange/SharePoint/OneDrive/Teams/Endpoint/Copilot/...).
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_workload = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_workload.parquet")),
+				    Columns = Table.SelectColumns(Source, {"workload_id", "workload"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"workload_id", Int64.Type}, {"workload", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

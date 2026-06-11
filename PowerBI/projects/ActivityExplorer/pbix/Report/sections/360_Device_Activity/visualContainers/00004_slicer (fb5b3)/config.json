@@ -1,0 +1,70 @@
+{
+  "name": "fb5b3f81b1e35e1cb783",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 953.0,
+        "y": 56,
+        "z": 5000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 5000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "fact_activity_detail.application"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "fact_activity_detail",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "application"
+          },
+          "Name": "fact_activity_detail.application"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "fact_activity_detail.application": {
+        "displayName": "Application"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Application'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

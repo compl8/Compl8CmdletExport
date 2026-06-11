@@ -1,0 +1,55 @@
+table dim_activity_type
+
+	/// Surrogate key.
+	column activity_type_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_type_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw activity name.
+	column activity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: activity
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Copilot/DLP/Email/Egress/File/Other.
+	column activity_group
+		dataType: string
+		summarizeBy: none
+		sourceColumn: activity_group
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Activity is an egress action.
+	column is_egress
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_egress
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Activity is Copilot related.
+	column is_copilot
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_copilot
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_activity_type = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_activity_type.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_type_id", "activity", "activity_group", "is_egress", "is_copilot"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_type_id", Int64.Type}, {"activity", type text}, {"activity_group", type text}, {"is_egress", type logical}, {"is_copilot", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

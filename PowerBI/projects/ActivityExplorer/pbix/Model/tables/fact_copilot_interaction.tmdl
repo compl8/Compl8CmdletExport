@@ -1,0 +1,147 @@
+/// One row per Copilot/AI-enriched activity.
+table fact_copilot_interaction
+
+	measure 'Copilot Interactions' =
+			COUNTROWS ( fact_copilot_interaction )
+		formatString: #,##0
+		displayFolder: Copilot
+
+	measure 'Copilot File References' =
+			CALCULATE (
+			    [Copilot Interactions],
+			    fact_copilot_interaction[are_files_referenced] = TRUE ()
+			)
+		formatString: #,##0
+		displayFolder: Copilot
+
+	measure 'Copilot Sensitive File References' =
+			CALCULATE (
+			    [Copilot Interactions],
+			    fact_copilot_interaction[are_sensitive_files_referenced] = TRUE ()
+			)
+		formatString: #,##0
+		displayFolder: Copilot
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_date.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_user.
+	column user_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_app_identity.
+	column app_identity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: app_identity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PurviewAIAppLocation (host app).
+	column purview_ai_app_location
+		dataType: string
+		summarizeBy: none
+		sourceColumn: purview_ai_app_location
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Thread/correlation id.
+	column enriched_copilot_thread_or_correlation_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: enriched_copilot_thread_or_correlation_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// LLM message ids (JSON list).
+	column enriched_llm_message_ids
+		dataType: string
+		summarizeBy: none
+		sourceColumn: enriched_llm_message_ids
+
+		annotation SummarizationSetBy = Automatic
+
+	/// HasWebsearchQuery.
+	column has_web_search_query
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: has_web_search_query
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AreFilesReferenced.
+	column are_files_referenced
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: are_files_referenced
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AreSensitiveFilesReferenced.
+	column are_sensitive_files_referenced
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: are_sensitive_files_referenced
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SensitivityLabelIdsReferenced (JSON list).
+	column sensitivity_label_ids_referenced
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sensitivity_label_ids_referenced
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw CopilotEventData JSON.
+	column copilot_event_data_json
+		dataType: string
+		summarizeBy: none
+		sourceColumn: copilot_event_data_json
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw AccessedResources JSON.
+	column accessed_resources_json
+		dataType: string
+		summarizeBy: none
+		sourceColumn: accessed_resources_json
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_copilot_interaction = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_copilot_interaction.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "date_key", "user_id", "app_identity_id", "purview_ai_app_location", "enriched_copilot_thread_or_correlation_id", "enriched_llm_message_ids", "has_web_search_query", "are_files_referenced", "are_sensitive_files_referenced", "sensitivity_label_ids_referenced", "copilot_event_data_json", "accessed_resources_json"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"date_key", Int64.Type}, {"user_id", Int64.Type}, {"app_identity_id", Int64.Type}, {"purview_ai_app_location", type text}, {"enriched_copilot_thread_or_correlation_id", type text}, {"enriched_llm_message_ids", type text}, {"has_web_search_query", type logical}, {"are_files_referenced", type logical}, {"are_sensitive_files_referenced", type logical}, {"sensitivity_label_ids_referenced", type text}, {"copilot_event_data_json", type text}, {"accessed_resources_json", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

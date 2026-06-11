@@ -1,0 +1,153 @@
+{
+  "name": "2b19fa086b86523f8cfa",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 436,
+        "z": 7000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_sit.qgiscf_dlm"
+        },
+        {
+          "queryRef": "fact_activity_sit.Activities by SIT"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "dim_sit.qgiscf_dlm"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Activities by SIT"
+          },
+          "Name": "fact_activity_sit.Activities by SIT"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Activities by SIT"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_sit.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Classification (DLM)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

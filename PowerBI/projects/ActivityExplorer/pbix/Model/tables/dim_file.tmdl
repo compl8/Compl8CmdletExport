@@ -1,0 +1,55 @@
+table dim_file
+
+	/// Surrogate key.
+	column file_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Full file path when present.
+	column file_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_path
+
+		annotation SummarizationSetBy = Automatic
+
+	/// File or item name.
+	column file_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw FileExtension field, else derived from the name.
+	column file_extension
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_extension
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Raw FileType field.
+	column file_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_type
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_file = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_file.parquet")),
+				    Columns = Table.SelectColumns(Source, {"file_id", "file_path", "file_name", "file_extension", "file_type"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"file_id", Int64.Type}, {"file_path", type text}, {"file_name", type text}, {"file_extension", type text}, {"file_type", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,108 @@
+{
+  "name": "a2b48303146257e18720",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 850.6666666666666,
+        "y": 184,
+        "z": 8000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "treemap",
+    "projections": {
+      "Group": [
+        {
+          "queryRef": "dim_domain.domain",
+          "active": true
+        }
+      ],
+      "Values": [
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_domain",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "domain"
+          },
+          "Name": "dim_domain.domain"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Total SIT Detections"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_domain.domain": {
+        "displayName": "Domain"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Detections by Target Domain'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

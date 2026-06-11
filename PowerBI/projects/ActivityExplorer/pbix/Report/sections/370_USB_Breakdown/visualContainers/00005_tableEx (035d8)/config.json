@@ -1,0 +1,271 @@
+{
+  "name": "035d8cc65aea52369e21",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 184,
+        "z": 6000,
+        "width": 1216,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_user.user_upn"
+        },
+        {
+          "queryRef": "dim_activity_type.activity"
+        },
+        {
+          "queryRef": "dim_sit.sit_name"
+        },
+        {
+          "queryRef": "fact_activity_sit.Activities by SIT"
+        },
+        {
+          "queryRef": "dim_location.folder_path"
+        },
+        {
+          "queryRef": "fact_activity_detail.device_name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_user",
+          "Type": 0
+        },
+        {
+          "Name": "i",
+          "Entity": "dim_activity_type",
+          "Type": 0
+        },
+        {
+          "Name": "m",
+          "Entity": "dim_sit",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        },
+        {
+          "Name": "l",
+          "Entity": "dim_location",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "fact_activity_detail",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "user_upn"
+          },
+          "Name": "dim_user.user_upn"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "i"
+              }
+            },
+            "Property": "activity"
+          },
+          "Name": "dim_activity_type.activity"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Activities by SIT"
+          },
+          "Name": "fact_activity_sit.Activities by SIT"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "l"
+              }
+            },
+            "Property": "folder_path"
+          },
+          "Name": "dim_location.folder_path"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "device_name"
+          },
+          "Name": "fact_activity_detail.device_name"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Activities by SIT"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_user.user_upn": {
+        "displayName": "User"
+      },
+      "dim_activity_type.activity": {
+        "displayName": "Activity"
+      },
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      },
+      "dim_location.folder_path": {
+        "displayName": "Folder Path"
+      },
+      "fact_activity_detail.device_name": {
+        "displayName": "Device"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "320.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_location.folder_path"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_sit.sit_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Removable Media Activity Evidence'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "e0c5585da25d58869478",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 136,
+        "y": 18,
+        "z": 2000,
+        "width": 700,
+        "height": 34,
+        "tabOrder": 2000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Classifier Drillthrough",
+                    "textStyle": {
+                      "fontSize": "18pt",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

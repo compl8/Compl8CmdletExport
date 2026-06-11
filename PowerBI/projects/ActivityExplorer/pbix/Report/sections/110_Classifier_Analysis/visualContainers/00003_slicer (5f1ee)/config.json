@@ -1,0 +1,70 @@
+{
+  "name": "5f1ee903e793503792bb",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 56,
+        "z": 4000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 4000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_sit.category"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "category"
+          },
+          "Name": "dim_sit.category"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_sit.category": {
+        "displayName": "SIT Category"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Category'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

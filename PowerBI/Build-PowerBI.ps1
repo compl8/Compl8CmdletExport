@@ -29,12 +29,12 @@ $repoRoot = Split-Path -Parent $powerBIRoot
 
 $builderModules = @{
     '_smoke'                 = 'PowerBI.builders.build_smoke'
-    'ActivityExplorer'       = 'PowerBI.builders.build_activity_explorer'   # lands in T3
+    'ActivityExplorer'       = 'PowerBI.builders.build_activity_explorer'
     'ContentExplorerSITRisk' = 'PowerBI.builders.build_content_explorer'    # lands in T4
 }
 $pbitNames = @{
     '_smoke'                 = 'Compl8Smoke.pbit'
-    'ActivityExplorer'       = 'ActivityExplorer.pbit'
+    'ActivityExplorer'       = 'ActivityExplorerRisk.pbit'
     'ContentExplorerSITRisk' = 'ContentExplorerSITRisk.pbit'
 }
 

@@ -1,0 +1,70 @@
+{
+  "name": "dc030d00e35c5dfca9ae",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 488,
+        "z": 6000,
+        "width": 602.0,
+        "height": 200,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Locations",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Location: folder path derived from the activity FilePath field.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Location hotspot: a folder path with elevated SIT matches, high-confidence matches, or risk pressure.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Path depth: number of path segments in the derived folder path.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

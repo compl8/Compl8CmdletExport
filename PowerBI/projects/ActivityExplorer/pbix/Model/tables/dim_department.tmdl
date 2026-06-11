@@ -1,0 +1,64 @@
+/// Departments from the GAL/department mapping; 'Unmapped' row for unknowns.
+table dim_department
+
+	/// Surrogate key.
+	column department_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: department_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Department name ('Unmapped' when no mapping).
+	column department
+		dataType: string
+		summarizeBy: none
+		sourceColumn: department
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Division/directorate when the mapping carries one.
+	column division
+		dataType: string
+		summarizeBy: none
+		sourceColumn: division
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Business unit/section when the mapping carries one.
+	column business_unit
+		dataType: string
+		summarizeBy: none
+		sourceColumn: business_unit
+
+		annotation SummarizationSetBy = Automatic
+
+	/// File the mapping came from.
+	column mapping_source
+		dataType: string
+		summarizeBy: none
+		sourceColumn: mapping_source
+
+		annotation SummarizationSetBy = Automatic
+
+	/// False for the synthesized Unmapped row.
+	column is_mapped
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_mapped
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_department = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_department.parquet")),
+				    Columns = Table.SelectColumns(Source, {"department_id", "department", "division", "business_unit", "mapping_source", "is_mapped"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"department_id", Int64.Type}, {"department", type text}, {"division", type text}, {"business_unit", type text}, {"mapping_source", type text}, {"is_mapped", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

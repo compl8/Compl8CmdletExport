@@ -1,0 +1,204 @@
+{
+  "name": "0cf9381e58715ddd9122",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 184,
+        "z": 6000,
+        "width": 1216,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_app_identity.app_identity"
+        },
+        {
+          "queryRef": "dim_app_identity.app_identity_category"
+        },
+        {
+          "queryRef": "dim_app_identity.purview_ai_app_name"
+        },
+        {
+          "queryRef": "fact_copilot_interaction.purview_ai_app_location"
+        },
+        {
+          "queryRef": "fact_copilot_interaction.Copilot Interactions"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_app_identity",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_copilot_interaction",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "app_identity"
+          },
+          "Name": "dim_app_identity.app_identity"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "app_identity_category"
+          },
+          "Name": "dim_app_identity.app_identity_category"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "purview_ai_app_name"
+          },
+          "Name": "dim_app_identity.purview_ai_app_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "purview_ai_app_location"
+          },
+          "Name": "fact_copilot_interaction.purview_ai_app_location"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Copilot Interactions"
+          },
+          "Name": "fact_copilot_interaction.Copilot Interactions"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Copilot Interactions"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_app_identity.app_identity": {
+        "displayName": "App Identity"
+      },
+      "dim_app_identity.app_identity_category": {
+        "displayName": "App Category"
+      },
+      "dim_app_identity.purview_ai_app_name": {
+        "displayName": "AI App"
+      },
+      "fact_copilot_interaction.purview_ai_app_location": {
+        "displayName": "AI App Host"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'AI App Identities'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

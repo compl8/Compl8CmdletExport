@@ -1,0 +1,70 @@
+{
+  "name": "7a6a7ed2fe7b51bcbfb4",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 64,
+        "z": 3000,
+        "width": 602.0,
+        "height": 200,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Risk",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Risk score: numeric value loaded from the SIT risk workbook.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Risk band: Low, Medium, High, Critical, or Unrated.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Risk pressure: match count multiplied by risk score and then summed \u2014 it intentionally combines severity and volume.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

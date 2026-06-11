@@ -1,0 +1,49 @@
+/// Folder-level locations extracted from file paths.
+table dim_location
+
+	/// Surrogate key.
+	column location_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Folder portion of the file path.
+	column folder_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_path
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Last path segment.
+	column folder_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Number of path segments.
+	column path_depth
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: path_depth
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_location = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_location.parquet")),
+				    Columns = Table.SelectColumns(Source, {"location_id", "folder_path", "folder_name", "path_depth"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"location_id", Int64.Type}, {"folder_path", type text}, {"folder_name", type text}, {"path_depth", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "0d8c42ecad425dc69d40",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "fact_activity"
+          }
+        },
+        "Property": "happened_at"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "9d80060ba32b5f648d83",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_sit"
+          }
+        },
+        "Property": "sit_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "1ddc046de51d58b1b2fd",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_sit"
+          }
+        },
+        "Property": "qgiscf_dlm"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]

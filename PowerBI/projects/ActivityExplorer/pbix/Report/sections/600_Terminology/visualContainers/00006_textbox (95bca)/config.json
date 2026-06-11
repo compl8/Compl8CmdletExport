@@ -1,0 +1,60 @@
+{
+  "name": "95bca96b6b725c189372",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 488,
+        "z": 7000,
+        "width": 602.0,
+        "height": 200,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Aggregates vs detail",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Overview pages use the daily aggregate tables (department, user, location, activity type x SIT x day) for speed.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Detail and drillthrough pages use the raw fact tables and should be used after filtering, not as the primary exploration surface for a very large export.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

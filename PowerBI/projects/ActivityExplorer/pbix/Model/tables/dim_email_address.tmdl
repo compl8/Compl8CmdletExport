@@ -1,0 +1,48 @@
+table dim_email_address
+
+	/// Surrogate key.
+	column email_address_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: email_address_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Email address (lowercase).
+	column email_address
+		dataType: string
+		summarizeBy: none
+		sourceColumn: email_address
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Address before the @.
+	column local_part
+		dataType: string
+		summarizeBy: none
+		sourceColumn: local_part
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_domain.
+	column domain_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_email_address = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_email_address.parquet")),
+				    Columns = Table.SelectColumns(Source, {"email_address_id", "email_address", "local_part", "domain_id"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"email_address_id", Int64.Type}, {"email_address", type text}, {"local_part", type text}, {"domain_id", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

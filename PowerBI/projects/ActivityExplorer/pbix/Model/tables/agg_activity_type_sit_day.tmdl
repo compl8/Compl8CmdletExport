@@ -1,0 +1,108 @@
+table agg_activity_type_sit_day
+
+	measure 'Activity Type SIT Events' =
+			SUM ( agg_activity_type_sit_day[activity_count] )
+		formatString: #,##0
+		displayFolder: Aggregates
+
+	measure 'Activity Type SIT Matches' =
+			SUM ( agg_activity_type_sit_day[match_count] )
+		formatString: #,##0
+		displayFolder: Aggregates
+
+	measure 'Activity Type Risk Pressure' =
+			SUM ( agg_activity_type_sit_day[risk_weighted_count] )
+		formatString: #,##0
+		displayFolder: Aggregates
+
+	measure 'Activity Type High Confidence Matches' =
+			SUM ( agg_activity_type_sit_day[high_confidence_count] )
+		formatString: #,##0
+		displayFolder: Aggregates
+
+	/// Dimension foreign key.
+	column date_key
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: date_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Dimension foreign key.
+	column activity_type_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_type_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FK to dim_sit.
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Dimension foreign key.
+	column workload_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: workload_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Distinct activities contributing.
+	column activity_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: activity_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Total SIT match count.
+	column match_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Total risk_score * match_count.
+	column risk_weighted_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: risk_weighted_count
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Total high-confidence matches.
+	column high_confidence_count
+		dataType: int64
+		formatString: #,0
+		summarizeBy: sum
+		sourceColumn: high_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition agg_activity_type_sit_day = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\agg_activity_type_sit_day.parquet")),
+				    Columns = Table.SelectColumns(Source, {"date_key", "activity_type_id", "sit_key", "workload_id", "activity_count", "match_count", "risk_weighted_count", "high_confidence_count"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"date_key", Int64.Type}, {"activity_type_id", Int64.Type}, {"sit_key", type text}, {"workload_id", Int64.Type}, {"activity_count", Int64.Type}, {"match_count", Int64.Type}, {"risk_weighted_count", Int64.Type}, {"high_confidence_count", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

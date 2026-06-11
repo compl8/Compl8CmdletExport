@@ -1,0 +1,62 @@
+[
+  {
+    "name": "ba428e3570bd56d19142",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_sit"
+          }
+        },
+        "Property": "sit_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "d5a5c57fe0db56509129",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_location"
+          }
+        },
+        "Property": "folder_path"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "e265c4403416598094ed",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_department"
+          }
+        },
+        "Property": "department"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "801368897dda599e96d8",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "dim_user"
+          }
+        },
+        "Property": "user_upn"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]

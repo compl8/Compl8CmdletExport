@@ -1,0 +1,80 @@
+/// DLP policy/rule combinations seen in PolicyMatchInfo.
+table dim_policy
+
+	/// Surrogate key.
+	column policy_rule_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: policy_rule_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Policy GUID.
+	column policy_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: policy_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Policy display name.
+	column policy_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: policy_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Enable/TestWithNotifications/...
+	column policy_mode
+		dataType: string
+		summarizeBy: none
+		sourceColumn: policy_mode
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Rule GUID.
+	column rule_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rule_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Rule display name.
+	column rule_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rule_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Rule actions (JSON when complex).
+	column rule_actions
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rule_actions
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Match condition (JSON when complex).
+	column condition
+		dataType: string
+		summarizeBy: none
+		sourceColumn: condition
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_policy = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_policy.parquet")),
+				    Columns = Table.SelectColumns(Source, {"policy_rule_id", "policy_id", "policy_name", "policy_mode", "rule_id", "rule_name", "rule_actions", "condition"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"policy_rule_id", Int64.Type}, {"policy_id", type text}, {"policy_name", type text}, {"policy_mode", type text}, {"rule_id", type text}, {"rule_name", type text}, {"rule_actions", type text}, {"condition", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

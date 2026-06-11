@@ -1,0 +1,67 @@
+/// Provenance: one row per source export page file.
+table dim_source_page
+
+	/// Surrogate key.
+	column page_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: page_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Page path relative to the export root.
+	column source_file
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_file
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PageNumber from the page wrapper.
+	column page_number
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: page_number
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ExportTimestamp from the page wrapper.
+	column export_timestamp
+		dataType: dateTime
+		formatString: yyyy-MM-dd HH:mm:ss
+		summarizeBy: none
+		sourceColumn: export_timestamp
+
+		annotation SummarizationSetBy = Automatic
+
+	/// WaterMark/PageCookie from the page wrapper.
+	column watermark
+		dataType: string
+		summarizeBy: none
+		sourceColumn: watermark
+
+		annotation SummarizationSetBy = Automatic
+
+	/// RecordCount declared by the page wrapper.
+	column record_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: record_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_source_page = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_source_page.parquet")),
+				    Columns = Table.SelectColumns(Source, {"page_id", "source_file", "page_number", "export_timestamp", "watermark", "record_count"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"page_id", Int64.Type}, {"source_file", type text}, {"page_number", Int64.Type}, {"export_timestamp", type datetime}, {"watermark", type text}, {"record_count", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,47 @@
+table dim_domain
+
+	/// Surrogate key.
+	column domain_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: domain_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Full domain (lowercase).
+	column domain
+		dataType: string
+		summarizeBy: none
+		sourceColumn: domain
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Last three labels (or the domain itself).
+	column parent_domain
+		dataType: string
+		summarizeBy: none
+		sourceColumn: parent_domain
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Top-level domain.
+	column tld
+		dataType: string
+		summarizeBy: none
+		sourceColumn: tld
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_domain = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_domain.parquet")),
+				    Columns = Table.SelectColumns(Source, {"domain_id", "domain", "parent_domain", "tld"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"domain_id", Int64.Type}, {"domain", type text}, {"parent_domain", type text}, {"tld", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,70 @@
+{
+  "name": "77cd59b45abf53918092",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 339.0,
+        "y": 56,
+        "z": 3000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_activity_type.activity"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_activity_type",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "activity"
+          },
+          "Name": "dim_activity_type.activity"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_activity_type.activity": {
+        "displayName": "Activity"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Activity'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

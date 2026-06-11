@@ -1,0 +1,56 @@
+/// AI/app identities observed on Copilot-enriched activities.
+table dim_app_identity
+
+	/// Surrogate key.
+	column app_identity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: app_identity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AppIdentity value.
+	column app_identity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: app_identity
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AppIdentityCategory value.
+	column app_identity_category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: app_identity_category
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AppIdentityGroup value.
+	column app_identity_group
+		dataType: string
+		summarizeBy: none
+		sourceColumn: app_identity_group
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PurviewAIAppName value.
+	column purview_ai_app_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: purview_ai_app_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_app_identity = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_app_identity.parquet")),
+				    Columns = Table.SelectColumns(Source, {"app_identity_id", "app_identity", "app_identity_category", "app_identity_group", "purview_ai_app_name"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"app_identity_id", Int64.Type}, {"app_identity", type text}, {"app_identity_category", type text}, {"app_identity_group", type text}, {"purview_ai_app_name", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

@@ -1,0 +1,70 @@
+{
+  "name": "aa792a1bd34e5193bd14",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 339.0,
+        "y": 56,
+        "z": 3000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_user.user_upn"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_user",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "user_upn"
+          },
+          "Name": "dim_user.user_upn"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_user.user_upn": {
+        "displayName": "User"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'User'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

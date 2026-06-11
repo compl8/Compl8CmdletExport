@@ -1,0 +1,70 @@
+{
+  "name": "a4b45a9446485c329f3d",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 953.0,
+        "y": 56,
+        "z": 5000,
+        "width": 295.0,
+        "height": 96,
+        "tabOrder": 5000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_sit.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'QGISCF DLM'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

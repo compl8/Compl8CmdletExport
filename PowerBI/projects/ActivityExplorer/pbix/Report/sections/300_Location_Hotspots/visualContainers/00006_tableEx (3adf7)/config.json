@@ -1,0 +1,214 @@
+{
+  "name": "3adf7dc19c96543eb2b6",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 7000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_location.folder_path"
+        },
+        {
+          "queryRef": "dim_location.path_depth"
+        },
+        {
+          "queryRef": "agg_location_sit_day.Location SIT Matches"
+        },
+        {
+          "queryRef": "agg_location_sit_day.Location Risk Pressure"
+        },
+        {
+          "queryRef": "agg_location_sit_day.Location High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_location",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "agg_location_sit_day",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "folder_path"
+          },
+          "Name": "dim_location.folder_path"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "path_depth"
+          },
+          "Name": "dim_location.path_depth"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Location SIT Matches"
+          },
+          "Name": "agg_location_sit_day.Location SIT Matches"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Location Risk Pressure"
+          },
+          "Name": "agg_location_sit_day.Location Risk Pressure"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Location High Confidence Matches"
+          },
+          "Name": "agg_location_sit_day.Location High Confidence Matches"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Location Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_location.folder_path": {
+        "displayName": "Folder Path"
+      },
+      "dim_location.path_depth": {
+        "displayName": "Path Depth"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "420.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_location.folder_path"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Folder Risk Rollup (Aggregate)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

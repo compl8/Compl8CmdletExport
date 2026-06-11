@@ -1,0 +1,328 @@
+/// 1:1 drillthrough detail per activity. record_identity lives in activity_record_index; file_path lives in dim_file. Unmapped raw keys land in extra_json (and the schema-drift report).
+table fact_activity_detail
+
+	/// Activity surrogate key.
+	column activity_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: activity_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ItemName/FileName.
+	column item_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: item_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// TargetFilePath.
+	column target_file_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_file_path
+
+		annotation SummarizationSetBy = Automatic
+
+	/// TargetUrl.
+	column target_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_url
+
+		annotation SummarizationSetBy = Automatic
+
+	/// DeviceName.
+	column device_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: device_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ClientIP.
+	column client_ip
+		dataType: string
+		summarizeBy: none
+		sourceColumn: client_ip
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Application/ApplicationName.
+	column application
+		dataType: string
+		summarizeBy: none
+		sourceColumn: application
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Platform.
+	column platform
+		dataType: string
+		summarizeBy: none
+		sourceColumn: platform
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Source page file (relative path).
+	column source_file
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_file
+
+		annotation SummarizationSetBy = Automatic
+
+	/// EnforcementMode.
+	column enforcement_mode
+		dataType: string
+		summarizeBy: none
+		sourceColumn: enforcement_mode
+
+		annotation SummarizationSetBy = Automatic
+
+	/// RMSEncrypted.
+	column rms_encrypted
+		dataType: string
+		summarizeBy: none
+		sourceColumn: rms_encrypted
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PreviousFileName.
+	column previous_file_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: previous_file_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// TargetPrinterName.
+	column target_printer_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_printer_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// MDATPDeviceId.
+	column mdatp_device_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: mdatp_device_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// JitTriggered.
+	column jit_triggered
+		dataType: string
+		summarizeBy: none
+		sourceColumn: jit_triggered
+
+		annotation SummarizationSetBy = Automatic
+
+	/// EvidenceFile (JSON).
+	column evidence_file
+		dataType: string
+		summarizeBy: none
+		sourceColumn: evidence_file
+
+		annotation SummarizationSetBy = Automatic
+
+	/// RemovableMediaDeviceAttributes (JSON).
+	column removable_media_device_attributes
+		dataType: string
+		summarizeBy: none
+		sourceColumn: removable_media_device_attributes
+
+		annotation SummarizationSetBy = Automatic
+
+	/// EndpointOperation.
+	column endpoint_operation
+		dataType: string
+		summarizeBy: none
+		sourceColumn: endpoint_operation
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AuthorizedGroup.
+	column authorized_group
+		dataType: string
+		summarizeBy: none
+		sourceColumn: authorized_group
+
+		annotation SummarizationSetBy = Automatic
+
+	/// MatchedPolicies (JSON).
+	column matched_policies
+		dataType: string
+		summarizeBy: none
+		sourceColumn: matched_policies
+
+		annotation SummarizationSetBy = Automatic
+
+	/// DlpAuditEventMetadata (JSON).
+	column dlp_audit_event_metadata
+		dataType: string
+		summarizeBy: none
+		sourceColumn: dlp_audit_event_metadata
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SessionMetadata (JSON).
+	column session_metadata
+		dataType: string
+		summarizeBy: none
+		sourceColumn: session_metadata
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ItemMetadata (JSON).
+	column item_metadata
+		dataType: string
+		summarizeBy: none
+		sourceColumn: item_metadata
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ParentArchiveHash.
+	column parent_archive_hash
+		dataType: string
+		summarizeBy: none
+		sourceColumn: parent_archive_hash
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AgentId.
+	column agent_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: agent_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AgentName.
+	column agent_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: agent_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// TargetAgentId.
+	column target_agent_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_agent_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// TargetAgentName.
+	column target_agent_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_agent_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PlatformTargetAgentId.
+	column platform_target_agent_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: platform_target_agent_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// FilePathUrl.
+	column file_path_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_path_url
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SourceLocationType.
+	column source_location_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_location_type
+
+		annotation SummarizationSetBy = Automatic
+
+	/// DestinationLocationType.
+	column destination_location_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: destination_location_type
+
+		annotation SummarizationSetBy = Automatic
+
+	/// File SHA1.
+	column sha1
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sha1
+
+		annotation SummarizationSetBy = Automatic
+
+	/// File SHA256.
+	column sha256
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sha256
+
+		annotation SummarizationSetBy = Automatic
+
+	/// ColdScanPolicyId.
+	column cold_scan_policy_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: cold_scan_policy_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// PolicyVersion.
+	column policy_version
+		dataType: string
+		summarizeBy: none
+		sourceColumn: policy_version
+
+		annotation SummarizationSetBy = Automatic
+
+	/// AssociatedAdminUnits (JSON).
+	column associated_admin_units
+		dataType: string
+		summarizeBy: none
+		sourceColumn: associated_admin_units
+
+		annotation SummarizationSetBy = Automatic
+
+	/// SensitivityLabelIdsReferenced (JSON).
+	column sensitivity_label_ids_referenced
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sensitivity_label_ids_referenced
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Catch-all: raw keys not consumed by any typed column.
+	column extra_json
+		dataType: string
+		summarizeBy: none
+		sourceColumn: extra_json
+
+		annotation SummarizationSetBy = Automatic
+
+	partition fact_activity_detail = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_activity_detail.parquet")),
+				    Columns = Table.SelectColumns(Source, {"activity_id", "item_name", "target_file_path", "target_url", "device_name", "client_ip", "application", "platform", "source_file", "enforcement_mode", "rms_encrypted", "previous_file_name", "target_printer_name", "mdatp_device_id", "jit_triggered", "evidence_file", "removable_media_device_attributes", "endpoint_operation", "authorized_group", "matched_policies", "dlp_audit_event_metadata", "session_metadata", "item_metadata", "parent_archive_hash", "agent_id", "agent_name", "target_agent_id", "target_agent_name", "platform_target_agent_id", "file_path_url", "source_location_type", "destination_location_type", "sha1", "sha256", "cold_scan_policy_id", "policy_version", "associated_admin_units", "sensitivity_label_ids_referenced", "extra_json"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"activity_id", Int64.Type}, {"item_name", type text}, {"target_file_path", type text}, {"target_url", type text}, {"device_name", type text}, {"client_ip", type text}, {"application", type text}, {"platform", type text}, {"source_file", type text}, {"enforcement_mode", type text}, {"rms_encrypted", type text}, {"previous_file_name", type text}, {"target_printer_name", type text}, {"mdatp_device_id", type text}, {"jit_triggered", type text}, {"evidence_file", type text}, {"removable_media_device_attributes", type text}, {"endpoint_operation", type text}, {"authorized_group", type text}, {"matched_policies", type text}, {"dlp_audit_event_metadata", type text}, {"session_metadata", type text}, {"item_metadata", type text}, {"parent_archive_hash", type text}, {"agent_id", type text}, {"agent_name", type text}, {"target_agent_id", type text}, {"target_agent_name", type text}, {"platform_target_agent_id", type text}, {"file_path_url", type text}, {"source_location_type", type text}, {"destination_location_type", type text}, {"sha1", type text}, {"sha256", type text}, {"cold_scan_policy_id", type text}, {"policy_version", type text}, {"associated_admin_units", type text}, {"sensitivity_label_ids_referenced", type text}, {"extra_json", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

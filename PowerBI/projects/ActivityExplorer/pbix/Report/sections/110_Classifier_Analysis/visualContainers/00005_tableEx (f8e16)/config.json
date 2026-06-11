@@ -1,0 +1,234 @@
+{
+  "name": "f8e16efb488a5f8688d9",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 184,
+        "z": 6000,
+        "width": 1216,
+        "height": 240,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_sit.sit_name"
+        },
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "queryRef": "dim_sit.category"
+        },
+        {
+          "queryRef": "dim_sit.source"
+        },
+        {
+          "queryRef": "dim_sit.risk_band"
+        },
+        {
+          "queryRef": "fact_activity_sit.Weighted Risk Score"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "category"
+          },
+          "Name": "dim_sit.category"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "source"
+          },
+          "Name": "dim_sit.source"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "dim_sit.risk_band"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Weighted Risk Score"
+          },
+          "Name": "fact_activity_sit.Weighted Risk Score"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Total SIT Detections"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      },
+      "dim_sit.category": {
+        "displayName": "SIT Category"
+      },
+      "dim_sit.source": {
+        "displayName": "SIT Source"
+      },
+      "dim_sit.risk_band": {
+        "displayName": "Risk Band"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "320.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_sit.sit_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Classifier Inventory (Detected SITs)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

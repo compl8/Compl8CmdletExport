@@ -1,0 +1,316 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "nodeIndex": "dim_date",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 0
+          },
+          "nodeIndex": "dim_department",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 0
+          },
+          "nodeIndex": "dim_user",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 0
+          },
+          "nodeIndex": "dim_sit",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 0
+          },
+          "nodeIndex": "dim_activity_type",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 4
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 0
+          },
+          "nodeIndex": "dim_workload",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 5
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 320
+          },
+          "nodeIndex": "dim_location",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 6
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 320
+          },
+          "nodeIndex": "dim_file",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 7
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 320
+          },
+          "nodeIndex": "dim_policy",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 8
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 320
+          },
+          "nodeIndex": "dim_domain",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 9
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 320
+          },
+          "nodeIndex": "dim_email_address",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 10
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 320
+          },
+          "nodeIndex": "dim_app_identity",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 11
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 640
+          },
+          "nodeIndex": "dim_source_page",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 12
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 640
+          },
+          "nodeIndex": "fact_activity",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 13
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 640
+          },
+          "nodeIndex": "fact_activity_sit",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 14
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 640
+          },
+          "nodeIndex": "fact_policy_activity",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 15
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 640
+          },
+          "nodeIndex": "fact_email_recipient",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 16
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 640
+          },
+          "nodeIndex": "fact_email_detail",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 17
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 960
+          },
+          "nodeIndex": "fact_copilot_interaction",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 18
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 960
+          },
+          "nodeIndex": "fact_activity_detail",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 19
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 960
+          },
+          "nodeIndex": "agg_department_sit_day",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 20
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 960
+          },
+          "nodeIndex": "agg_user_sit_day",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 21
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 960
+          },
+          "nodeIndex": "agg_location_sit_day",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 22
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 960
+          },
+          "nodeIndex": "agg_activity_type_sit_day",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 23
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 1280
+          },
+          "nodeIndex": "agg_domain_sit_day",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 24
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 65
+    }
+  ]
+}

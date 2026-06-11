@@ -1,0 +1,261 @@
+{
+  "id": 0,
+  "layoutOptimization": 0,
+  "pods": [
+    {
+      "boundSection": "651352d890f4545081b8",
+      "config": "{}",
+      "name": "91ed58af5342543fabbd",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "19da3ad56f4958d9872a",
+      "config": "{}",
+      "name": "93c4f1bd600257b4b12c",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "b0fd41563edd527aba28",
+      "config": "{}",
+      "name": "0bcd9d00e41e5d58babc",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "aa22b3e3d257517fa737",
+      "config": "{}",
+      "name": "a0e494afac3958e9b682",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "e7f5661783725e62add4",
+      "config": "{}",
+      "name": "750aaa5a2365561daece",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "f89f0847fdff5b639128",
+      "config": "{}",
+      "name": "06430f72f4c751359997",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "0e85c3eeaa2f5741a5e9",
+      "config": "{}",
+      "name": "3dab6c90f8b75381b541",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "40ce065ef3335f929a89",
+      "config": "{}",
+      "name": "bcd2398851d25853a72f",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "1fed734b2a1f5ce28962",
+      "config": "{}",
+      "name": "34f9fa70bf185c8cbcf6",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "f20f9d44e6b951699b80",
+      "config": "{}",
+      "name": "4c8314acd094550dbcb9",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "1d8214f5d746578ea6e1",
+      "config": "{}",
+      "name": "448d05a6b4675e6990c4",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "df554c67af475a7bad83",
+      "config": "{}",
+      "name": "8fdf818aad6e5823807b",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "103eae7d30195eefa472",
+      "config": "{}",
+      "name": "ffb25d9c5726597f833e",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "06e332f0adf45d879861",
+      "config": "{}",
+      "name": "823f02b3bb715ad2831b",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "d93a51b5cd8b57c99be0",
+      "config": "{}",
+      "name": "ccbefc5f10f55dd4b761",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "5a1a290820de5d379934",
+      "config": "{}",
+      "name": "5de024e0dd1059c3a970",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "c1172fef33255ebd9ef9",
+      "config": "{}",
+      "name": "8486a6c47e475f6eafe0",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "f50ae75c03e1530dbf0d",
+      "config": "{}",
+      "name": "659a3b15448a5577ad08",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "0e13501490a95e9fa78b",
+      "config": "{}",
+      "name": "df6a23281e075f278ba1",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "098258293b5353308ab0",
+      "config": "{}",
+      "name": "bebe3cb695285f1f8d72",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "e505b128b9605a629bed",
+      "config": "{}",
+      "name": "9f39f3734bda586b9f47",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "5c80ffdb88b758b5a00e",
+      "config": "{}",
+      "name": "efd20cb3dfec5e36b2ad",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "a066c15339475b78a171",
+      "config": "{}",
+      "name": "ce5231f22574566ab36f",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "9d4937f2159d58cdad33",
+      "config": "{}",
+      "name": "e2a64ba6222a5bfbbacf",
+      "parameters": "[{\"name\": \"e59e9682de085238ad31\", \"boundFilter\": \"0d8c42ecad425dc69d40\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"fact_activity\"}}, \"Property\": \"happened_at\"}}}, {\"name\": \"d8e9ecb8ad3d590081c8\", \"boundFilter\": \"9d80060ba32b5f648d83\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"80d52df688b95df78445\", \"boundFilter\": \"1ddc046de51d58b1b2fd\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"qgiscf_dlm\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "05a8624e840152f4820c",
+      "config": "{}",
+      "name": "047ccb88ad0e5a5e8731",
+      "parameters": "[{\"name\": \"c062d6d1f42152daa5f9\", \"boundFilter\": \"c86f575df9cf5bffbd05\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"f3f6fa23de6a557ebcdd\", \"boundFilter\": \"a29b3ebc787c57109943\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_user\"}}, \"Property\": \"user_upn\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "063efdd905a750b78bcc",
+      "config": "{}",
+      "name": "2988384bcbbe57fd8f40",
+      "parameters": "[{\"name\": \"3466304a094d559a8ed9\", \"boundFilter\": \"c6727cffe5005f7bb5b3\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"0a044f3c64795690aa79\", \"boundFilter\": \"f36d610d68875820aec1\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_domain\"}}, \"Property\": \"domain\"}}}, {\"name\": \"e0886e13a0e55fdd8913\", \"boundFilter\": \"8be92e5eb7235f33836b\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_department\"}}, \"Property\": \"department\"}}}, {\"name\": \"b2e83d8e1d0d5ea5a8fc\", \"boundFilter\": \"028bd4a33d8f55589846\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_user\"}}, \"Property\": \"user_upn\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "da8ef1cbdb2b50ff86ee",
+      "config": "{}",
+      "name": "9b0ccaa8307c578cac4c",
+      "parameters": "[{\"name\": \"87d03cb10c8e54b7be32\", \"boundFilter\": \"ba428e3570bd56d19142\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"2e54603ec4d05e28bd9b\", \"boundFilter\": \"d5a5c57fe0db56509129\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_location\"}}, \"Property\": \"folder_path\"}}}, {\"name\": \"31d7721d7f495e8c9613\", \"boundFilter\": \"e265c4403416598094ed\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_department\"}}, \"Property\": \"department\"}}}, {\"name\": \"f8e5d5e991e75b3a8915\", \"boundFilter\": \"801368897dda599e96d8\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_user\"}}, \"Property\": \"user_upn\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "0c0496f6d5755934a42d",
+      "config": "{}",
+      "name": "a7fe56191e7952f09015",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "7cb1f8e27a1a56f2bea5",
+      "config": "{}",
+      "name": "84d28d23ddb15c52bf8b",
+      "referenceScope": 1
+    }
+  ],
+  "resourcePackages": [
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020.pbiviz.json",
+            "path": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020.pbiviz.json",
+            "type": 5
+          }
+        ],
+        "name": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020",
+        "type": 0
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "ForceGraph1449359463895.pbiviz.json",
+            "path": "ForceGraph1449359463895.pbiviz.json",
+            "type": 5
+          }
+        ],
+        "name": "ForceGraph1449359463895",
+        "type": 0
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "WordCloud1447959067750.pbiviz.json",
+            "path": "WordCloud1447959067750.pbiviz.json",
+            "type": 5
+          }
+        ],
+        "name": "WordCloud1447959067750",
+        "type": 0
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "Compl8.Theme.json",
+            "path": "Compl8.Theme.json",
+            "type": 202
+          }
+        ],
+        "name": "RegisteredResources",
+        "type": 1
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "CY26SU02",
+            "path": "BaseThemes/CY26SU02.json",
+            "type": 202
+          }
+        ],
+        "name": "SharedResources",
+        "type": 2
+      }
+    }
+  ],
+  "publicCustomVisuals": [
+    "sankey02300D1BE6F5427989F3DE31CCA9E0F32020",
+    "ForceGraph1449359463895",
+    "WordCloud1447959067750"
+  ]
+}

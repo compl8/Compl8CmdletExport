@@ -1,0 +1,195 @@
+{
+  "name": "7ab8fb653df4547087d6",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 9000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_department.department"
+        },
+        {
+          "queryRef": "agg_department_sit_day.Department SIT Matches"
+        },
+        {
+          "queryRef": "agg_department_sit_day.Department Risk Pressure"
+        },
+        {
+          "queryRef": "agg_department_sit_day.Department Avg Risk Per Match"
+        },
+        {
+          "queryRef": "agg_department_sit_day.Department High Confidence %"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_department",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "agg_department_sit_day",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "department"
+          },
+          "Name": "dim_department.department"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Department SIT Matches"
+          },
+          "Name": "agg_department_sit_day.Department SIT Matches"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Department Risk Pressure"
+          },
+          "Name": "agg_department_sit_day.Department Risk Pressure"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Department Avg Risk Per Match"
+          },
+          "Name": "agg_department_sit_day.Department Avg Risk Per Match"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Department High Confidence %"
+          },
+          "Name": "agg_department_sit_day.Department High Confidence %"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Department Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_department.department": {
+        "displayName": "Department"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Department Rollup (Aggregate)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

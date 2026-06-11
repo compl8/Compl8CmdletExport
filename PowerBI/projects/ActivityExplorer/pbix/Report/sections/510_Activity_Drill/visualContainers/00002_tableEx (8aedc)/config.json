@@ -1,0 +1,289 @@
+{
+  "name": "8aedc66e37895fe4a57e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 64,
+        "z": 3000,
+        "width": 1216,
+        "height": 616,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_activity_type.activity"
+        },
+        {
+          "queryRef": "dim_user.user_upn"
+        },
+        {
+          "queryRef": "fact_activity.happened_at"
+        },
+        {
+          "queryRef": "fact_activity_detail.item_name"
+        },
+        {
+          "queryRef": "dim_policy.rule_name"
+        },
+        {
+          "queryRef": "dim_sit.qgiscf_dlm"
+        },
+        {
+          "queryRef": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_activity_type",
+          "Type": 0
+        },
+        {
+          "Name": "i",
+          "Entity": "dim_user",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "fact_activity_detail",
+          "Type": 0
+        },
+        {
+          "Name": "m",
+          "Entity": "dim_policy",
+          "Type": 0
+        },
+        {
+          "Name": "s",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "activity"
+          },
+          "Name": "dim_activity_type.activity"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "i"
+              }
+            },
+            "Property": "user_upn"
+          },
+          "Name": "dim_user.user_upn"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "happened_at"
+          },
+          "Name": "fact_activity.happened_at"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "item_name"
+          },
+          "Name": "fact_activity_detail.item_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "rule_name"
+          },
+          "Name": "dim_policy.rule_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "s"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "dim_sit.qgiscf_dlm"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "s"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_activity_type.activity": {
+        "displayName": "Activity"
+      },
+      "dim_user.user_upn": {
+        "displayName": "User"
+      },
+      "fact_activity.happened_at": {
+        "displayName": "Happened"
+      },
+      "fact_activity_detail.item_name": {
+        "displayName": "Item Name"
+      },
+      "dim_policy.rule_name": {
+        "displayName": "Rule"
+      },
+      "dim_sit.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      },
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "260.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_sit.sit_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "fact_activity_detail.item_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "220.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_policy.rule_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Activity Evidence'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

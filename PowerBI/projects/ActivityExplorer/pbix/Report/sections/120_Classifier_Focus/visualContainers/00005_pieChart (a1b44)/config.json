@@ -1,0 +1,126 @@
+{
+  "name": "a1b449e0fdf15730ae43",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 6000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "pieChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "dim_sit.sit_name",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        }
+      ],
+      "Series": [
+        {
+          "queryRef": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_sit",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "dim_sit.qgiscf_dlm"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      },
+      "dim_sit.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "objects": {
+      "legend": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Detections by SIT Name'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

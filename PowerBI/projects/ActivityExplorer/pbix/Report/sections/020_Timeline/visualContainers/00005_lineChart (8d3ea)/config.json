@@ -1,0 +1,116 @@
+{
+  "name": "8d3ea2787a5552489873",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 6000,
+        "width": 602.0,
+        "height": 224,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "lineChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "dim_date.date",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
+        }
+      ],
+      "Series": [
+        {
+          "queryRef": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_date",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity_sit",
+          "Type": 0
+        },
+        {
+          "Name": "i",
+          "Entity": "dim_sit",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "date"
+          },
+          "Name": "dim_date.date"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "i"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "dim_sit.sit_name"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "dim_date.date": {
+        "displayName": "Date"
+      },
+      "dim_sit.sit_name": {
+        "displayName": "SIT Name"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Detections over Time by SIT Name'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,5 @@
+expression ParquetRoot = "C:\CHANGEME\PowerBI-AE-Parquet-v6" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Text

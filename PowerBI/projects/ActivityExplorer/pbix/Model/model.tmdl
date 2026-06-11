@@ -1,0 +1,39 @@
+model Model
+	culture: en-AU
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-AU
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["ParquetRoot", "dim_date", "dim_department", "dim_user", "dim_sit", "dim_activity_type", "dim_workload", "dim_location", "dim_file", "dim_policy", "dim_domain", "dim_email_address", "dim_app_identity", "dim_source_page", "fact_activity", "fact_activity_sit", "fact_policy_activity", "fact_email_recipient", "fact_email_detail", "fact_copilot_interaction", "fact_activity_detail", "agg_department_sit_day", "agg_user_sit_day", "agg_location_sit_day", "agg_activity_type_sit_day", "agg_domain_sit_day"]
+
+ref table dim_date
+ref table dim_department
+ref table dim_user
+ref table dim_sit
+ref table dim_activity_type
+ref table dim_workload
+ref table dim_location
+ref table dim_file
+ref table dim_policy
+ref table dim_domain
+ref table dim_email_address
+ref table dim_app_identity
+ref table dim_source_page
+ref table fact_activity
+ref table fact_activity_sit
+ref table fact_policy_activity
+ref table fact_email_recipient
+ref table fact_email_detail
+ref table fact_copilot_interaction
+ref table fact_activity_detail
+ref table agg_department_sit_day
+ref table agg_user_sit_day
+ref table agg_location_sit_day
+ref table agg_activity_type_sit_day
+ref table agg_domain_sit_day
+
+ref cultureInfo en-AU
