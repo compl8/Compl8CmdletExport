@@ -101,7 +101,7 @@ FACT_EMAIL_DETAIL = TableSpec(
     description="One row per email-bearing activity: subject/message id/attachments.",
     columns=(
         _key("activity_id", desc="Activity surrogate key."),
-        _fk("date_key", "FK to dim_date."),
+        _fk("date_key", "FK to dim_date (inactive relationship; the active inbound path is the fact_activity_sit rollup)."),
         _fk("sender_email_address_id", "FK to dim_email_address."),
         _c("subject", "string", "Email subject."),
         _c("message_id", "string", "Internet message id."),

@@ -1,6 +1,12 @@
 /// 1:1 drillthrough detail per activity. record_identity lives in activity_record_index; file_path lives in dim_file. Unmapped raw keys land in extra_json (and the schema-drift report).
 table fact_activity_detail
 
+	/// Activity count at the 1:1 detail grain. Use in evidence tables grouped by fact_activity_detail columns (agent/device/application): fact_activity measures cannot respond to those groupings across the single-direction M:1 relationship.
+	measure 'Detail Activities' =
+			COUNTROWS ( fact_activity_detail )
+		formatString: #,##0
+		displayFolder: Key Metrics
+
 	/// Activity surrogate key.
 	column activity_id
 		dataType: int64

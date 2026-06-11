@@ -135,12 +135,20 @@ def _rule_pivot() -> VisualSpec:
 
 
 def activity_drill_page() -> PageSpec:
-    """510: legacy 'Drill Through Activity' (drill: Happened + SITName + DLM)."""
+    """510: legacy 'Drill Through Activity' (drill: Happened + SITName + DLM).
+
+    Rebound to SIT grain so the dim_sit drill filters actually reach the
+    evidence rows (dim_sit only filters fact_activity_sit): the legacy
+    Happened (fact_activity.happened_at) drill field becomes dim_date.date
+    (a fact_activity filter cannot propagate to fact_activity_sit, and no
+    source visual binds the raw timestamp), ITEM_NAME (fact_activity_detail)
+    becomes dim_file.file_name, and [Total SIT Detections] mediates the
+    multi-dim implicit join."""
     return PageSpec(
         folder="510_Activity_Drill",
         display_name="Drill Through Activity",
         drillthrough_fields=[
-            ("fact_activity", "happened_at"),
+            ("dim_date", "date"),
             ("dim_sit", "sit_name"),
             ("dim_sit", "qgiscf_dlm"),
         ],
@@ -149,18 +157,23 @@ def activity_drill_page() -> PageSpec:
             *_drill_header("actdrill", "Activity Drillthrough"),
             table(
                 "actdrill-table",
-                [f.ACTIVITY, f.USER, f.HAPPENED_AT, f.ITEM_NAME, f.RULE_NAME,
-                 f.QGISCF_DLM, f.SIT_NAME],
+                [f.ACTIVITY, f.USER, f.DATE, f.FILE_NAME, f.RULE_NAME,
+                 f.QGISCF_DLM, f.SIT_NAME, f.TOTAL_SIT_DETECTIONS],
                 full_width(TALL_TABLE_Y, TALL_TABLE_HEIGHT),
                 title="Activity Evidence",
-                column_widths={f.SIT_NAME: 260.0, f.ITEM_NAME: 240.0,
+                column_widths={f.SIT_NAME: 260.0, f.FILE_NAME: 240.0,
                                f.RULE_NAME: 220.0}),
         ],
     )
 
 
 def classifier_detail_page() -> PageSpec:
-    """520: legacy 'Classifier Detail' (drill: SITName + User)."""
+    """520: legacy 'Classifier Detail' (drill: SITName + User).
+
+    ITEM_NAME (fact_activity_detail) is rebound to dim_file.file_name:
+    fact_activity_detail has no relationship path to fact_activity_sit, so
+    the detail column would cross-join against the SIT-grain measure;
+    dim_file carries the same item/file name and relates via file_id."""
     return PageSpec(
         folder="520_Classifier_Detail",
         display_name="Classifier Detail",
@@ -174,17 +187,23 @@ def classifier_detail_page() -> PageSpec:
             table(
                 "clsdetail-table",
                 [f.SIT_NAME, f.QGISCF_DLM, f.ACTIVITY, f.FILE_TYPE, f.USER,
-                 f.TOTAL_SIT_DETECTIONS, f.ITEM_NAME],
+                 f.TOTAL_SIT_DETECTIONS, f.FILE_NAME],
                 full_width(TALL_TABLE_Y, TALL_TABLE_HEIGHT),
                 title="Classifier Evidence",
                 column_widths={f.SIT_NAME: 260.0, f.USER: 200.0,
-                               f.ITEM_NAME: 240.0}),
+                               f.FILE_NAME: 240.0}),
         ],
     )
 
 
 def domain_drill_page() -> PageSpec:
-    """530: legacy 'DomainDrillThrough' (drill: SITName/Domain/Department/User)."""
+    """530: legacy 'DomainDrillThrough' (drill: SITName/Domain/Department/User).
+
+    SIT-grain evidence: ITEM_NAME (fact_activity_detail) is rebound to
+    dim_file.file_name; TARGET_URL and SOURCE_LOCATION_TYPE are dropped —
+    they exist only on fact_activity_detail, which has no unambiguous
+    relationship path to fact_activity_sit, so they would cross-join against
+    the SIT-grain rows (endpoint URL detail remains on 360_Device_Activity)."""
     return PageSpec(
         folder="530_Domain_Drill",
         display_name="Domain Drillthrough",
@@ -200,19 +219,26 @@ def domain_drill_page() -> PageSpec:
             table(
                 "domdrill-table",
                 [f.DOMAIN, f.DEPARTMENT, f.USER, f.SIT_NAME, f.ACTIVITIES_BY_SIT,
-                 f.FOLDER_PATH, f.RULE_NAME, f.TARGET_URL,
-                 f.SOURCE_LOCATION_TYPE, f.ITEM_NAME],
+                 f.FOLDER_PATH, f.RULE_NAME, f.FILE_NAME],
                 full_width(TALL_TABLE_Y, TALL_TABLE_HEIGHT),
                 title="Domain Flow Evidence",
                 column_widths={f.DOMAIN: 180.0, f.SIT_NAME: 220.0,
-                               f.FOLDER_PATH: 260.0, f.TARGET_URL: 220.0}),
+                               f.FOLDER_PATH: 260.0, f.FILE_NAME: 220.0}),
         ],
     )
 
 
 def location_drill_page() -> PageSpec:
     """540: legacy 'LocationDrillThrough' (drill: SITName/FolderPath/
-    Department/User)."""
+    Department/User).
+
+    This page raised Desktop's "Can't determine relationships between the
+    fields" error: the legacy table mixed bare dim columns (dim_sit/dim_user/
+    dim_department/dim_date) with fact_activity_detail columns and no measure
+    — there is no chain of active M:1 hops covering all of them. Rebound to
+    SIT grain: DEVICE_NAME and SOURCE_FILE (fact_activity_detail) are
+    replaced by dim_location.folder_path (the drilled entity) and
+    dim_file.file_name, with [Activities by SIT] mediating the join."""
     return PageSpec(
         folder="540_Location_Drill",
         display_name="Location Drillthrough",
@@ -227,12 +253,12 @@ def location_drill_page() -> PageSpec:
             *_drill_header("locdrill", "Location Drillthrough"),
             table(
                 "locdrill-table",
-                [f.SIT_NAME, f.USER, f.DEPARTMENT, f.DEVICE_NAME, f.DATE,
-                 f.SOURCE_FILE],
+                [f.SIT_NAME, f.USER, f.DEPARTMENT, f.FOLDER_PATH, f.DATE,
+                 f.FILE_NAME, f.ACTIVITIES_BY_SIT],
                 full_width(TALL_TABLE_Y, TALL_TABLE_HEIGHT),
                 title="Location Evidence",
                 column_widths={f.SIT_NAME: 260.0, f.USER: 220.0,
-                               f.SOURCE_FILE: 240.0}),
+                               f.FOLDER_PATH: 260.0, f.FILE_NAME: 220.0}),
         ],
     )
 

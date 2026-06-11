@@ -5,10 +5,10 @@
       "Measure": {
         "Expression": {
           "SourceRef": {
-            "Entity": "fact_activity"
+            "Entity": "fact_activity_sit"
           }
         },
-        "Property": "TotalRisk"
+        "Property": "Total SIT Risk"
       }
     },
     "filter": {
@@ -16,7 +16,7 @@
       "From": [
         {
           "Name": "f",
-          "Entity": "fact_activity",
+          "Entity": "fact_activity_sit",
           "Type": 0
         }
       ],
@@ -32,7 +32,7 @@
                       "Source": "f"
                     }
                   },
-                  "Property": "TotalRisk"
+                  "Property": "Total SIT Risk"
                 }
               },
               "Right": {

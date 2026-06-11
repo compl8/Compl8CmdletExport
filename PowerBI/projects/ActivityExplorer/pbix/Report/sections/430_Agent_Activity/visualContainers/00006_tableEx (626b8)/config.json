@@ -27,7 +27,7 @@
           "queryRef": "dim_activity_type.activity"
         },
         {
-          "queryRef": "fact_activity.Raw Activities"
+          "queryRef": "fact_activity_detail.Detail Activities"
         }
       ]
     },
@@ -42,11 +42,6 @@
         {
           "Name": "d",
           "Entity": "dim_activity_type",
-          "Type": 0
-        },
-        {
-          "Name": "a",
-          "Entity": "fact_activity",
           "Type": 0
         }
       ],
@@ -88,12 +83,12 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Source": "a"
+                "Source": "f"
               }
             },
-            "Property": "Raw Activities"
+            "Property": "Detail Activities"
           },
-          "Name": "fact_activity.Raw Activities"
+          "Name": "fact_activity_detail.Detail Activities"
         }
       ],
       "OrderBy": [
@@ -103,10 +98,10 @@
             "Measure": {
               "Expression": {
                 "SourceRef": {
-                  "Source": "a"
+                  "Source": "f"
                 }
               },
-              "Property": "Raw Activities"
+              "Property": "Detail Activities"
             }
           }
         }

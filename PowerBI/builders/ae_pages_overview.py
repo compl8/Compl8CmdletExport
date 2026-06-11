@@ -297,7 +297,14 @@ def department_treemap_page() -> PageSpec:
 
 
 def user_investigation_page() -> PageSpec:
-    """220: legacy 'User' (single-user activity evidence table)."""
+    """220: legacy 'User' (single-user activity evidence table).
+
+    Evidence is SIT-grain: every bare column binds a dim that
+    fact_activity_sit reaches via an active M:1 relationship, and the
+    [Activities by SIT] measure mediates the multi-dim join (bare dim columns
+    alone cannot be joined across a fact's many-side). The legacy SOURCE_FILE
+    (fact_activity_detail) column is dropped: fact_activity_detail has no
+    unambiguous relationship path to dim_sit / fact_activity_sit."""
     return PageSpec(
         folder="220_User_Investigation",
         display_name="User Investigation",
@@ -307,11 +314,11 @@ def user_investigation_page() -> PageSpec:
             table(
                 "userpage-table-evidence",
                 [f.USER, f.ACTIVITY, f.DATE, f.DOMAIN, f.RULE_NAME, f.SIT_NAME,
-                 f.FILE_NAME, f.SOURCE_FILE],
+                 f.FILE_NAME, f.ACTIVITIES_BY_SIT],
                 full_width(CHART_ROW_Y, TALL_HEIGHT),
                 title="User Activity Evidence",
                 column_widths={f.USER: 200.0, f.SIT_NAME: 240.0, f.FILE_NAME: 220.0,
-                               f.RULE_NAME: 220.0, f.SOURCE_FILE: 200.0}),
+                               f.RULE_NAME: 220.0}),
         ],
     )
 

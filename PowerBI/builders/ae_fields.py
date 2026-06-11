@@ -105,6 +105,8 @@ EXTERNAL_DOMAIN_ACTIVITIES = meas("fact_activity", "External Domain Activities")
 UNIQUE_TARGET_DOMAINS = meas("fact_activity", "Unique Target Domains")
 DAILY_ACTIVITY_AVERAGE = meas("fact_activity", "Daily Activity Average")
 
+DETAIL_ACTIVITIES = meas("fact_activity_detail", "Detail Activities")
+
 ACTIVITIES_BY_SIT = meas("fact_activity_sit", "Activities by SIT")
 TOTAL_SIT_DETECTIONS = meas("fact_activity_sit", "Total SIT Detections")
 TOTAL_SIT_INSTANCE_COUNT = meas("fact_activity_sit", "Total SIT Instance Count")

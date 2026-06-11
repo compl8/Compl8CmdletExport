@@ -31,9 +31,6 @@
         },
         {
           "queryRef": "dim_location.folder_path"
-        },
-        {
-          "queryRef": "fact_activity_detail.device_name"
         }
       ]
     },
@@ -63,11 +60,6 @@
         {
           "Name": "l",
           "Entity": "dim_location",
-          "Type": 0
-        },
-        {
-          "Name": "a",
-          "Entity": "fact_activity_detail",
           "Type": 0
         }
       ],
@@ -126,17 +118,6 @@
             "Property": "folder_path"
           },
           "Name": "dim_location.folder_path"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "a"
-              }
-            },
-            "Property": "device_name"
-          },
-          "Name": "fact_activity_detail.device_name"
         }
       ],
       "OrderBy": [
@@ -169,9 +150,6 @@
       },
       "dim_location.folder_path": {
         "displayName": "Folder Path"
-      },
-      "fact_activity_detail.device_name": {
-        "displayName": "Device"
       }
     },
     "objects": {

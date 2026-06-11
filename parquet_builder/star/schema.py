@@ -83,6 +83,20 @@ RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     _rel("fact_activity_sit", "target_domain_id", "dim_domain", "domain_id"),
     _rel("fact_activity_sit", "policy_rule_id", "dim_policy", "policy_rule_id"),
     _rel("fact_activity_sit", "sit_key", "dim_sit", "sit_key"),
+    # Email-detail rollup: SIT-grain visuals/measures respond to
+    # fact_email_detail column groupings (e.g. subject word cloud sized by
+    # [Activities by SIT]). M:1 holds: activity_id is fact_email_detail's key;
+    # SIT rows for non-email activities resolve to the blank member.
+    # NOTE: fact_email_detail.date_key -> dim_date must stay INACTIVE while
+    # this is active, or dim_date would have two active paths into
+    # fact_activity_sit (direct vs via fact_email_detail) and Desktop would
+    # reject the model as ambiguous.
+    # NOT declared (same ambiguity, via every shared dim): rollups from
+    # fact_activity_sit.activity_id to fact_activity or fact_activity_detail —
+    # the denormalized FK relationships above already provide the dim paths,
+    # so SIT-grain visuals bind dim columns (dim_file.file_name, dim_date.date)
+    # instead of fact_activity / fact_activity_detail columns.
+    _rel("fact_activity_sit", "activity_id", "fact_email_detail", "activity_id"),
     # fact_policy_activity
     _rel("fact_policy_activity", "date_key", "dim_date", "date_key"),
     _rel("fact_policy_activity", "user_id", "dim_user", "user_id"),
@@ -95,8 +109,10 @@ RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     _rel("fact_email_recipient", "recipient_email_address_id", "dim_email_address", "email_address_id"),
     _rel("fact_email_recipient", "sender_email_address_id", "dim_email_address", "email_address_id", active=False),
     _rel("fact_email_recipient", "recipient_domain_id", "dim_domain", "domain_id"),
-    # fact_email_detail
-    _rel("fact_email_detail", "date_key", "dim_date", "date_key"),
+    # fact_email_detail (date relationship inactive — see the email-detail
+    # rollup note above; date filtering reaches SIT measures via dim_date ->
+    # fact_activity_sit directly)
+    _rel("fact_email_detail", "date_key", "dim_date", "date_key", active=False),
     _rel("fact_email_detail", "sender_email_address_id", "dim_email_address", "email_address_id"),
     # fact_copilot_interaction
     _rel("fact_copilot_interaction", "date_key", "dim_date", "date_key"),

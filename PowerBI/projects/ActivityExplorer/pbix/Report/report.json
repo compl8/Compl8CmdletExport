@@ -144,7 +144,7 @@
       "boundSection": "9d4937f2159d58cdad33",
       "config": "{}",
       "name": "e2a64ba6222a5bfbbacf",
-      "parameters": "[{\"name\": \"e59e9682de085238ad31\", \"boundFilter\": \"0d8c42ecad425dc69d40\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"fact_activity\"}}, \"Property\": \"happened_at\"}}}, {\"name\": \"d8e9ecb8ad3d590081c8\", \"boundFilter\": \"9d80060ba32b5f648d83\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"80d52df688b95df78445\", \"boundFilter\": \"1ddc046de51d58b1b2fd\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"qgiscf_dlm\"}}}]",
+      "parameters": "[{\"name\": \"e59e9682de085238ad31\", \"boundFilter\": \"f2900013414e5fccb5a0\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_date\"}}, \"Property\": \"date\"}}}, {\"name\": \"d8e9ecb8ad3d590081c8\", \"boundFilter\": \"9d80060ba32b5f648d83\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"80d52df688b95df78445\", \"boundFilter\": \"1ddc046de51d58b1b2fd\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"dim_sit\"}}, \"Property\": \"qgiscf_dlm\"}}}]",
       "type": 1
     },
     {

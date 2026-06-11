@@ -163,9 +163,16 @@ def test_every_visual_has_vc_title(project_dir: Path) -> None:
 
 
 def test_sankey_pages_keep_risk_gates(project_dir: Path) -> None:
-    gated_pages = ("330_Location_Domain_Flows", "340_Folder_Data_Flows",
-                   "350_Domain_Graph", "410_Email_Subject_Cloud")
-    for folder in gated_pages:
+    # 410's gate is at SIT grain ([Total SIT Risk]): the word cloud groups by
+    # fact_email_detail[subject], which cannot filter fact_activity's
+    # [TotalRisk] (see ae_pages_flows.email_subject_cloud_page).
+    gated_pages = {
+        "330_Location_Domain_Flows": "TotalRisk",
+        "340_Folder_Data_Flows": "TotalRisk",
+        "350_Domain_Graph": "TotalRisk",
+        "410_Email_Subject_Cloud": "Total SIT Risk",
+    }
+    for folder, gate_measure in gated_pages.items():
         gates = []
         for filters_path in (project_dir / "Report" / "sections" / folder).glob(
                 "visualContainers/*/filters.json"):
@@ -174,9 +181,36 @@ def test_sankey_pages_keep_risk_gates(project_dir: Path) -> None:
                     "Condition", {})
                 comparison = condition.get("Comparison", {})
                 if comparison.get("Left", {}).get("Measure", {}).get(
-                        "Property") == "TotalRisk":
+                        "Property") == gate_measure:
                     gates.append(comparison)
-        assert gates, f"{folder}: TotalRisk gate not ported"
+        assert gates, f"{folder}: {gate_measure} gate not ported"
+
+
+# --- polish: compact dropdown multi-select slicers (T6 owner feedback) --------
+
+def test_slicers_are_compact_dropdown_multiselect(project_dir: Path) -> None:
+    found = 0
+    for config_path in (project_dir / "Report" / "sections").glob(
+            "*/visualContainers/*/config.json"):
+        single = json.loads(config_path.read_text(encoding="utf-8"))["singleVisual"]
+        if single["visualType"] != "slicer":
+            continue
+        found += 1
+        objects = single["objects"]
+
+        def literal(group: str, prop: str) -> str:
+            return objects[group][0]["properties"][prop]["expr"]["Literal"]["Value"]
+
+        assert literal("data", "mode") == "'Dropdown'"
+        assert literal("selection", "singleSelect") == "false"
+        # strictSingleSelect false = "Multi-select with CTRL" OFF (plain-click
+        # checkbox multi-select)
+        assert literal("selection", "strictSingleSelect") == "false"
+        assert literal("selection", "selectAllCheckboxEnabled") == "true"
+        assert literal("items", "textSize") == "10D"
+        assert literal("header", "show") == "true"
+        assert literal("header", "textSize") == "10D"
+    assert found, "no slicers emitted"
 
 
 # --- determinism --------------------------------------------------------------

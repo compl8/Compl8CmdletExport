@@ -93,6 +93,10 @@ relationship e7e97d57-5166-52e1-9c2d-2b0020e815ae
 	fromColumn: fact_activity_sit.sit_key
 	toColumn: dim_sit.sit_key
 
+relationship 3713a3ea-adc1-5ffc-911d-5b01788c42c6
+	fromColumn: fact_activity_sit.activity_id
+	toColumn: fact_email_detail.activity_id
+
 relationship 53de5787-6346-5231-b21b-e3d7b8271e94
 	fromColumn: fact_policy_activity.date_key
 	toColumn: dim_date.date_key
@@ -135,6 +139,7 @@ relationship f7765b75-5cdd-5de8-906f-347a370e9c5a
 	toColumn: dim_domain.domain_id
 
 relationship d93e9cb4-07ec-5563-ac37-6bd9ef1d8e5d
+	isActive: false
 	fromColumn: fact_email_detail.date_key
 	toColumn: dim_date.date_key
 

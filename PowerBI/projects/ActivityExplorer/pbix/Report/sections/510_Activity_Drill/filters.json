@@ -1,14 +1,14 @@
 [
   {
-    "name": "0d8c42ecad425dc69d40",
+    "name": "f2900013414e5fccb5a0",
     "expression": {
       "Column": {
         "Expression": {
           "SourceRef": {
-            "Entity": "fact_activity"
+            "Entity": "dim_date"
           }
         },
-        "Property": "happened_at"
+        "Property": "date"
       }
     },
     "type": "Categorical",

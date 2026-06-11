@@ -217,12 +217,29 @@ def card(seed: str, value: Field, rect: Rect, *, title: str | None = None,
     )
 
 
-def slicer(seed: str, slicer_field: Field, rect: Rect, *, title: str | None = None) -> VisualSpec:
+def slicer(seed: str, slicer_field: Field, rect: Rect, *, title: str | None = None,
+           mode: str = "Dropdown", text_size: int = 10) -> VisualSpec:
+    """Compact slicer defaults (T6 owner feedback): Dropdown data mode, small
+    item/header text, and plain-click checkbox multi-select
+    (strictSingleSelect false = the "Multi-select with CTRL" toggle OFF)."""
     return VisualSpec(
         seed, "slicer", rect,
         fields=[slicer_field],
         projections={"Values": _one(slicer_field)},
         title=title,
+        objects={
+            "data": [{"properties": {"mode": literal_expr(mode)}}],
+            "selection": [{"properties": {
+                "singleSelect": literal_expr(False),
+                "strictSingleSelect": literal_expr(False),
+                "selectAllCheckboxEnabled": literal_expr(True),
+            }}],
+            "items": [{"properties": {"textSize": literal_expr(text_size)}}],
+            "header": [{"properties": {
+                "show": literal_expr(True),
+                "textSize": literal_expr(text_size),
+            }}],
+        },
     )
 
 

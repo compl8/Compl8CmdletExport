@@ -27,13 +27,16 @@
           "queryRef": "dim_department.department"
         },
         {
-          "queryRef": "fact_activity_detail.device_name"
+          "queryRef": "dim_location.folder_path"
         },
         {
           "queryRef": "dim_date.date"
         },
         {
-          "queryRef": "fact_activity_detail.source_file"
+          "queryRef": "dim_file.file_name"
+        },
+        {
+          "queryRef": "fact_activity_sit.Activities by SIT"
         }
       ]
     },
@@ -56,13 +59,23 @@
           "Type": 0
         },
         {
-          "Name": "f",
-          "Entity": "fact_activity_detail",
+          "Name": "l",
+          "Entity": "dim_location",
           "Type": 0
         },
         {
           "Name": "a",
           "Entity": "dim_date",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "dim_file",
+          "Type": 0
+        },
+        {
+          "Name": "c",
+          "Entity": "fact_activity_sit",
           "Type": 0
         }
       ],
@@ -104,12 +117,12 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Source": "f"
+                "Source": "l"
               }
             },
-            "Property": "device_name"
+            "Property": "folder_path"
           },
-          "Name": "fact_activity_detail.device_name"
+          "Name": "dim_location.folder_path"
         },
         {
           "Column": {
@@ -129,9 +142,20 @@
                 "Source": "f"
               }
             },
-            "Property": "source_file"
+            "Property": "file_name"
           },
-          "Name": "fact_activity_detail.source_file"
+          "Name": "dim_file.file_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "c"
+              }
+            },
+            "Property": "Activities by SIT"
+          },
+          "Name": "fact_activity_sit.Activities by SIT"
         }
       ]
     },
@@ -146,14 +170,14 @@
       "dim_department.department": {
         "displayName": "Department"
       },
-      "fact_activity_detail.device_name": {
-        "displayName": "Device"
+      "dim_location.folder_path": {
+        "displayName": "Folder Path"
       },
       "dim_date.date": {
         "displayName": "Date"
       },
-      "fact_activity_detail.source_file": {
-        "displayName": "Source Page File"
+      "dim_file.file_name": {
+        "displayName": "File Name"
       }
     },
     "objects": {
@@ -237,13 +261,27 @@
             "value": {
               "expr": {
                 "Literal": {
-                  "Value": "240.0D"
+                  "Value": "260.0D"
                 }
               }
             }
           },
           "selector": {
-            "metadata": "fact_activity_detail.source_file"
+            "metadata": "dim_location.folder_path"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "220.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_file.file_name"
           }
         }
       ]

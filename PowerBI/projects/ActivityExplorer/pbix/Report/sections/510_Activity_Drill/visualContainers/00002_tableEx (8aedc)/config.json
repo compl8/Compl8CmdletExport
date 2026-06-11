@@ -24,10 +24,10 @@
           "queryRef": "dim_user.user_upn"
         },
         {
-          "queryRef": "fact_activity.happened_at"
+          "queryRef": "dim_date.date"
         },
         {
-          "queryRef": "fact_activity_detail.item_name"
+          "queryRef": "dim_file.file_name"
         },
         {
           "queryRef": "dim_policy.rule_name"
@@ -37,6 +37,9 @@
         },
         {
           "queryRef": "dim_sit.sit_name"
+        },
+        {
+          "queryRef": "fact_activity_sit.Total SIT Detections"
         }
       ]
     },
@@ -54,23 +57,28 @@
           "Type": 0
         },
         {
-          "Name": "f",
-          "Entity": "fact_activity",
-          "Type": 0
-        },
-        {
-          "Name": "a",
-          "Entity": "fact_activity_detail",
-          "Type": 0
-        },
-        {
           "Name": "m",
+          "Entity": "dim_date",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "dim_file",
+          "Type": 0
+        },
+        {
+          "Name": "p",
           "Entity": "dim_policy",
           "Type": 0
         },
         {
           "Name": "s",
           "Entity": "dim_sit",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "fact_activity_sit",
           "Type": 0
         }
       ],
@@ -101,29 +109,29 @@
           "Column": {
             "Expression": {
               "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "date"
+          },
+          "Name": "dim_date.date"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
                 "Source": "f"
               }
             },
-            "Property": "happened_at"
+            "Property": "file_name"
           },
-          "Name": "fact_activity.happened_at"
+          "Name": "dim_file.file_name"
         },
         {
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Source": "a"
-              }
-            },
-            "Property": "item_name"
-          },
-          "Name": "fact_activity_detail.item_name"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "m"
+                "Source": "p"
               }
             },
             "Property": "rule_name"
@@ -151,6 +159,17 @@
             "Property": "sit_name"
           },
           "Name": "dim_sit.sit_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Total SIT Detections"
+          },
+          "Name": "fact_activity_sit.Total SIT Detections"
         }
       ]
     },
@@ -162,11 +181,11 @@
       "dim_user.user_upn": {
         "displayName": "User"
       },
-      "fact_activity.happened_at": {
-        "displayName": "Happened"
+      "dim_date.date": {
+        "displayName": "Date"
       },
-      "fact_activity_detail.item_name": {
-        "displayName": "Item Name"
+      "dim_file.file_name": {
+        "displayName": "File Name"
       },
       "dim_policy.rule_name": {
         "displayName": "Rule"
@@ -251,7 +270,7 @@
             }
           },
           "selector": {
-            "metadata": "fact_activity_detail.item_name"
+            "metadata": "dim_file.file_name"
           }
         },
         {

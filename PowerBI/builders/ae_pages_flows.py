@@ -58,6 +58,15 @@ def _risk_gated(visual):
     return visual
 
 
+def _sit_risk_gated(visual):
+    """Risk gate at SIT grain — for visuals grouped by columns that only
+    filter fact_activity_sit (e.g. fact_email_detail via the rollup
+    relationship), where [TotalRisk] on fact_activity would not respond."""
+    visual.filters.append(
+        measure_threshold_filter(f.TOTAL_SIT_RISK, SANKEY_RISK_GATE, COMPARISON_GT))
+    return visual
+
+
 def location_hotspots_page() -> PageSpec:
     """300: legacy 'Location' (folder treemap) + aggregate location rollup."""
     return PageSpec(
@@ -83,7 +92,11 @@ def location_hotspots_page() -> PageSpec:
 
 
 def location_risk_page() -> PageSpec:
-    """310: legacy 'Location Risk' (risk vs detections scatter per folder)."""
+    """310: legacy 'Location Risk' (risk vs detections scatter per folder).
+    Bubble size uses [Avg Weighted Risk] (fact_activity_sit) rather than the
+    legacy [Avg Risk Rating] (dim_sit): a dim_sit-home measure cannot respond
+    to dim_location groupings across single-direction relationships, so every
+    folder bubble would get the same size."""
     return PageSpec(
         folder="310_Location_Risk",
         display_name="Location Risk",
@@ -93,8 +106,8 @@ def location_risk_page() -> PageSpec:
             scatter_chart(
                 "locrisk-scatter", f.TOTAL_SIT_RISK, f.TOTAL_SIT_DETECTIONS,
                 f.FOLDER_PATH, full_width(CHART_ROW_Y, TALL_HEIGHT),
-                title="Folder Risk vs Detections (size = avg risk rating)",
-                size=f.AVG_RISK_RATING, series=f.QGISCF_DLM),
+                title="Folder Risk vs Detections (size = avg weighted risk)",
+                size=f.AVG_WEIGHTED_RISK, series=f.QGISCF_DLM),
         ],
     )
 
@@ -214,7 +227,10 @@ def device_page() -> PageSpec:
 
 
 def usb_breakdown_page() -> PageSpec:
-    """370: legacy 'USB Breakdown' (removable-media/remote-session focus)."""
+    """370: legacy 'USB Breakdown' (removable-media/remote-session focus).
+    DEVICE_NAME (fact_activity_detail) is dropped from the SIT evidence table:
+    fact_activity_detail has no relationship path to fact_activity_sit, so the
+    [Activities by SIT] values would cross-join over every device name."""
     tables = grid_row(2, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
         folder="370_USB_Breakdown",
@@ -228,7 +244,7 @@ def usb_breakdown_page() -> PageSpec:
             table(
                 "usb-table-evidence",
                 [f.USER, f.ACTIVITY, f.SIT_NAME, f.ACTIVITIES_BY_SIT,
-                 f.FOLDER_PATH, f.DEVICE_NAME],
+                 f.FOLDER_PATH],
                 full_width(CHART_ROW_Y, CHART_HEIGHT),
                 title="Removable Media Activity Evidence",
                 order_by=f.ACTIVITIES_BY_SIT,
@@ -270,7 +286,12 @@ def dlp_policy_analysis_page() -> PageSpec:
 
 
 def email_subject_cloud_page() -> PageSpec:
-    """410: legacy 'Subject Heading Word Cloud' (subjects + email KPIs)."""
+    """410: legacy 'Subject Heading Word Cloud' (subjects + email KPIs).
+    The word cloud groups by fact_email_detail[subject]; SIT measures respond
+    to that grouping via the fact_activity_sit -> fact_email_detail rollup
+    relationship. The legacy [TotalRisk] (fact_activity) gate becomes
+    [Total SIT Risk] (fact_activity_sit) — subject groupings cannot filter
+    fact_activity, so the old gate would have been all-or-nothing."""
     kpis = row_of_cards(4)
     tables = grid_row(2, TABLE_ROW_Y, TABLE_HEIGHT)
     dlm_table = f.by_sit_table("subject-table-dlm", f.QGISCF_DLM, tables[0],
@@ -294,7 +315,7 @@ def email_subject_cloud_page() -> PageSpec:
                  title="External Recipients"),
             card("subject-card-domains", f.UNIQUE_RECEIVER_DOMAINS, kpis[3],
                  title="Receiver Domains"),
-            _risk_gated(word_cloud(
+            _sit_risk_gated(word_cloud(
                 "subject-wordcloud", f.EMAIL_SUBJECT, f.ACTIVITIES_BY_SIT,
                 full_width(CHART_ROW_Y, CHART_HEIGHT),
                 title="Subject Keyword Distribution (risk > 100)")),
@@ -336,7 +357,10 @@ def ai_view_page() -> PageSpec:
 
 def agent_activity_page() -> PageSpec:
     """430: legacy 'Agent Activity' upgraded onto fact_copilot_interaction +
-    dim_app_identity (v6 AI enrichment)."""
+    dim_app_identity (v6 AI enrichment). The agent-names table counts with
+    [Detail Activities] (fact_activity_detail home): [Raw Activities] on
+    fact_activity cannot respond to agent_name groupings across the
+    single-direction fact_activity_detail -> fact_activity relationship."""
     kpis = row_of_cards(4)
     tables = grid_row(2, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
@@ -360,9 +384,9 @@ def agent_activity_page() -> PageSpec:
                 title="AI App Identities", order_by=f.COPILOT_INTERACTIONS),
             table(
                 "agent-table-agents",
-                [f.AGENT_NAME, f.TARGET_AGENT_NAME, f.ACTIVITY, f.RAW_ACTIVITIES],
+                [f.AGENT_NAME, f.TARGET_AGENT_NAME, f.ACTIVITY, f.DETAIL_ACTIVITIES],
                 tables[0], title="Agent Names by Activity",
-                order_by=f.RAW_ACTIVITIES),
+                order_by=f.DETAIL_ACTIVITIES),
             f.by_sit_table("agent-table-group", f.ACTIVITY_GROUP, tables[1],
                            title="Activity Groups"),
         ],

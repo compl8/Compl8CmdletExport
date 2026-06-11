@@ -34,7 +34,7 @@
       ],
       "Size": [
         {
-          "queryRef": "dim_sit.Avg Risk Rating"
+          "queryRef": "fact_activity_sit.Avg Weighted Risk"
         }
       ],
       "Series": [
@@ -100,12 +100,12 @@
           "Measure": {
             "Expression": {
               "SourceRef": {
-                "Source": "i"
+                "Source": "f"
               }
             },
-            "Property": "Avg Risk Rating"
+            "Property": "Avg Weighted Risk"
           },
-          "Name": "dim_sit.Avg Risk Rating"
+          "Name": "fact_activity_sit.Avg Weighted Risk"
         },
         {
           "Column": {
@@ -136,7 +136,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Folder Risk vs Detections (size = avg risk rating)'"
+                  "Value": "'Folder Risk vs Detections (size = avg weighted risk)'"
                 }
               }
             }

@@ -11,7 +11,7 @@ table fact_email_detail
 
 		annotation SummarizationSetBy = Automatic
 
-	/// FK to dim_date.
+	/// FK to dim_date (inactive relationship; the active inbound path is the fact_activity_sit rollup).
 	column date_key
 		dataType: int64
 		isHidden

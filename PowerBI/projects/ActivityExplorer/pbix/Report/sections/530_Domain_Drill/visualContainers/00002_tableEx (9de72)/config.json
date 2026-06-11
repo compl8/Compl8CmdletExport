@@ -39,13 +39,7 @@
           "queryRef": "dim_policy.rule_name"
         },
         {
-          "queryRef": "fact_activity_detail.target_url"
-        },
-        {
-          "queryRef": "fact_activity_detail.source_location_type"
-        },
-        {
-          "queryRef": "fact_activity_detail.item_name"
+          "queryRef": "dim_file.file_name"
         }
       ]
     },
@@ -88,8 +82,8 @@
           "Type": 0
         },
         {
-          "Name": "a",
-          "Entity": "fact_activity_detail",
+          "Name": "e",
+          "Entity": "dim_file",
           "Type": 0
         }
       ],
@@ -175,34 +169,12 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Source": "a"
+                "Source": "e"
               }
             },
-            "Property": "target_url"
+            "Property": "file_name"
           },
-          "Name": "fact_activity_detail.target_url"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "a"
-              }
-            },
-            "Property": "source_location_type"
-          },
-          "Name": "fact_activity_detail.source_location_type"
-        },
-        {
-          "Column": {
-            "Expression": {
-              "SourceRef": {
-                "Source": "a"
-              }
-            },
-            "Property": "item_name"
-          },
-          "Name": "fact_activity_detail.item_name"
+          "Name": "dim_file.file_name"
         }
       ]
     },
@@ -226,14 +198,8 @@
       "dim_policy.rule_name": {
         "displayName": "Rule"
       },
-      "fact_activity_detail.target_url": {
-        "displayName": "Target URL"
-      },
-      "fact_activity_detail.source_location_type": {
-        "displayName": "Source Location Type"
-      },
-      "fact_activity_detail.item_name": {
-        "displayName": "Item Name"
+      "dim_file.file_name": {
+        "displayName": "File Name"
       }
     },
     "objects": {
@@ -337,7 +303,7 @@
             }
           },
           "selector": {
-            "metadata": "fact_activity_detail.target_url"
+            "metadata": "dim_file.file_name"
           }
         }
       ]

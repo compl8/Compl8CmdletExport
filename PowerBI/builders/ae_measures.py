@@ -202,6 +202,16 @@ _FACT_ACTIVITY_SIT_MEASURES = [
                 "#,##0", "Risk"),
 ]
 
+_FACT_ACTIVITY_DETAIL_MEASURES = [
+    MeasureSpec("fact_activity_detail", "Detail Activities",
+                "COUNTROWS ( fact_activity_detail )",
+                "#,##0", "Key Metrics",
+                "Activity count at the 1:1 detail grain. Use in evidence "
+                "tables grouped by fact_activity_detail columns (agent/device/"
+                "application): fact_activity measures cannot respond to those "
+                "groupings across the single-direction M:1 relationship."),
+]
+
 _DIM_SIT_MEASURES = [
     MeasureSpec("dim_sit", "Avg Risk Rating",
                 "AVERAGE ( dim_sit[risk_score] )", "#,##0.0", "Risk"),
@@ -294,6 +304,7 @@ _AGG_MEASURES = [
 MEASURES: list[MeasureSpec] = [
     *_FACT_ACTIVITY_MEASURES,
     *_FACT_ACTIVITY_SIT_MEASURES,
+    *_FACT_ACTIVITY_DETAIL_MEASURES,
     *_DIM_SIT_MEASURES,
     *_EMAIL_MEASURES,
     *_COPILOT_MEASURES,

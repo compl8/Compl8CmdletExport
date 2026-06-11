@@ -220,6 +220,31 @@ def test_every_visual_has_vc_title(project_dir: Path) -> None:
         assert "title" not in single  # non-schema bare key must never appear
 
 
+# --- polish: compact dropdown multi-select slicers (engine-wide, T6) -------------
+
+def test_slicers_are_compact_dropdown_multiselect(project_dir: Path) -> None:
+    found = 0
+    for config_path in (project_dir / "Report" / "sections").glob(
+            "*/visualContainers/*/config.json"):
+        single = json.loads(config_path.read_text(encoding="utf-8"))["singleVisual"]
+        if single["visualType"] != "slicer":
+            continue
+        found += 1
+        objects = single["objects"]
+
+        def literal(group: str, prop: str) -> str:
+            return objects[group][0]["properties"][prop]["expr"]["Literal"]["Value"]
+
+        assert literal("data", "mode") == "'Dropdown'"
+        assert literal("selection", "singleSelect") == "false"
+        assert literal("selection", "strictSingleSelect") == "false"
+        assert literal("selection", "selectAllCheckboxEnabled") == "true"
+        assert literal("items", "textSize") == "10D"
+        assert literal("header", "show") == "true"
+        assert literal("header", "textSize") == "10D"
+    assert found, "no slicers emitted"
+
+
 # --- determinism ------------------------------------------------------------------
 
 def test_two_builds_are_byte_identical(project_dir: Path, tmp_path: Path) -> None:

@@ -39,7 +39,7 @@
           "queryRef": "dim_file.file_name"
         },
         {
-          "queryRef": "fact_activity_detail.source_file"
+          "queryRef": "fact_activity_sit.Activities by SIT"
         }
       ]
     },
@@ -83,7 +83,7 @@
         },
         {
           "Name": "a",
-          "Entity": "fact_activity_detail",
+          "Entity": "fact_activity_sit",
           "Type": 0
         }
       ],
@@ -166,15 +166,15 @@
           "Name": "dim_file.file_name"
         },
         {
-          "Column": {
+          "Measure": {
             "Expression": {
               "SourceRef": {
                 "Source": "a"
               }
             },
-            "Property": "source_file"
+            "Property": "Activities by SIT"
           },
-          "Name": "fact_activity_detail.source_file"
+          "Name": "fact_activity_sit.Activities by SIT"
         }
       ]
     },
@@ -200,9 +200,6 @@
       },
       "dim_file.file_name": {
         "displayName": "File Name"
-      },
-      "fact_activity_detail.source_file": {
-        "displayName": "Source Page File"
       }
     },
     "objects": {
@@ -307,20 +304,6 @@
           },
           "selector": {
             "metadata": "dim_policy.rule_name"
-          }
-        },
-        {
-          "properties": {
-            "value": {
-              "expr": {
-                "Literal": {
-                  "Value": "200.0D"
-                }
-              }
-            }
-          },
-          "selector": {
-            "metadata": "fact_activity_detail.source_file"
           }
         }
       ]

@@ -36,7 +36,7 @@
           "queryRef": "fact_activity_sit.Total SIT Detections"
         },
         {
-          "queryRef": "fact_activity_detail.item_name"
+          "queryRef": "dim_file.file_name"
         }
       ]
     },
@@ -66,11 +66,6 @@
         {
           "Name": "f",
           "Entity": "fact_activity_sit",
-          "Type": 0
-        },
-        {
-          "Name": "a",
-          "Entity": "fact_activity_detail",
           "Type": 0
         }
       ],
@@ -145,12 +140,12 @@
           "Column": {
             "Expression": {
               "SourceRef": {
-                "Source": "a"
+                "Source": "m"
               }
             },
-            "Property": "item_name"
+            "Property": "file_name"
           },
-          "Name": "fact_activity_detail.item_name"
+          "Name": "dim_file.file_name"
         }
       ]
     },
@@ -171,8 +166,8 @@
       "dim_user.user_upn": {
         "displayName": "User"
       },
-      "fact_activity_detail.item_name": {
-        "displayName": "Item Name"
+      "dim_file.file_name": {
+        "displayName": "File Name"
       }
     },
     "objects": {
@@ -262,7 +257,7 @@
             }
           },
           "selector": {
-            "metadata": "fact_activity_detail.item_name"
+            "metadata": "dim_file.file_name"
           }
         }
       ]

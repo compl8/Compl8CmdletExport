@@ -67,6 +67,47 @@ def test_domain_and_location_relationship_activity_flags() -> None:
     assert _find_rel("fact_activity_sit", "target_domain_id", "dim_domain").active is True
 
 
+def test_email_detail_rollup_relationship() -> None:
+    """SIT-grain visuals/measures reach fact_email_detail attributes (subject
+    word cloud) via the active rollup; the email-detail date relationship must
+    stay inactive or dim_date would have two active paths into
+    fact_activity_sit."""
+    rollup = _find_rel("fact_activity_sit", "activity_id", "fact_email_detail")
+    assert rollup is not None and rollup.active is True
+    assert _find_rel("fact_email_detail", "date_key", "dim_date").active is False
+
+
+def _active_propagation_paths(source: str) -> dict[str, int]:
+    """Count distinct active filter-propagation paths from `source` to every
+    other model table (filters flow one-side -> many-side)."""
+    edges: dict[str, list[str]] = {}
+    for rel in schema.model_relationships():
+        if rel.active:
+            edges.setdefault(rel.to_table, []).append(rel.from_table)
+    counts: dict[str, int] = {}
+
+    def _walk(node: str, visited: frozenset[str]) -> None:
+        for nxt in edges.get(node, []):
+            if nxt in visited:
+                continue
+            counts[nxt] = counts.get(nxt, 0) + 1
+            _walk(nxt, visited | {nxt})
+
+    _walk(source, frozenset({source}))
+    return counts
+
+
+def test_active_relationship_graph_is_unambiguous() -> None:
+    """Power BI refuses a model where two active filter paths connect the same
+    pair of tables (e.g. a fact_activity_sit -> fact_activity rollup would
+    duplicate every denormalized dim path). Guard the SSOT against it."""
+    for source in (table.name for table in schema.model_tables()):
+        for target, count in _active_propagation_paths(source).items():
+            assert count <= 1, (
+                f"ambiguous active filter paths: {source} -> {target} "
+                f"({count} distinct paths)")
+
+
 def test_fact_activity_v6_additions() -> None:
     cols = schema.TABLES["fact_activity"].column_names()
     for name in ("user_type", "data_platform", "app_identity_id"):
