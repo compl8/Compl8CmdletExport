@@ -13,7 +13,11 @@ from parquet_builder.star.convert import convert
 from parquet_builder.star.enrich import (
     EnrichmentError,
     RiskLookup,
+    is_generic_account_dn,
+    is_leaver_dn,
     load_department_mapping,
+    parse_dn_ous,
+    region_from_dn,
 )
 from parquet_builder.star.finalize import write_dimensions
 from parquet_builder.star.keys import stable_int_id
@@ -193,9 +197,10 @@ def _make_workbook(path: Path) -> Path:
 
 def _make_gal(path: Path) -> Path:
     path.write_text(
-        "UserPrincipalName,Department\n"
-        "alice@contoso.com,Dept A\n"
-        "bob.galonly@contoso.com,Dept B\n",
+        "UserPrincipalName,Department,CompanyName,JobTitle,OnPremisesDN\n"
+        "alice@contoso.com,Dept A,DIV-ONE,Data Scientist,"
+        '"CN=Alice,OU=Users,OU=Central,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
+        "bob.galonly@contoso.com,Dept B,,,\n",
         encoding="utf-8",
     )
     return path
@@ -348,6 +353,20 @@ def test_dim_user_unions_gal_with_has_activity(converted) -> None:
     assert {"Dept A", "Dept B"} <= departments
 
 
+def test_dim_user_org_enrichment_lands_in_parquet(converted) -> None:
+    users = {row["user_upn"]: row for row in _read(converted, "dim_user").to_pylist()}
+    alice = users["ALICE@CONTOSO.COM"]
+    assert alice["division"] == "DIV-ONE"  # CompanyName wins over Department
+    assert alice["region"] == "Central"  # OU directly under Regions
+    assert alice["job_title"] == "Data Scientist"
+    assert alice["is_leaver"] is False
+    assert alice["is_generic_account"] is False
+    bob = users["BOB.GALONLY@CONTOSO.COM"]
+    assert bob["division"] == "Dept B"  # no CompanyName: Department fallback
+    assert bob["region"] == "Unknown"  # no DN
+    assert bob["job_title"] is None
+
+
 def test_dim_sit_workbook_rows_with_observed_flag(converted) -> None:
     sits = {row["sit_name"]: row for row in _read(converted, "dim_sit").to_pylist()}
     assert sits["Test SIT One"]["observed"] is True
@@ -452,6 +471,102 @@ def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
         "ALICE@QFES.EXAMPLE.COM", "BOB@QFES.EXAMPLE.COM",
         "CAROL@QFES.EXAMPLE.COM", "DAVE@FIRE.EXAMPLE.COM",
     }
+
+
+# --- composite org enrichment (T6 polish 3: division/region/flags) -----------
+
+def _make_org_gal(path: Path) -> Path:
+    path.write_text(
+        "UserPrincipalName,Department,CompanyName,JobTitle,OnPremisesDN\n"
+        # CompanyName beats Department; standard Regions DN
+        "fiona@qfes.example.com,QFES,QFR,Firefighter,"
+        '"CN=Fiona,OU=Users,OU=South East,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
+        # lower-case CompanyName variant: canonicalized to the dominant casing
+        "gary@qfes.example.com,QFES,qfr,,"
+        '"CN=Gary,OU=Users,OU=Far Northern,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
+        # leaver: Leavers OU, no Regions OU anywhere
+        "wayne@qfes.example.com,QFES,,Regional Director,"
+        '"CN=Wayne,OU=QFES Leavers,OU=Leavers,OU=DES Users,DC=corp,DC=internal"\n'
+        # generic-account pool directly under Regions
+        "icc.info@qfes.example.com,QFES,,,"
+        '"CN=ICC Info,OU=Generic Accounts,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
+        # SharedUsers pool also counts as generic
+        "462.alpha@qfes.example.com,QFES,,,"
+        '"CN=462 Alpha,OU=SharedUsers,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
+        # service OU with no Regions ancestor -> region Unknown
+        "svc.sync@qfes.example.com,QFES,,,"
+        '"CN=Sync,OU=Office365Sync,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
+        # no Department, no CompanyName, no DN -> all Unknown
+        "blank@qfes.example.com,,,,\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_division_company_name_with_department_fallback(tmp_path) -> None:
+    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
+    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
+    # casing canonicalized to the dominant variant across the file
+    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
+    # no CompanyName -> Department fallback
+    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_division"] == "QFES"
+    # neither -> Unknown
+    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_division"] == "Unknown"
+
+
+def test_region_parsed_from_dn(tmp_path) -> None:
+    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
+    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_region"] == "South East"
+    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_region"] == "Far Northern"
+    # account-pool OUs under Regions are regions verbatim
+    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["user_region"] == "Generic Accounts"
+    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["user_region"] == "SharedUsers"
+    # leaver / service OUs have no Regions ancestor
+    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
+    assert mappings["SVC.SYNC@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
+    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
+
+
+def test_leaver_and_generic_account_flags(tmp_path) -> None:
+    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
+    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_leaver"] is True
+    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_generic_account"] is False
+    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["is_generic_account"] is True
+    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["is_generic_account"] is True
+    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_leaver"] is False
+    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_generic_account"] is False
+    assert mappings["FIONA@QFES.EXAMPLE.COM"]["job_title"] == "Firefighter"
+
+
+def test_dn_parsing_edge_cases() -> None:
+    # escaped comma inside an OU value survives the component split
+    assert parse_dn_ous(
+        r"CN=X,OU=Fire\, Rescue,OU=Regions,DC=corp"
+    ) == ["Fire, Rescue", "Regions"]
+    assert region_from_dn(r"CN=X,OU=Fire\, Rescue,OU=Regions,DC=corp") == "Fire, Rescue"
+    # Regions as the leaf OU has no child -> Unknown
+    assert region_from_dn("CN=X,OU=Regions,OU=MOE,DC=corp") == "Unknown"
+    # case-insensitive OU matching
+    assert region_from_dn("CN=X,OU=Users,OU=Central,OU=REGIONS,DC=corp") == "Central"
+    assert is_leaver_dn("CN=X,OU=qfes leavers,OU=LEAVERS,DC=corp") is True
+    assert is_generic_account_dn("CN=X,OU=GENERIC ACCOUNTS,OU=Regions,DC=corp") is True
+    # empty / missing DNs
+    assert region_from_dn(None) == "Unknown"
+    assert region_from_dn("") == "Unknown"
+    assert is_leaver_dn(None) is False
+    assert is_generic_account_dn("") is False
+
+
+def test_activity_only_user_gets_unknown_org(tmp_path) -> None:
+    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
+    registry = IdRegistry()
+    user_id, _ = registry.get_user("stranger@elsewhere.example.com", mappings)
+    row = registry.user_rows[user_id]
+    assert row["division"] == "Unknown"
+    assert row["region"] == "Unknown"
+    assert row["job_title"] is None
+    assert row["is_leaver"] is False
+    assert row["is_generic_account"] is False
 
 
 def test_no_archive_raw_flag(tmp_path) -> None:

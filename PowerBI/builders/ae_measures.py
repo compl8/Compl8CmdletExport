@@ -144,6 +144,28 @@ _FACT_ACTIVITY_MEASURES = [
     MeasureSpec("fact_activity", "Unique Rules Triggered",
                 "CALCULATE ( DISTINCTCOUNT ( dim_policy[rule_name] ), fact_policy_activity )",
                 "#,##0", "Policy"),
+    # --- Org (GAL-derived dim_user flags, T6 polish 3) ------------------------
+    MeasureSpec("fact_activity", "Leaver Activities",
+                "CALCULATE ( [Raw Activities], dim_user[is_leaver] = TRUE () )",
+                "#,##0", "Org",
+                "Activity recorded against accounts sitting in a Leavers OU "
+                "of the GAL — departed users should not be generating events."),
+    MeasureSpec("fact_activity", "Generic Account Activities",
+                "CALCULATE ( [Raw Activities], dim_user[is_generic_account] = TRUE () )",
+                "#,##0", "Org",
+                "Activity from shared-account pools (Generic Accounts/"
+                "SharedUsers OUs) — no individual accountability."),
+    MeasureSpec("fact_activity", "Flagged Account Activities",
+                "CALCULATE (\n"
+                "    [Raw Activities],\n"
+                "    FILTER (\n"
+                "        ALL ( dim_user[is_leaver], dim_user[is_generic_account] ),\n"
+                "        dim_user[is_leaver] || dim_user[is_generic_account]\n"
+                "    )\n"
+                ")",
+                "#,##0", "Org",
+                "Leaver OR generic-account activity (the 2x2 flag iterator is "
+                "constant-time; gates the flagged-accounts table)."),
 ]
 
 _FACT_ACTIVITY_SIT_MEASURES = [

@@ -121,7 +121,9 @@ def location_risk_page() -> PageSpec:
 
 
 def domain_data_flows_page() -> PageSpec:
-    """320: legacy 'Domain Data Flows' (department -> target domain Sankey)."""
+    """320: legacy 'Domain Data Flows' (org -> target domain Sankey). The org
+    side is division since T6 polish 3 (Department is one QFES value on this
+    tenant; dim_user.division resolves to fact_activity_sit via user_id)."""
     tables = grid_row(3, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
         folder="320_Domain_Data_Flows",
@@ -130,15 +132,15 @@ def domain_data_flows_page() -> PageSpec:
             textbox("domflow-title", "Domain Data Flows", title_rect()),
             *f.slicer_band("domflow"),
             sankey(
-                "domflow-sankey", f.DEPARTMENT, f.DOMAIN, f.ACTIVITIES_BY_SIT,
+                "domflow-sankey", f.DIVISION, f.DOMAIN, f.ACTIVITIES_BY_SIT,
                 full_width(CHART_ROW_Y, CHART_HEIGHT),
-                title="External Flows by Department and Domain"),
+                title="External Flows by Division and Domain"),
             f.by_sit_table("domflow-table-dlm", f.QGISCF_DLM, tables[0],
                            title="Classification (DLM)"),
             f.by_sit_table("domflow-table-domain", f.DOMAIN, tables[1],
                            title="Target Domains"),
-            f.by_sit_table("domflow-table-dept", f.DEPARTMENT, tables[2],
-                           title="Departments"),
+            f.by_sit_table("domflow-table-division", f.DIVISION, tables[2],
+                           title="Divisions"),
         ],
     )
 
@@ -166,8 +168,8 @@ def location_domain_flows_page() -> PageSpec:
 
 
 def folder_data_flows_page() -> PageSpec:
-    """340: legacy 'Folder Data Flows' (department -> folder Sankey,
-    TotalRisk > 100 gate)."""
+    """340: legacy 'Folder Data Flows' (org -> folder Sankey, TotalRisk > 100
+    gate). Division replaced department in T6 polish 3."""
     tables = grid_row(2, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
         folder="340_Folder_Data_Flows",
@@ -176,20 +178,21 @@ def folder_data_flows_page() -> PageSpec:
             textbox("folderflow-title", "Folder Data Flows", title_rect()),
             *f.slicer_band("folderflow"),
             _risk_gated(sankey(
-                "folderflow-sankey", f.DEPARTMENT, f.FOLDER_PATH,
+                "folderflow-sankey", f.DIVISION, f.FOLDER_PATH,
                 f.ACTIVITIES_BY_SIT, full_width(CHART_ROW_Y, CHART_HEIGHT),
-                title="Flows by Department and Folder (risk > 100)")),
+                title="Flows by Division and Folder (risk > 100)")),
             f.by_sit_table("folderflow-table-dlm", f.QGISCF_DLM, tables[0],
                            title="Classification (DLM)"),
-            f.by_sit_table("folderflow-table-dept", f.DEPARTMENT, tables[1],
-                           title="Departments"),
+            f.by_sit_table("folderflow-table-division", f.DIVISION, tables[1],
+                           title="Divisions"),
         ],
     )
 
 
 def domain_graph_page() -> PageSpec:
     """350: legacy 'Graph Domain Data Flows' — keeps the fallback matrix
-    (dept x domain pivot) AND adds the ForceGraph upgrade."""
+    (org x domain pivot) AND adds the ForceGraph upgrade. Division replaced
+    department in T6 polish 3."""
     charts = grid_row(2, CHART_ROW_Y, CHART_HEIGHT + 64)
     return PageSpec(
         folder="350_Domain_Graph",
@@ -198,13 +201,13 @@ def domain_graph_page() -> PageSpec:
             textbox("domgraph-title", "Graph Domain Data Flows", title_rect()),
             *f.slicer_band("domgraph"),
             _risk_gated(force_graph(
-                "domgraph-force", f.DEPARTMENT, f.DOMAIN, f.ACTIVITIES_BY_SIT,
+                "domgraph-force", f.DIVISION, f.DOMAIN, f.ACTIVITIES_BY_SIT,
                 f.QGISCF_DLM, charts[0],
-                title="Department to Domain Network (risk > 100)")),
+                title="Division to Domain Network (risk > 100)")),
             _risk_gated(pivot_table(
-                "domgraph-pivot", rows=[f.DEPARTMENT], columns=[f.DOMAIN],
+                "domgraph-pivot", rows=[f.DIVISION], columns=[f.DOMAIN],
                 values=[f.ACTIVITIES_BY_SIT], rect=charts[1],
-                title="External Flows by Department and Domain (risk > 100)")),
+                title="External Flows by Division and Domain (risk > 100)")),
             f.by_sit_table(
                 "domgraph-table-dlm", f.QGISCF_DLM,
                 full_width(TABLE_ROW_Y + 64, TABLE_HEIGHT - 64),
@@ -306,8 +309,8 @@ def email_subject_cloud_page() -> PageSpec:
                                title="Classification (DLM)")
     dlm_table.filters.append(
         measure_threshold_filter(f.ACTIVITIES_BY_SIT, 0, COMPARISON_GT))
-    dept_table = f.by_sit_table("subject-table-dept", f.DEPARTMENT, tables[1],
-                                title="Departments")
+    dept_table = f.by_sit_table("subject-table-division", f.DIVISION, tables[1],
+                                title="Divisions")
     dept_table.filters.append(
         measure_threshold_filter(f.ACTIVITIES_BY_SIT, 1, COMPARISON_GT))
     return PageSpec(
@@ -343,7 +346,7 @@ def ai_view_page() -> PageSpec:
         display_name="AI View",
         visuals=[
             textbox("aiview-title", "AI View", title_rect()),
-            *f.slicer_band("aiview", (f.DATE, f.DOMAIN, f.DEPARTMENT, f.QGISCF_DLM)),
+            *f.slicer_band("aiview", (f.DATE, f.DOMAIN, f.DIVISION, f.QGISCF_DLM)),
             line_chart(
                 "aiview-line-dlm", f.DATE, [f.TOTAL_SIT_DETECTIONS], charts[0],
                 title="Detections over Time by Classification (DLM)",
@@ -356,8 +359,8 @@ def ai_view_page() -> PageSpec:
                 tables[0], title="Detections by Activity and Domain",
                 series=f.DOMAIN),
             pie_chart(
-                "aiview-pie-dept", f.DEPARTMENT, f.TOTAL_SIT_DETECTIONS,
-                tables[1], title="Detections by Department and Domain",
+                "aiview-pie-division", f.DIVISION, f.TOTAL_SIT_DETECTIONS,
+                tables[1], title="Detections by Division and Domain",
                 series=f.DOMAIN),
         ],
     )

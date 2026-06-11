@@ -277,11 +277,15 @@ _TERMINOLOGY = [
      " supplied risk workbook. It is kept visible because treating unknown mappings"
      " as low risk hides register gaps.\n"
      "QGISCF DLM and PSPF: classification fields imported from the SIT risk workbook."),
-    ("Departments",
-     "Department mapping: user enrichment loaded from the GAL/department mapping"
-     " supplied to the conversion script.\n"
+    ("Org mapping (Division / Region / Department)",
+     "Division: GAL CompanyName falling back to Department ('Unknown' when the"
+     " user has no GAL row) — the primary org lens in this report.\n"
+     "Region: the OU directly under the Regions OU of the user's GAL"
+     " distinguished name ('Unknown' for non-Regions accounts).\n"
+     "Leaver / generic account: OU-derived flags (Leavers OUs; Generic"
+     " Accounts/SharedUsers pools).\n"
      "Unmapped department: a user was present in Activity Explorer but no"
-     " department mapping was found."),
+     " GAL/department mapping was found."),
     ("Locations",
      "Location: folder path derived from the activity FilePath field.\n"
      "Location hotspot: a folder path with elevated SIT matches, high-confidence"

@@ -1,0 +1,251 @@
+{
+  "name": "17aa1b7862d15302bfff",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 496,
+        "z": 8000,
+        "width": 1216,
+        "height": 184,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "dim_user.user_upn"
+        },
+        {
+          "queryRef": "dim_user.division"
+        },
+        {
+          "queryRef": "dim_user.job_title"
+        },
+        {
+          "queryRef": "dim_user.is_leaver"
+        },
+        {
+          "queryRef": "dim_user.is_generic_account"
+        },
+        {
+          "queryRef": "fact_activity.Flagged Account Activities"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "dim_user",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "fact_activity",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "user_upn"
+          },
+          "Name": "dim_user.user_upn"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "division"
+          },
+          "Name": "dim_user.division"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "job_title"
+          },
+          "Name": "dim_user.job_title"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "is_leaver"
+          },
+          "Name": "dim_user.is_leaver"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "is_generic_account"
+          },
+          "Name": "dim_user.is_generic_account"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Flagged Account Activities"
+          },
+          "Name": "fact_activity.Flagged Account Activities"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Flagged Account Activities"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "dim_user.user_upn": {
+        "displayName": "User"
+      },
+      "dim_user.division": {
+        "displayName": "Division"
+      },
+      "dim_user.job_title": {
+        "displayName": "Job Title"
+      },
+      "dim_user.is_leaver": {
+        "displayName": "Leaver"
+      },
+      "dim_user.is_generic_account": {
+        "displayName": "Generic Account"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_user.user_upn"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "200.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "dim_user.job_title"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Flagged Accounts with Activity (Leavers / Generic Accounts)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

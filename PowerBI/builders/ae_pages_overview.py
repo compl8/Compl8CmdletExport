@@ -36,8 +36,16 @@ TALL_HEIGHT = 720 - CHART_ROW_Y - 40  # 496
 
 def executive_overview_page() -> PageSpec:
     """000: legacy 'Executive Overview' merged with the interim report's
-    Executive page (agg-table risk-pressure visuals)."""
-    kpis = row_of_cards(5)
+    Executive page.
+
+    T6 polish 3: the department visuals became division (dim_user) — on this
+    tenant Department is a single QFES value, while the GAL CompanyName-derived
+    division carries the real org split. Division groupings resolve via
+    fact_activity_sit.user_id -> dim_user, so the risk-pressure visuals use the
+    fact-grain [Weighted Risk Score] (identical semantics to the agg-table
+    [Department Risk Pressure]: SUM of risk_weighted_count). A Leaver
+    Activities KPI surfaces the GAL is_leaver flag."""
+    kpis = row_of_cards(6)
     charts = grid_row(3, CHART_ROW_Y, CHART_HEIGHT)
     tables = grid_row(2, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
@@ -51,12 +59,14 @@ def executive_overview_page() -> PageSpec:
             card("exec-card-risk", f.WEIGHTED_RISK_SCORE, kpis[3], title="Risk Pressure"),
             card("exec-card-highconf", f.HIGH_CONFIDENCE_DETECTIONS, kpis[4],
                  title="High Confidence Detections"),
+            card("exec-card-leavers", f.LEAVER_ACTIVITIES, kpis[5],
+                 title="Leaver Activities"),
             bar_chart(
                 "exec-bar-dlm", f.QGISCF_DLM, [f.ACTIVITIES_BY_SIT, f.TOTAL_SIT_RISK],
                 charts[0], title="Activities and Risk by Classification (DLM)"),
             treemap(
-                "exec-treemap-dept", f.DEPARTMENT, f.DEPT_RISK_PRESSURE,
-                charts[1], title="Department Risk Pressure"),
+                "exec-treemap-division", f.DIVISION, f.WEIGHTED_RISK_SCORE,
+                charts[1], title="Division Risk Pressure"),
             column_chart(
                 "exec-col-group", f.ACTIVITY_GROUP, [f.ACTIVITY_TYPE_RISK_PRESSURE],
                 charts[2], title="Risk Pressure by Activity Group",
@@ -64,11 +74,11 @@ def executive_overview_page() -> PageSpec:
             f.by_sit_table("exec-table-rules", f.RULE_NAME, tables[0],
                            title="Top DLP Rules by SIT Activities"),
             table(
-                "exec-table-dept",
-                [f.DEPARTMENT, f.RISK_BAND, f.DEPT_SIT_MATCHES, f.DEPT_RISK_PRESSURE,
-                 f.DEPT_HIGH_CONFIDENCE_PCT],
-                tables[1], title="Department Risk Summary",
-                order_by=f.DEPT_RISK_PRESSURE),
+                "exec-table-division",
+                [f.DIVISION, f.RISK_BAND, f.TOTAL_SIT_INSTANCE_COUNT,
+                 f.WEIGHTED_RISK_SCORE, f.HIGH_CONFIDENCE_PCT],
+                tables[1], title="Division Risk Summary",
+                order_by=f.WEIGHTED_RISK_SCORE),
         ],
     )
 
@@ -110,7 +120,7 @@ def timeline_page() -> PageSpec:
         display_name="Timeline",
         visuals=[
             textbox("timeline-title", "Detection Timeline", title_rect()),
-            *f.slicer_band("timeline", (f.DATE, f.USER, f.DEPARTMENT, f.QGISCF_DLM)),
+            *f.slicer_band("timeline", (f.DATE, f.USER, f.DIVISION, f.QGISCF_DLM)),
             line_chart(
                 "timeline-line-sit", f.DATE, [f.TOTAL_SIT_DETECTIONS], charts[0],
                 title="SIT Detections over Time by SIT Name", series=f.SIT_NAME),
@@ -239,59 +249,67 @@ def file_analysis_page() -> PageSpec:
                            title="Classification (DLM) Summary"),
             f.by_sit_table("fileanalysis-table-domain", f.DOMAIN, tables[1],
                            title="Target Domains"),
-            f.by_sit_table("fileanalysis-table-dept", f.DEPARTMENT, tables[2],
-                           title="Departments"),
+            f.by_sit_table("fileanalysis-table-division", f.DIVISION, tables[2],
+                           title="Divisions"),
         ],
     )
 
 
 def department_analysis_page() -> PageSpec:
-    """200: legacy 'Department Analysis' (classification mix, category pivot,
-    domain treemap)."""
+    """200: legacy 'Department Analysis', rebound to division (T6 polish 3).
+
+    Department on this tenant is one wall-to-wall QFES value; the GAL
+    CompanyName-derived division is the real org axis. The rollup table moved
+    from the agg_department measures to fact-grain fact_activity_sit measures
+    (same semantics) so the division/region slicers actually filter it —
+    agg_department_sit_day carries no user_id and cannot respond to dim_user
+    filters. Department itself stays available on 010/370 tables, the 5xx
+    drillthrough pages, and as a drill field."""
     charts = grid_row(3, CHART_ROW_Y, CHART_HEIGHT)
     return PageSpec(
         folder="200_Department_Analysis",
-        display_name="Department Analysis",
+        display_name="Division Analysis",
         visuals=[
-            textbox("deptanalysis-title", "Department Analysis", title_rect()),
-            *f.slicer_band("deptanalysis"),
+            textbox("deptanalysis-title", "Division Analysis", title_rect()),
+            *f.slicer_band("deptanalysis", f.ORG_SLICERS),
             pie_chart(
-                "deptanalysis-pie-dlm", f.DEPARTMENT, f.TOTAL_SIT_DETECTIONS,
-                charts[0], title="Detections by Department and Classification",
+                "deptanalysis-pie-dlm", f.DIVISION, f.TOTAL_SIT_DETECTIONS,
+                charts[0], title="Detections by Division and Classification",
                 series=f.QGISCF_DLM),
             pivot_table(
-                "deptanalysis-pivot-category", rows=[f.DEPARTMENT],
+                "deptanalysis-pivot-category", rows=[f.DIVISION],
                 columns=[f.SIT_CATEGORY], values=[f.TOTAL_SIT_DETECTIONS],
-                rect=charts[1], title="Detections by Department and SIT Category"),
+                rect=charts[1], title="Detections by Division and SIT Category"),
             treemap(
                 "deptanalysis-treemap-domain", f.DOMAIN, f.TOTAL_SIT_DETECTIONS,
                 charts[2], title="Detections by Target Domain"),
             table(
-                "deptanalysis-table-dept",
-                [f.DEPARTMENT, f.DEPT_SIT_MATCHES, f.DEPT_RISK_PRESSURE,
-                 f.DEPT_AVG_RISK_PER_MATCH, f.DEPT_HIGH_CONFIDENCE_PCT],
+                "deptanalysis-table-division",
+                [f.DIVISION, f.TOTAL_SIT_INSTANCE_COUNT, f.WEIGHTED_RISK_SCORE,
+                 f.AVG_WEIGHTED_RISK, f.HIGH_CONFIDENCE_PCT],
                 full_width(TABLE_ROW_Y, TABLE_HEIGHT),
-                title="Department Rollup (Aggregate)",
-                order_by=f.DEPT_RISK_PRESSURE),
+                title="Division Rollup",
+                order_by=f.WEIGHTED_RISK_SCORE),
         ],
     )
 
 
 def department_treemap_page() -> PageSpec:
-    """210: legacy 'TreeDept' (department treemap, detections > 50 gate)."""
-    dept_treemap = treemap(
-        "depttree-treemap", f.DEPARTMENT, f.TOTAL_SIT_DETECTIONS,
+    """210: legacy 'TreeDept' (treemap, detections > 50 gate), rebound from
+    department to division (T6 polish 3 — see department_analysis_page)."""
+    division_treemap = treemap(
+        "depttree-treemap", f.DIVISION, f.TOTAL_SIT_DETECTIONS,
         full_width(CHART_ROW_Y, TALL_HEIGHT),
-        title="SIT Detections by Department (>50)")
-    dept_treemap.filters.append(
+        title="SIT Detections by Division (>50)")
+    division_treemap.filters.append(
         measure_threshold_filter(f.TOTAL_SIT_DETECTIONS, 50, COMPARISON_GT))
     return PageSpec(
         folder="210_Department_Treemap",
-        display_name="Department Treemap",
+        display_name="Division Treemap",
         visuals=[
-            textbox("depttree-title", "Department Treemap", title_rect()),
-            *f.slicer_band("depttree"),
-            dept_treemap,
+            textbox("depttree-title", "Division Treemap", title_rect()),
+            *f.slicer_band("depttree", f.ORG_SLICERS),
+            division_treemap,
         ],
     )
 
@@ -304,21 +322,38 @@ def user_investigation_page() -> PageSpec:
     [Activities by SIT] measure mediates the multi-dim join (bare dim columns
     alone cannot be joined across a fact's many-side). The legacy SOURCE_FILE
     (fact_activity_detail) column is dropped: fact_activity_detail has no
-    unambiguous relationship path to dim_sit / fact_activity_sit."""
+    unambiguous relationship path to dim_sit / fact_activity_sit.
+
+    T6 polish 3: evidence gains the GAL job_title / is_leaver columns, the
+    band gains division + region, and a flagged-accounts table lists leaver /
+    generic accounts that actually generated activity (gated on the
+    [Flagged Account Activities] OR-measure — a visual filter cannot OR two
+    columns)."""
+    flagged = table(
+        "userpage-table-flagged",
+        [f.USER, f.DIVISION, f.JOB_TITLE, f.IS_LEAVER, f.IS_GENERIC_ACCOUNT,
+         f.FLAGGED_ACCOUNT_ACTIVITIES],
+        full_width(CHART_ROW_Y + 312, TALL_HEIGHT - 312),
+        title="Flagged Accounts with Activity (Leavers / Generic Accounts)",
+        order_by=f.FLAGGED_ACCOUNT_ACTIVITIES,
+        column_widths={f.USER: 240.0, f.JOB_TITLE: 200.0})
+    flagged.filters.append(
+        measure_threshold_filter(f.FLAGGED_ACCOUNT_ACTIVITIES, 0, COMPARISON_GT))
     return PageSpec(
         folder="220_User_Investigation",
         display_name="User Investigation",
         visuals=[
             textbox("userpage-title", "User Investigation", title_rect()),
-            *f.slicer_band("userpage", (f.USER, f.DATE, f.DEPARTMENT, f.ACTIVITY)),
+            *f.slicer_band("userpage", (f.USER, f.DATE, f.DIVISION, f.REGION, f.ACTIVITY)),
             table(
                 "userpage-table-evidence",
-                [f.USER, f.ACTIVITY, f.DATE, f.DOMAIN, f.RULE_NAME, f.SIT_NAME,
-                 f.FILE_NAME, f.ACTIVITIES_BY_SIT],
-                full_width(CHART_ROW_Y, TALL_HEIGHT),
+                [f.USER, f.JOB_TITLE, f.IS_LEAVER, f.ACTIVITY, f.DATE, f.DOMAIN,
+                 f.RULE_NAME, f.SIT_NAME, f.FILE_NAME, f.ACTIVITIES_BY_SIT],
+                full_width(CHART_ROW_Y, 300),
                 title="User Activity Evidence",
-                column_widths={f.USER: 200.0, f.SIT_NAME: 240.0, f.FILE_NAME: 220.0,
-                               f.RULE_NAME: 220.0}),
+                column_widths={f.USER: 200.0, f.SIT_NAME: 220.0, f.FILE_NAME: 200.0,
+                               f.RULE_NAME: 200.0, f.JOB_TITLE: 160.0}),
+            flagged,
         ],
     )
 

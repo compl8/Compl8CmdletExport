@@ -152,6 +152,20 @@ def test_dim_sit_carries_all_reference_columns() -> None:
         assert name in cols, f"missing dim_sit reference column {name}"
 
 
+def test_dim_user_carries_org_enrichment_columns() -> None:
+    """T6 polish 3: composite GAL org enrichment lives on dim_user (reached
+    from both facts via user_id), not on the facts or agg tables."""
+    table = schema.TABLES["dim_user"]
+    cols = {col.name: col for col in table.columns}
+    for name, dtype in (
+        ("division", "string"), ("region", "string"), ("job_title", "string"),
+        ("is_leaver", "bool"), ("is_generic_account", "bool"),
+    ):
+        assert name in cols, f"missing dim_user org column {name}"
+        assert cols[name].dtype == dtype
+        assert cols[name].summarize_by == "none"
+
+
 def test_dim_date_has_month_short_and_week_of_year() -> None:
     cols = schema.TABLES["dim_date"].column_names()
     assert "month_short" in cols

@@ -275,6 +275,102 @@ def test_usb_activity_filter_carries_both_naming_styles() -> None:
     assert "FileCopiedToRemovableMedia" in values
 
 
+# --- division as the primary org lens (T6 polish 3) ---------------------------
+
+def _page(folder: str):
+    return next(page for page in ae_pages() if page.folder == folder)
+
+
+def _visual(folder: str, seed: str):
+    return next(v for v in _page(folder).visuals if v.seed == seed)
+
+
+def _slicer_columns(page) -> set[tuple[str, str]]:
+    return {
+        (v.fields[0].table, v.fields[0].name)
+        for v in page.visuals if v.visual_type == "slicer"
+    }
+
+
+def test_standard_slicer_band_uses_division() -> None:
+    """Department was a single wall-to-wall value on this tenant; the standard
+    band's org slicer is dim_user.division."""
+    page = _page("010_Activity_Summary")
+    slicers = _slicer_columns(page)
+    assert ("dim_user", "division") in slicers
+    assert ("dim_department", "department") not in slicers
+
+
+def test_org_pages_carry_region_slicer() -> None:
+    for folder in ("200_Department_Analysis", "210_Department_Treemap",
+                   "220_User_Investigation"):
+        assert ("dim_user", "region") in _slicer_columns(_page(folder)), folder
+
+
+def test_executive_division_visuals_resolve_via_dim_user() -> None:
+    treemap = _visual("000_Executive_Overview", "exec-treemap-division")
+    bound = {(field.table, field.name) for field in treemap.fields}
+    assert ("dim_user", "division") in bound
+    # risk pressure at fact grain (agg_department cannot reach dim_user)
+    assert ("fact_activity_sit", "Weighted Risk Score") in bound
+    summary = _visual("000_Executive_Overview", "exec-table-division")
+    assert ("dim_user", "division") in {(f.table, f.name) for f in summary.fields}
+
+
+def test_division_visuals_never_mix_agg_department_measures() -> None:
+    """A dim_user.division/region grouping cannot filter agg_department_sit_day
+    (no user_id on the agg): any visual binding those columns must take its
+    measures from elsewhere."""
+    for page in ae_pages():
+        for visual in page.visuals:
+            tables = {field.table for field in visual.fields if field.kind == "column"}
+            if "dim_user" not in tables:
+                continue
+            measure_homes = {
+                field.table for field in visual.fields if field.kind == "measure"
+            }
+            assert "agg_department_sit_day" not in measure_homes, (
+                f"{page.folder}/{visual.seed}: agg_department measure cannot "
+                "respond to a dim_user grouping")
+
+
+def test_department_lens_kept_for_completeness() -> None:
+    """Division is primary, but Department must remain reachable somewhere."""
+    dept_bindings = []
+    for page in ae_pages():
+        for visual in page.visuals:
+            for field in visual.fields:
+                if (field.table, field.name) == ("dim_department", "department"):
+                    dept_bindings.append((page.folder, visual.seed))
+    assert dept_bindings, "no Department-bound visual left in the report"
+
+
+def test_user_investigation_org_columns_and_flagged_table() -> None:
+    evidence = _visual("220_User_Investigation", "userpage-table-evidence")
+    bound = {(field.table, field.name) for field in evidence.fields}
+    assert ("dim_user", "job_title") in bound
+    assert ("dim_user", "is_leaver") in bound
+    flagged = _visual("220_User_Investigation", "userpage-table-flagged")
+    flagged_bound = {(field.table, field.name) for field in flagged.fields}
+    assert ("dim_user", "is_generic_account") in flagged_bound
+    assert ("fact_activity", "Flagged Account Activities") in flagged_bound
+    # gated to accounts that actually generated activity
+    gates = [
+        entry for entry in flagged.filters
+        if entry.get("filter", {}).get("Where", [{}])[0].get("Condition", {})
+        .get("Comparison", {}).get("Left", {}).get("Measure", {})
+        .get("Property") == "Flagged Account Activities"
+    ]
+    assert gates, "flagged-accounts table lost its activity gate"
+
+
+def test_leaver_kpi_on_executive() -> None:
+    card = _visual("000_Executive_Overview", "exec-card-leavers")
+    assert {(field.table, field.name) for field in card.fields} == {
+        ("fact_activity", "Leaver Activities")
+    }
+
+
 # --- determinism --------------------------------------------------------------
 
 def test_two_builds_are_byte_identical(project_dir: Path, tmp_path: Path) -> None:

@@ -18,7 +18,7 @@
     "projections": {
       "Source": [
         {
-          "queryRef": "dim_department.department",
+          "queryRef": "dim_user.division",
           "active": true
         }
       ],
@@ -39,7 +39,7 @@
       "From": [
         {
           "Name": "d",
-          "Entity": "dim_department",
+          "Entity": "dim_user",
           "Type": 0
         },
         {
@@ -61,9 +61,9 @@
                 "Source": "d"
               }
             },
-            "Property": "department"
+            "Property": "division"
           },
-          "Name": "dim_department.department"
+          "Name": "dim_user.division"
         },
         {
           "Column": {
@@ -107,8 +107,8 @@
     "drillFilterOtherVisuals": true,
     "hasDefaultSort": true,
     "columnProperties": {
-      "dim_department.department": {
-        "displayName": "Department"
+      "dim_user.division": {
+        "displayName": "Division"
       },
       "dim_domain.domain": {
         "displayName": "Domain"
@@ -236,7 +236,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'External Flows by Department and Domain'"
+                  "Value": "'External Flows by Division and Domain'"
                 }
               }
             }

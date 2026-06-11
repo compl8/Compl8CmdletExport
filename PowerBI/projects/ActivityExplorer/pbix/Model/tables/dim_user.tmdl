@@ -36,6 +36,46 @@ table dim_user
 
 		annotation SummarizationSetBy = Automatic
 
+	/// GAL CompanyName falling back to Department; 'Unknown' when unmapped. The primary org lens (Department is ~one value tenant-wide).
+	column division
+		dataType: string
+		summarizeBy: none
+		sourceColumn: division
+
+		annotation SummarizationSetBy = Automatic
+
+	/// OU directly under the GAL OnPremisesDN 'Regions' OU (Central/Kedron/South East/...); 'Unknown' for non-Regions DNs.
+	column region
+		dataType: string
+		summarizeBy: none
+		sourceColumn: region
+
+		annotation SummarizationSetBy = Automatic
+
+	/// GAL JobTitle when the mapping carries one.
+	column job_title
+		dataType: string
+		summarizeBy: none
+		sourceColumn: job_title
+
+		annotation SummarizationSetBy = Automatic
+
+	/// GAL OnPremisesDN sits in a Leavers OU (account departed the org).
+	column is_leaver
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_leaver
+
+		annotation SummarizationSetBy = Automatic
+
+	/// GAL OnPremisesDN sits in a shared-account pool OU (Generic Accounts/SharedUsers). Kept separate from is_service_account, which is a UPN naming-pattern heuristic that also covers activity-only users with no GAL row.
+	column is_generic_account
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_generic_account
+
+		annotation SummarizationSetBy = Automatic
+
 	/// Matches service-account naming patterns.
 	column is_service_account
 		dataType: boolean
@@ -57,8 +97,8 @@ table dim_user
 		source =
 				let
 				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_user.parquet")),
-				    Columns = Table.SelectColumns(Source, {"user_id", "user_upn", "user_domain", "department_id", "is_service_account", "has_activity"}, MissingField.UseNull),
-				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"user_id", Int64.Type}, {"user_upn", type text}, {"user_domain", type text}, {"department_id", Int64.Type}, {"is_service_account", type logical}, {"has_activity", type logical}})
+				    Columns = Table.SelectColumns(Source, {"user_id", "user_upn", "user_domain", "department_id", "division", "region", "job_title", "is_leaver", "is_generic_account", "is_service_account", "has_activity"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"user_id", Int64.Type}, {"user_upn", type text}, {"user_domain", type text}, {"department_id", Int64.Type}, {"division", type text}, {"region", type text}, {"job_title", type text}, {"is_leaver", type logical}, {"is_generic_account", type logical}, {"is_service_account", type logical}, {"has_activity", type logical}})
 				in
 				    #"Changed Type"
 

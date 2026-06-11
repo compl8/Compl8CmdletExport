@@ -150,12 +150,18 @@ class IdRegistry:
         if key not in self.user_map:
             user_id = stable_int_id("user", key)
             domain = extract_domain_from_email(key)
+            org = mapping or {}
             self.user_map[key] = user_id
             self.user_rows[user_id] = {
                 "user_id": user_id,
                 "user_upn": key,
                 "user_domain": domain,
                 "department_id": department_id,
+                "division": _safe_str(org.get("user_division")) or "Unknown",
+                "region": _safe_str(org.get("user_region")) or "Unknown",
+                "job_title": _safe_str(org.get("job_title")),
+                "is_leaver": bool(org.get("is_leaver")),
+                "is_generic_account": bool(org.get("is_generic_account")),
                 "is_service_account": bool(SERVICE_ACCOUNT_PATTERNS.search(key)),
                 "has_activity": has_activity,
             }

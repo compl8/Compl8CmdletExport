@@ -49,6 +49,20 @@ DIM_USER = TableSpec(
         _c("user_upn", "string", "User principal name (uppercased)."),
         _c("user_domain", "string", "Domain part of the UPN."),
         _fk("department_id", "FK to dim_department."),
+        _c("division", "string",
+           "GAL CompanyName falling back to Department; 'Unknown' when unmapped. "
+           "The primary org lens (Department is ~one value tenant-wide)."),
+        _c("region", "string",
+           "OU directly under the GAL OnPremisesDN 'Regions' OU "
+           "(Central/Kedron/South East/...); 'Unknown' for non-Regions DNs."),
+        _c("job_title", "string", "GAL JobTitle when the mapping carries one."),
+        _c("is_leaver", "bool",
+           "GAL OnPremisesDN sits in a Leavers OU (account departed the org)."),
+        _c("is_generic_account", "bool",
+           "GAL OnPremisesDN sits in a shared-account pool OU (Generic "
+           "Accounts/SharedUsers). Kept separate from is_service_account, "
+           "which is a UPN naming-pattern heuristic that also covers "
+           "activity-only users with no GAL row."),
         _c("is_service_account", "bool", "Matches service-account naming patterns."),
         _c("has_activity", "bool", "True when the user appears in the activity data; False for GAL-only rows."),
     ),

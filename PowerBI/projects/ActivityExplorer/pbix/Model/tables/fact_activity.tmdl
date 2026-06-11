@@ -175,6 +175,30 @@ table fact_activity
 		formatString: #,##0
 		displayFolder: Policy
 
+	/// Activity recorded against accounts sitting in a Leavers OU of the GAL — departed users should not be generating events.
+	measure 'Leaver Activities' =
+			CALCULATE ( [Raw Activities], dim_user[is_leaver] = TRUE () )
+		formatString: #,##0
+		displayFolder: Org
+
+	/// Activity from shared-account pools (Generic Accounts/SharedUsers OUs) — no individual accountability.
+	measure 'Generic Account Activities' =
+			CALCULATE ( [Raw Activities], dim_user[is_generic_account] = TRUE () )
+		formatString: #,##0
+		displayFolder: Org
+
+	/// Leaver OR generic-account activity (the 2x2 flag iterator is constant-time; gates the flagged-accounts table).
+	measure 'Flagged Account Activities' =
+			CALCULATE (
+			    [Raw Activities],
+			    FILTER (
+			        ALL ( dim_user[is_leaver], dim_user[is_generic_account] ),
+			        dim_user[is_leaver] || dim_user[is_generic_account]
+			    )
+			)
+		formatString: #,##0
+		displayFolder: Org
+
 	/// Stable surrogate from RecordIdentity.
 	column activity_id
 		dataType: int64

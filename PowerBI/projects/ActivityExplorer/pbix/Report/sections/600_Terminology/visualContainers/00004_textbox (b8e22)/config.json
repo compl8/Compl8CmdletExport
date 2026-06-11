@@ -24,7 +24,7 @@
               {
                 "textRuns": [
                   {
-                    "value": "Departments",
+                    "value": "Org mapping (Division / Region / Department)",
                     "textStyle": {
                       "fontSize": "11pt"
                     }
@@ -34,7 +34,7 @@
               {
                 "textRuns": [
                   {
-                    "value": "Department mapping: user enrichment loaded from the GAL/department mapping supplied to the conversion script.",
+                    "value": "Division: GAL CompanyName falling back to Department ('Unknown' when the user has no GAL row) \u2014 the primary org lens in this report.",
                     "textStyle": {
                       "fontSize": "11pt"
                     }
@@ -44,7 +44,27 @@
               {
                 "textRuns": [
                   {
-                    "value": "Unmapped department: a user was present in Activity Explorer but no department mapping was found.",
+                    "value": "Region: the OU directly under the Regions OU of the user's GAL distinguished name ('Unknown' for non-Regions accounts).",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Leaver / generic account: OU-derived flags (Leavers OUs; Generic Accounts/SharedUsers pools).",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Unmapped department: a user was present in Activity Explorer but no GAL/department mapping was found.",
                     "textStyle": {
                       "fontSize": "11pt"
                     }

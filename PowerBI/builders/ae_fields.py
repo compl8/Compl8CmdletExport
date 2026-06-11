@@ -31,6 +31,11 @@ MONTH_SHORT = col("dim_date", "month_short", "Month")
 
 DEPARTMENT = col("dim_department", "department", "Department")
 USER = col("dim_user", "user_upn", "User")
+DIVISION = col("dim_user", "division", "Division")
+REGION = col("dim_user", "region", "Region")
+JOB_TITLE = col("dim_user", "job_title", "Job Title")
+IS_LEAVER = col("dim_user", "is_leaver", "Leaver")
+IS_GENERIC_ACCOUNT = col("dim_user", "is_generic_account", "Generic Account")
 
 SIT_NAME = col("dim_sit", "sit_name", "SIT Name")
 QGISCF_DLM = col("dim_sit", "qgiscf_dlm", "QGISCF DLM")
@@ -105,6 +110,10 @@ EXTERNAL_DOMAIN_ACTIVITIES = meas("fact_activity", "External Domain Activities")
 UNIQUE_TARGET_DOMAINS = meas("fact_activity", "Unique Target Domains")
 DAILY_ACTIVITY_AVERAGE = meas("fact_activity", "Daily Activity Average")
 
+LEAVER_ACTIVITIES = meas("fact_activity", "Leaver Activities")
+GENERIC_ACCOUNT_ACTIVITIES = meas("fact_activity", "Generic Account Activities")
+FLAGGED_ACCOUNT_ACTIVITIES = meas("fact_activity", "Flagged Account Activities")
+
 DETAIL_ACTIVITIES = meas("fact_activity_detail", "Detail Activities")
 
 ACTIVITIES_BY_SIT = meas("fact_activity_sit", "Activities by SIT")
@@ -149,12 +158,21 @@ USER_SIT_MATCHES = meas("agg_user_sit_day", "User SIT Matches")
 
 # --- layout helpers ----------------------------------------------------------
 
-STANDARD_SLICERS: tuple[Field, ...] = (DATE, WORKLOAD, DEPARTMENT, QGISCF_DLM)
+# Division (dim_user) replaced Department here in T6 polish 3: Department is a
+# wall of one value (QFES) on this tenant, while division carries the real org
+# split. dim_user filters reach every fact via user_id, so the swap loses
+# nothing on fact-grain visuals; the agg_department-bound visuals were rebound
+# to division + fact_activity_sit measures at the same time.
+STANDARD_SLICERS: tuple[Field, ...] = (DATE, WORKLOAD, DIVISION, QGISCF_DLM)
+
+# Org-focused pages (division analysis / treemap / user investigation) carry
+# a wider band including the GAL-derived region.
+ORG_SLICERS: tuple[Field, ...] = (DATE, WORKLOAD, DIVISION, REGION, QGISCF_DLM)
 
 
 def slicer_band(prefix: str, fields: tuple[Field, ...] = STANDARD_SLICERS, *,
                 y: float = SLICER_ROW_Y, height: float = SLICER_HEIGHT) -> list[VisualSpec]:
-    """A row of titled slicers (analysis-page standard: date/workload/dept/DLM)."""
+    """A row of titled slicers (analysis-page standard: date/workload/division/DLM)."""
     cells = grid_row(len(fields), y, height)
     return [
         slicer(f"{prefix}-slicer-{field.name}", field, cell, title=field.shown_as())

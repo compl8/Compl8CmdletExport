@@ -28,6 +28,15 @@ GUID_RE = re.compile(
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
 
+# DN components are comma-separated; commas inside a value are escaped \,
+_DN_COMPONENT_SPLIT = re.compile(r"(?<!\\),")
+
+# OUs (anywhere in the DN) that mark shared/role-based accounts rather than a
+# person: 'Generic Accounts' and 'SharedUsers' both sit directly under the
+# Regions OU in the QFD directory, but the membership test is by OU name so a
+# future re-parenting does not silently drop the flag.
+_GENERIC_ACCOUNT_OUS = frozenset({"generic accounts", "sharedusers"})
+
 # Workbook header -> dim_sit column (the legacy 18-column reference contract).
 _WORKBOOK_COLUMNS = {
     "SIT Name": "sit_name",
@@ -131,6 +140,55 @@ def sit_key_for(name: str | None, identifier: str | None) -> str:
     if identifier:
         return identifier.lower()
     return f"name:{_norm_text(name)}"
+
+
+def parse_dn_ous(dn: str | None) -> list[str]:
+    """OU names from an AD distinguished name, leaf-first.
+
+    'CN=Jo,OU=Users,OU=Central,OU=Regions,DC=x' -> ['Users', 'Central',
+    'Regions']. Splits on unescaped commas only (values may contain '\\,').
+    """
+    if not dn or not str(dn).strip():
+        return []
+    ous: list[str] = []
+    for component in _DN_COMPONENT_SPLIT.split(str(dn)):
+        key, _, value = component.partition("=")
+        if key.strip().upper() == "OU":
+            ous.append(value.replace("\\,", ",").strip())
+    return ous
+
+
+def region_from_dn(dn: str | None) -> str:
+    """Region = the OU directly under the 'Regions' OU.
+
+    The DN is leaf-first, so that is the OU element immediately BEFORE
+    'Regions' (e.g. OU=Users,OU=Central,OU=Regions,... -> 'Central'). Verbatim
+    values include geographic regions ('Central', 'South East', 'Far
+    Northern'), HQ ('Kedron') and account-pool OUs ('Generic Accounts',
+    'SharedUsers'). DNs with no Regions OU (leavers, service OUs, no DN at
+    all) and DNs where Regions is itself the leaf OU -> 'Unknown'.
+    """
+    ous = parse_dn_ous(dn)
+    lowered = [ou.casefold() for ou in ous]
+    try:
+        index = lowered.index("regions")
+    except ValueError:
+        return "Unknown"
+    if index == 0:
+        return "Unknown"
+    return ous[index - 1] or "Unknown"
+
+
+def is_leaver_dn(dn: str | None) -> bool:
+    """True when any OU in the DN is a leavers container ('QFES Leavers',
+    'Leavers', ...) — name match, not position."""
+    return any("leaver" in ou.casefold() for ou in parse_dn_ous(dn))
+
+
+def is_generic_account_dn(dn: str | None) -> bool:
+    """True when any OU is one of the shared-account pools
+    (Generic Accounts / SharedUsers)."""
+    return any(ou.casefold() in _GENERIC_ACCOUNT_OUS for ou in parse_dn_ous(dn))
 
 
 def _read_worksheet_rows(ws) -> Iterable[dict[str, Any]]:
@@ -296,23 +354,45 @@ def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
     casing wins) so variants like 'qfes'/'QFES' cannot split into two
     dim_department rows — Power BI's case-insensitive engine merges such
     labels and displays an arbitrary casing.
+
+    Composite org enrichment (user grain, surfaced on dim_user):
+    - ``user_division``: CompanyName (the GAL's real org-unit signal, e.g.
+      QFR/S&CS/RFSQ) falling back to Department, else 'Unknown'. Casing is
+      canonicalized like department names.
+    - ``user_region``: OU directly under the 'Regions' OU of OnPremisesDN
+      (region_from_dn); 'Unknown' for non-Regions DNs.
+    - ``is_leaver`` / ``is_generic_account``: OU-derived flags
+      (is_leaver_dn / is_generic_account_dn).
+    - ``job_title``: JobTitle verbatim.
     """
     parsed: list[tuple[str | None, str | None, dict[str, Any]]] = []
     casing_counts: dict[str, dict[str, int]] = {}
+    division_casing_counts: dict[str, dict[str, int]] = {}
     for row in _read_mapping_rows(path):
         upn = _mapping_value(row, ("userprincipalname", "user_upn", "upn", "user", "username"))
         mail = _mapping_value(row, ("mail", "email", "primarysmtpaddress"))
         if not upn and not mail:
             continue
-        department = _mapping_value(row, ("department", "dept")) or "Unmapped"
+        raw_department = _mapping_value(row, ("department", "dept"))
+        department = raw_department or "Unmapped"
         counts = casing_counts.setdefault(department.casefold(), {})
         counts[department] = counts.get(department, 0) + 1
+        company = _mapping_value(row, ("companyname", "company"))
+        user_division = company or raw_department or "Unknown"
+        division_counts = division_casing_counts.setdefault(user_division.casefold(), {})
+        division_counts[user_division] = division_counts.get(user_division, 0) + 1
+        dn = _mapping_value(row, ("onpremisesdn", "distinguishedname", "dn"))
         parsed.append((upn, mail, {
             "department": department,
             "division": _mapping_value(row, ("division", "directorate", "group")),
             "business_unit": _mapping_value(
                 row, ("business_unit", "businessunit", "unit", "section", "branch", "team")
             ),
+            "user_division": user_division,
+            "user_region": region_from_dn(dn),
+            "job_title": _mapping_value(row, ("jobtitle", "job_title", "title")),
+            "is_leaver": is_leaver_dn(dn),
+            "is_generic_account": is_generic_account_dn(dn),
             "mapping_source": path.name,
             "is_mapped": True,
         }))
@@ -321,10 +401,15 @@ def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
         folded: max(counts.items(), key=lambda item: item[1])[0]
         for folded, counts in casing_counts.items()
     }
+    canonical_division_casing = {
+        folded: max(counts.items(), key=lambda item: item[1])[0]
+        for folded, counts in division_casing_counts.items()
+    }
 
     mappings: dict[str, dict[str, Any]] = {}
     for upn, mail, entry in parsed:
         entry["department"] = canonical_casing[entry["department"].casefold()]
+        entry["user_division"] = canonical_division_casing[entry["user_division"].casefold()]
         primary = upn or mail
         mappings[primary.upper().strip()] = entry
     # Mail aliases never displace a primary (UPN) key.
