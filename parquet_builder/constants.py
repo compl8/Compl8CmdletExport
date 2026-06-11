@@ -104,12 +104,27 @@ CONTENT_RENAMES = {
 # CE metadata fields (added by export, not from API)
 CE_METADATA_FIELDS = {"_ExportTagType", "_ExportTagName"}
 
-# Activities that indicate egress
+# Activities that indicate egress. The Activity Explorer API emits two naming
+# styles: raw enum forms (FileCopiedToRemovableMedia) and humanized display
+# strings ('File copied to removable media' — the style observed in cloud-DLP
+# exports, e.g. 'DLP rule matched'). Both are listed so is_egress /
+# activity_group classification works regardless of which style an export
+# carries; unmatched extras are harmless (set membership only).
 EGRESS_ACTIVITIES = {
     "FileUploaded", "FileCopiedToRemovableMedia", "FileCopiedToNetworkShare",
     "FileCopiedToCloud", "FileTransferredByAIP", "FilePrinted",
     "ContentExtractionAllowed", "AccessByUnallowedApp", "FileUploadedToCloud",
     "FileCopiedToClipboard", "BrowserUpload",
+    # humanized equivalents (legacy-report-verified forms first)
+    "File copied to removable media",
+    "File created on removable media",
+    "File copied to remote desktop session",
+    "File copied to cloud",
+    "File copied to network share",
+    "File uploaded to cloud",
+    "File copied to clipboard",
+    "File printed",
+    "File uploaded",
 }
 
 SERVICE_ACCOUNT_PATTERNS = re.compile(

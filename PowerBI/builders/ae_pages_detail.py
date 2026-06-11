@@ -7,7 +7,6 @@ buttons are placed in the page header).
 from __future__ import annotations
 
 from . import ae_fields as f
-from .expressions import entity_column_expression, query_aliases
 from .filters import categorical_in_filter, not_in_filter
 from .report_layout import (
     CHART_HEIGHT,
@@ -36,36 +35,6 @@ TALL_TABLE_Y = 64
 TALL_TABLE_HEIGHT = 720 - TALL_TABLE_Y - 40  # 616
 
 
-def contains_filter(table_name: str, column: str, substring: str) -> dict[str, object]:
-    """Advanced Contains filter (legacy 'FolderPath contains C:\\' shape)."""
-    alias = query_aliases([table_name])[table_name]
-    escaped = substring.replace("'", "''")
-    return {
-        "expression": entity_column_expression(table_name, column),
-        "filter": {
-            "Version": 2,
-            "From": [{"Name": alias, "Entity": table_name, "Type": 0}],
-            "Where": [
-                {
-                    "Condition": {
-                        "Contains": {
-                            "Left": {
-                                "Column": {
-                                    "Expression": {"SourceRef": {"Source": alias}},
-                                    "Property": column,
-                                }
-                            },
-                            "Right": {"Literal": {"Value": f"'{escaped}'"}},
-                        }
-                    }
-                }
-            ],
-        },
-        "type": "Advanced",
-        "howCreated": 1,
-    }
-
-
 def _drill_header(prefix: str, heading: str) -> list[VisualSpec]:
     """Explicit Back button + heading for drillthrough pages (suppresses the
     engine's auto back button by providing the actionButton ourselves)."""
@@ -76,22 +45,34 @@ def _drill_header(prefix: str, heading: str) -> list[VisualSpec]:
 
 
 def _category_table(seed: str, title: str, rect: Rect,
-                    activity_values: list[str] | None = None,
+                    workload_values: list[str] | None = None,
+                    measure=None,
                     extra_filters: list[dict[str, object]] | None = None) -> VisualSpec:
-    spec = table(seed, [f.DATE, f.ACTIVITIES_BY_SIT], rect, title=title,
-                 order_by=f.ACTIVITIES_BY_SIT)
-    if activity_values:
+    measure = measure or f.ACTIVITIES_BY_SIT
+    spec = table(seed, [f.DATE, measure], rect, title=title, order_by=measure)
+    if workload_values:
         spec.filters.append(
-            categorical_in_filter("dim_activity_type", "activity", activity_values))
+            categorical_in_filter("dim_workload", "workload", workload_values))
     for extra in extra_filters or []:
         spec.filters.append(extra)
     return spec
 
 
 def activity_detail_page() -> PageSpec:
-    """500: legacy 'Activity Detail' (per-category daily SIT activity tables +
-    date x rule pivot). The fifth legacy table's 'FolderPath contains C:\\'
-    gate is ported via an explicit Contains filter."""
+    """500: legacy 'Activity Detail' (per-channel daily SIT activity tables +
+    date x rule pivot).
+
+    The legacy channel tables filtered on endpoint activity-type values
+    ('File created', 'File copied to removable media', 'File copied to
+    cloud') and a 'FolderPath contains C:\\' gate. The v6 export scope is
+    cloud DLP: the only activity values present are 'DLP rule matched' /
+    'Copilot Interaction' / 'Classification stamped', and no local-drive
+    folder paths exist, so every one of those legacy filters matched zero
+    rows. The channels are rebound to the workloads that actually carry the
+    data (Exchange / SharePoint / OneDrive / Teams / Copilot); removable-media
+    analysis remains on 370_USB_Breakdown for endpoint-bearing exports. The
+    Copilot channel counts [Raw Activities] — Copilot interactions carry no
+    SIT detections, so a SIT-grain measure would always be blank there."""
     cells = grid_row(5, CHART_ROW_Y, CHART_HEIGHT)
     return PageSpec(
         folder="500_Activity_Detail",
@@ -101,22 +82,19 @@ def activity_detail_page() -> PageSpec:
             *f.slicer_band("actdetail"),
             _category_table(
                 "actdetail-table-email", "Sensitive Emails", cells[0],
-                extra_filters=[categorical_in_filter("dim_workload", "workload",
-                                                     ["Exchange"])]),
+                workload_values=["Exchange"]),
             _category_table(
-                "actdetail-table-created", "Sensitive Files Created", cells[1],
-                activity_values=["File created", "File created on network share",
-                                 "File created on removable media"]),
+                "actdetail-table-sharepoint", "Sensitive SharePoint Files", cells[1],
+                workload_values=["SharePoint"]),
             _category_table(
-                "actdetail-table-usb", "Sensitive USB", cells[2],
-                activity_values=["File copied to removable media",
-                                 "File created on removable media"]),
+                "actdetail-table-onedrive", "Sensitive OneDrive Files", cells[2],
+                workload_values=["OneDrive"]),
             _category_table(
-                "actdetail-table-cloud", "Sensitive Cloud", cells[3],
-                activity_values=["File copied to cloud"]),
+                "actdetail-table-teams", "Sensitive Teams Content", cells[3],
+                workload_values=["MicrosoftTeams"]),
             _category_table(
-                "actdetail-table-local", "Sensitive Files on Local Drives", cells[4],
-                extra_filters=[contains_filter("dim_location", "folder_path", "C:\\")]),
+                "actdetail-table-copilot", "Copilot / AI Activity", cells[4],
+                workload_values=["Copilot"], measure=f.RAW_ACTIVITIES),
             _rule_pivot(),
         ],
     )

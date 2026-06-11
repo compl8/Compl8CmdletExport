@@ -282,14 +282,32 @@ def _read_mapping_rows(path: Path) -> list[dict[str, Any]]:
 
 
 def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
-    """UPN (uppercased) -> department mapping rows from a GAL/department file."""
-    mappings: dict[str, dict[str, Any]] = {}
+    """User key (uppercased) -> department mapping rows from a GAL/department file.
+
+    Each row is registered under BOTH its UserPrincipalName and its Mail
+    address: Activity Explorer identifies users by primary SMTP address,
+    which routinely lives on a different domain than the UPN (e.g. UPN
+    user@qfes.qld.gov.au vs mail user@fire.qld.gov.au). Keying on UPN alone
+    silently drops those users into 'Unmapped' at fact grain. UPN keys win
+    collisions; mail-derived entries carry ``is_alias`` so dim_user seeding
+    can skip them (one dim_user row per person, not per address).
+
+    Department names are case-canonicalized across the file (most frequent
+    casing wins) so variants like 'qfes'/'QFES' cannot split into two
+    dim_department rows — Power BI's case-insensitive engine merges such
+    labels and displays an arbitrary casing.
+    """
+    parsed: list[tuple[str | None, str | None, dict[str, Any]]] = []
+    casing_counts: dict[str, dict[str, int]] = {}
     for row in _read_mapping_rows(path):
-        upn = _mapping_value(row, ("userprincipalname", "user_upn", "upn", "mail", "user", "username"))
-        if not upn:
+        upn = _mapping_value(row, ("userprincipalname", "user_upn", "upn", "user", "username"))
+        mail = _mapping_value(row, ("mail", "email", "primarysmtpaddress"))
+        if not upn and not mail:
             continue
         department = _mapping_value(row, ("department", "dept")) or "Unmapped"
-        mappings[upn.upper().strip()] = {
+        counts = casing_counts.setdefault(department.casefold(), {})
+        counts[department] = counts.get(department, 0) + 1
+        parsed.append((upn, mail, {
             "department": department,
             "division": _mapping_value(row, ("division", "directorate", "group")),
             "business_unit": _mapping_value(
@@ -297,7 +315,25 @@ def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
             ),
             "mapping_source": path.name,
             "is_mapped": True,
-        }
+        }))
+
+    canonical_casing = {
+        folded: max(counts.items(), key=lambda item: item[1])[0]
+        for folded, counts in casing_counts.items()
+    }
+
+    mappings: dict[str, dict[str, Any]] = {}
+    for upn, mail, entry in parsed:
+        entry["department"] = canonical_casing[entry["department"].casefold()]
+        primary = upn or mail
+        mappings[primary.upper().strip()] = entry
+    # Mail aliases never displace a primary (UPN) key.
+    for upn, mail, entry in parsed:
+        if not (upn and mail):
+            continue
+        alias_key = mail.upper().strip()
+        if alias_key and alias_key not in mappings:
+            mappings[alias_key] = {**entry, "is_alias": True}
     return mappings
 
 

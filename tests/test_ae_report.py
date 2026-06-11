@@ -213,6 +213,68 @@ def test_slicers_are_compact_dropdown_multiselect(project_dir: Path) -> None:
     assert found, "no slicers emitted"
 
 
+# --- categorical filter values match the data domain (T6 Bug B) ---------------
+
+# Workload values the star ETL passes through verbatim from the AE export
+# (dim_workload.workload). Endpoint is included for endpoint-bearing tenants.
+KNOWN_WORKLOADS = {
+    "Exchange", "SharePoint", "OneDrive", "MicrosoftTeams", "Copilot",
+    "Endpoint",
+}
+
+
+def _categorical_filters(page) -> list[tuple[str, str, list[str]]]:
+    """(entity, property, values) for every Categorical In filter on a page."""
+    entries = list(page.page_filters)
+    for visual in page.visuals:
+        entries.extend(visual.filters)
+    found = []
+    for entry in entries:
+        if entry.get("type") != "Categorical" or "filter" not in entry:
+            continue
+        where = entry["filter"]["Where"][0]["Condition"]
+        if "In" not in where:
+            continue
+        column = where["In"]["Expressions"][0]["Column"]["Property"]
+        entity = entry["filter"]["From"][0]["Entity"]
+        values = [
+            value[0]["Literal"]["Value"].strip("'")
+            for value in where["In"]["Values"]
+        ]
+        found.append((entity, column, values))
+    return found
+
+
+def test_workload_filter_values_are_known() -> None:
+    """Stale-value guard: workload include-lists must use real dim values
+    (the legacy 'Sensitive Files Created'/'Sensitive USB'/'Sensitive Cloud'
+    activity lists matched zero rows in cloud-DLP exports)."""
+    seen = 0
+    for page in ae_pages():
+        for entity, column, values in _categorical_filters(page):
+            if (entity, column) != ("dim_workload", "workload"):
+                continue
+            seen += 1
+            unknown = set(values) - KNOWN_WORKLOADS
+            assert not unknown, f"{page.folder}: unknown workloads {unknown}"
+    assert seen >= 5  # the five 500_Activity_Detail channel tables
+
+
+def test_usb_activity_filter_carries_both_naming_styles() -> None:
+    """370_USB_Breakdown must match removable-media activities whether the
+    export carries humanized display strings or raw enum names."""
+    usb_page = next(page for page in ae_pages()
+                    if page.folder == "370_USB_Breakdown")
+    activity_filters = [
+        values for entity, column, values in _categorical_filters(usb_page)
+        if (entity, column) == ("dim_activity_type", "activity")
+    ]
+    assert activity_filters, "USB page lost its activity filter"
+    values = set(activity_filters[0])
+    assert "File copied to removable media" in values
+    assert "FileCopiedToRemovableMedia" in values
+
+
 # --- determinism --------------------------------------------------------------
 
 def test_two_builds_are_byte_identical(project_dir: Path, tmp_path: Path) -> None:

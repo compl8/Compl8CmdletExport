@@ -1,14 +1,14 @@
 [
   {
-    "name": "efd2c49ad0af52c38af2",
+    "name": "74cfa6be65b05189b689",
     "expression": {
       "Column": {
         "Expression": {
           "SourceRef": {
-            "Entity": "dim_activity_type"
+            "Entity": "dim_workload"
           }
         },
-        "Property": "activity"
+        "Property": "workload"
       }
     },
     "filter": {
@@ -16,7 +16,7 @@
       "From": [
         {
           "Name": "d",
-          "Entity": "dim_activity_type",
+          "Entity": "dim_workload",
           "Type": 0
         }
       ],
@@ -32,7 +32,7 @@
                         "Source": "d"
                       }
                     },
-                    "Property": "activity"
+                    "Property": "workload"
                   }
                 }
               ],
@@ -40,21 +40,7 @@
                 [
                   {
                     "Literal": {
-                      "Value": "'File created'"
-                    }
-                  }
-                ],
-                [
-                  {
-                    "Literal": {
-                      "Value": "'File created on network share'"
-                    }
-                  }
-                ],
-                [
-                  {
-                    "Literal": {
-                      "Value": "'File created on removable media'"
+                      "Value": "'SharePoint'"
                     }
                   }
                 ]

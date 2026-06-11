@@ -1,14 +1,14 @@
 [
   {
-    "name": "f30a26939321563e9b89",
+    "name": "79028cc02b43583f9b18",
     "expression": {
       "Column": {
         "Expression": {
           "SourceRef": {
-            "Entity": "dim_activity_type"
+            "Entity": "dim_workload"
           }
         },
-        "Property": "activity"
+        "Property": "workload"
       }
     },
     "filter": {
@@ -16,7 +16,7 @@
       "From": [
         {
           "Name": "d",
-          "Entity": "dim_activity_type",
+          "Entity": "dim_workload",
           "Type": 0
         }
       ],
@@ -32,7 +32,7 @@
                         "Source": "d"
                       }
                     },
-                    "Property": "activity"
+                    "Property": "workload"
                   }
                 }
               ],
@@ -40,7 +40,7 @@
                 [
                   {
                     "Literal": {
-                      "Value": "'File copied to cloud'"
+                      "Value": "'Copilot'"
                     }
                   }
                 ]

@@ -10,8 +10,14 @@ import pytest
 
 from parquet_builder.star import schema
 from parquet_builder.star.convert import convert
-from parquet_builder.star.enrich import EnrichmentError
+from parquet_builder.star.enrich import (
+    EnrichmentError,
+    RiskLookup,
+    load_department_mapping,
+)
+from parquet_builder.star.finalize import write_dimensions
 from parquet_builder.star.keys import stable_int_id
+from parquet_builder.star.registry import IdRegistry
 
 SIT_GUID_OK = "11111111-1111-1111-1111-111111111111"
 SIT_GUID_EXCLUDED = "22222222-2222-2222-2222-222222222222"
@@ -383,6 +389,69 @@ def test_unenriched_hard_fail_and_override(tmp_path) -> None:
     )
     assert manifest["enrichment"] is None
     assert manifest["row_counts"]["fact_activity"] == 4
+
+
+# --- department resolution (Bug A: GAL mail aliases + case-canonical names) --
+
+def _make_alias_gal(path: Path) -> Path:
+    path.write_text(
+        "UserPrincipalName,Mail,Department\n"
+        "alice@qfes.example.com,Alice.A@fire.example.com,QFES\n"
+        "bob@qfes.example.com,Bob.B@fire.example.com,QFES\n"
+        "carol@qfes.example.com,,qfes\n"
+        ",dave@fire.example.com,Ops\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def test_department_mapping_registers_mail_aliases(tmp_path) -> None:
+    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
+    # UPN keys are primary; the same row's Mail address is an alias entry
+    assert "is_alias" not in mappings["ALICE@QFES.EXAMPLE.COM"]
+    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["is_alias"] is True
+    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["department"] == "QFES"
+    # rows with only a Mail value keep it as the primary key
+    assert "is_alias" not in mappings["DAVE@FIRE.EXAMPLE.COM"]
+    assert mappings["DAVE@FIRE.EXAMPLE.COM"]["department"] == "Ops"
+    # department casing canonicalized to the dominant variant in the file
+    assert mappings["CAROL@QFES.EXAMPLE.COM"]["department"] == "QFES"
+
+
+def test_activity_user_resolves_department_via_mail_and_case(tmp_path) -> None:
+    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
+    registry = IdRegistry()
+    # activity identifies the user by primary SMTP address, in different case;
+    # the GAL row is keyed by UPN — both must land on the same mapped department
+    _, dept_via_mail = registry.get_user("alice.a@FIRE.example.com", mappings)
+    _, dept_via_upn = registry.get_user("ALICE@QFES.EXAMPLE.COM", mappings)
+    assert dept_via_mail == dept_via_upn
+    row = registry.department_rows[dept_via_mail]
+    assert row["department"] == "QFES"
+    assert row["is_mapped"] is True
+
+
+def test_department_case_variants_share_one_dim_row() -> None:
+    registry = IdRegistry()
+    id_upper = registry.get_department({"department": "QFES", "is_mapped": True})
+    id_lower = registry.get_department({"department": "qfes", "is_mapped": True})
+    assert id_upper == id_lower
+    assert len(registry.department_rows) == 1
+    # display casing = first seen (loader canonicalizes to dominant casing)
+    assert registry.department_rows[id_upper]["department"] == "QFES"
+
+
+def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
+    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
+    registry = IdRegistry()
+    write_dimensions(tmp_path / "out", registry, mappings, {}, RiskLookup(), set())
+    upns = {row["user_upn"] for row in pq.read_table(
+        tmp_path / "out" / "dim_user.parquet").to_pylist()}
+    # one dim_user row per person (UPN or mail-only primary), none per alias
+    assert upns == {
+        "ALICE@QFES.EXAMPLE.COM", "BOB@QFES.EXAMPLE.COM",
+        "CAROL@QFES.EXAMPLE.COM", "DAVE@FIRE.EXAMPLE.COM",
+    }
 
 
 def test_no_archive_raw_flag(tmp_path) -> None:

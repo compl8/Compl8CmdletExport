@@ -57,6 +57,27 @@
                       "Value": "'File copied to remote desktop session'"
                     }
                   }
+                ],
+                [
+                  {
+                    "Literal": {
+                      "Value": "'FileCopiedToRemovableMedia'"
+                    }
+                  }
+                ],
+                [
+                  {
+                    "Literal": {
+                      "Value": "'FileCreatedOnRemovableMedia'"
+                    }
+                  }
+                ],
+                [
+                  {
+                    "Literal": {
+                      "Value": "'FileCopiedToRemoteDesktopSession'"
+                    }
+                  }
                 ]
               ]
             }

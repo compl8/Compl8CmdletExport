@@ -1,15 +1,15 @@
 {
-  "name": "f60065251e7e5dd09b34",
+  "name": "9e20e01b04315112b064",
   "layouts": [
     {
       "id": 0,
       "position": {
-        "x": 768.8,
+        "x": 1014.4,
         "y": 184,
-        "z": 9000,
+        "z": 10000,
         "width": 233.6,
         "height": 224,
-        "tabOrder": 9000
+        "tabOrder": 10000
       }
     }
   ],
@@ -21,7 +21,7 @@
           "queryRef": "dim_date.date"
         },
         {
-          "queryRef": "fact_activity_sit.Activities by SIT"
+          "queryRef": "fact_activity.Raw Activities"
         }
       ]
     },
@@ -35,7 +35,7 @@
         },
         {
           "Name": "f",
-          "Entity": "fact_activity_sit",
+          "Entity": "fact_activity",
           "Type": 0
         }
       ],
@@ -58,9 +58,9 @@
                 "Source": "f"
               }
             },
-            "Property": "Activities by SIT"
+            "Property": "Raw Activities"
           },
-          "Name": "fact_activity_sit.Activities by SIT"
+          "Name": "fact_activity.Raw Activities"
         }
       ],
       "OrderBy": [
@@ -73,7 +73,7 @@
                   "Source": "f"
                 }
               },
-              "Property": "Activities by SIT"
+              "Property": "Raw Activities"
             }
           }
         }
@@ -141,7 +141,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Sensitive Cloud'"
+                  "Value": "'Copilot / AI Activity'"
                 }
               }
             }

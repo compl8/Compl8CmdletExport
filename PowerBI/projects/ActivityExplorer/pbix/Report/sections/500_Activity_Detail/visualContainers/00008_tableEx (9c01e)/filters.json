@@ -1,14 +1,14 @@
 [
   {
-    "name": "1021c7a85f3859b58089",
+    "name": "079d61457ef757df8b32",
     "expression": {
       "Column": {
         "Expression": {
           "SourceRef": {
-            "Entity": "dim_activity_type"
+            "Entity": "dim_workload"
           }
         },
-        "Property": "activity"
+        "Property": "workload"
       }
     },
     "filter": {
@@ -16,7 +16,7 @@
       "From": [
         {
           "Name": "d",
-          "Entity": "dim_activity_type",
+          "Entity": "dim_workload",
           "Type": 0
         }
       ],
@@ -32,7 +32,7 @@
                         "Source": "d"
                       }
                     },
-                    "Property": "activity"
+                    "Property": "workload"
                   }
                 }
               ],
@@ -40,14 +40,7 @@
                 [
                   {
                     "Literal": {
-                      "Value": "'File copied to removable media'"
-                    }
-                  }
-                ],
-                [
-                  {
-                    "Literal": {
-                      "Value": "'File created on removable media'"
+                      "Value": "'MicrosoftTeams'"
                     }
                   }
                 ]

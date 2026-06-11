@@ -45,10 +45,18 @@ SANKEY_RISK_GATE = 100
 
 # Removable-media / remote-session activities (union of the legacy USB
 # Breakdown page filter and the legacy Activity Detail 'Sensitive USB' values).
+# Both naming styles the Activity Explorer API emits are listed: humanized
+# display strings (what cloud-DLP exports such as the QFD tenant contain —
+# e.g. 'DLP rule matched') and the raw enum forms used by endpoint exports
+# (constants.EGRESS_ACTIVITIES style). Cloud-only exports legitimately match
+# zero rows here: the page is an endpoint/removable-media surface.
 USB_ACTIVITIES = (
     "File copied to removable media",
     "File created on removable media",
     "File copied to remote desktop session",
+    "FileCopiedToRemovableMedia",
+    "FileCreatedOnRemovableMedia",
+    "FileCopiedToRemoteDesktopSession",
 )
 
 

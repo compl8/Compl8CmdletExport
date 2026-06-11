@@ -59,6 +59,13 @@ Deviations from the legacy report (intentional):
   removable-media activity sets) are.
 - Legacy time-intelligence measures anchored to TODAY() are re-anchored to
   the latest data date (MAX(dim_date[date])).
+- 500_Activity_Detail's five channel tables are rebound from legacy endpoint
+  activity-value filters ('File created', 'File copied to removable media',
+  'FolderPath contains C:\\', ...) to workload channels (Exchange/SharePoint/
+  OneDrive/Teams/Copilot): the v6 cloud-DLP export scope contains no endpoint
+  activity values, so every legacy channel filter matched zero rows.
+  Removable-media analysis stays on 370_USB_Breakdown, whose activity list
+  now carries both API naming styles (humanized + raw enum).
 """
 
 from __future__ import annotations

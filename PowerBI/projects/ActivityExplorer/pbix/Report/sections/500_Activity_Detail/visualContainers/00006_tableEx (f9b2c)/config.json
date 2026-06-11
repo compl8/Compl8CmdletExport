@@ -1,15 +1,15 @@
 {
-  "name": "76a16551bf43595cb8f0",
+  "name": "f9b2c04304f859ae878a",
   "layouts": [
     {
       "id": 0,
       "position": {
-        "x": 523.2,
+        "x": 277.6,
         "y": 184,
-        "z": 8000,
+        "z": 7000,
         "width": 233.6,
         "height": 224,
-        "tabOrder": 8000
+        "tabOrder": 7000
       }
     }
   ],
@@ -141,7 +141,7 @@
             "text": {
               "expr": {
                 "Literal": {
-                  "Value": "'Sensitive USB'"
+                  "Value": "'Sensitive SharePoint Files'"
                 }
               }
             }

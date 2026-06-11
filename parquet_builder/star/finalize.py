@@ -74,7 +74,12 @@ def write_dimensions(output_dir: Path, registry: IdRegistry,
                      seen_sit_keys: set[str]) -> dict[str, int]:
     """Materialize every dimension table; returns row counts."""
     # Union the full GAL population into dim_user (has_activity=False).
-    for upn_key in department_mappings:
+    # Mail-alias keys are skipped: one dim_user row per person (UPN), not one
+    # per address — aliases exist only so activity records that identify the
+    # user by primary SMTP resolve to the same department mapping.
+    for upn_key, mapping in department_mappings.items():
+        if mapping.get("is_alias"):
+            continue
         registry.get_user(upn_key, department_mappings, has_activity=False)
 
     dim_rows = {

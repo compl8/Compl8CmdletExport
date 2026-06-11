@@ -79,10 +79,15 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
     department_mappings = load_department_mapping(dept_path) if dept_path else {}
     excluded_names, exclusions_path = load_sit_exclusions(sit_exclusions)
 
+    primary_mappings = sum(
+        1 for entry in department_mappings.values() if not entry.get("is_alias"))
+    alias_mappings = len(department_mappings) - primary_mappings
+
     print(f"Input:      {input_dir}")
     print(f"Output:     {output_dir}")
     print(f"Risk:       {risk_path} ({len(risk.rows)} SIT reference rows)")
-    print(f"GAL:        {dept_path} ({len(department_mappings)} user mappings)")
+    print(f"GAL:        {dept_path} ({primary_mappings} user mappings, "
+          f"{alias_mappings} mail aliases)")
     print(f"Exclusions: {exclusions_path} ({len(excluded_names)} SIT names)")
     print()
 
@@ -106,7 +111,8 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
             "risk_workbook": str(risk_path) if risk_path else None,
             "department_csv": str(dept_path) if dept_path else None,
             "sit_reference_rows": len(risk.rows),
-            "department_mappings": len(department_mappings),
+            "department_mappings": primary_mappings,
+            "department_mail_aliases": alias_mappings,
         }
 
     manifest = {
