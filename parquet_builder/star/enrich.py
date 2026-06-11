@@ -55,6 +55,7 @@ from .sit_reference import (  # noqa: F401  (re-exported for backward compatibil
     risk_band,
     sit_key_for,
     sit_key_for_detected_id,
+    tenant_prefix_from_export_dir,
 )
 
 _DEPARTMENT_FILE_CANDIDATES = (

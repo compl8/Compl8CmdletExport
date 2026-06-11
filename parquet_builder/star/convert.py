@@ -31,6 +31,7 @@ from .enrich import (
     load_sit_name_map,
     resolve_enrichment_inputs,
     resolve_sit_names_path,
+    tenant_prefix_from_export_dir,
 )
 from .org_mapping import OrgMapping, default_org_mapping, load_org_mapping
 from .pipeline import StarPipeline
@@ -104,7 +105,14 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
     department_mappings = (
         load_department_mapping(dept_path, org_map) if dept_path else {})
     excluded_names, exclusions_path = load_sit_exclusions(sit_exclusions)
-    sit_names_path = resolve_sit_names_path(input_dir, sit_names, _DEFAULT_SIT_NAMES)
+    # Auto-detected name maps are tenant-scoped: GUIDs are tenant-specific, so
+    # a machine-global merged map must be passed explicitly via --sit-names.
+    tenant_prefix = tenant_prefix_from_export_dir(input_dir.name)
+    tenant_sit_names = (
+        _CONFIG_DIR / f"SITNames-{tenant_prefix}.local.json"
+        if tenant_prefix else None)
+    sit_names_path = resolve_sit_names_path(
+        input_dir, sit_names, _DEFAULT_SIT_NAMES, tenant_default=tenant_sit_names)
     sit_name_map = load_sit_name_map(sit_names_path) if sit_names_path else {}
 
     primary_mappings = sum(

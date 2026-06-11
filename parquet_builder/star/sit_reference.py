@@ -296,13 +296,26 @@ def resolve_risk_workbook(input_dir: Path, explicit: Path | None) -> Path | None
     return _search_one(input_dir, _RISK_GLOB)
 
 
+def tenant_prefix_from_export_dir(name: str) -> str | None:
+    """Parse the tenant prefix from an export dir name:
+    Export-{prefix}-{yyyyMMdd}-{HHmmss} -> prefix; Export-{yyyyMMdd}-... -> None.
+    SIT GUIDs are tenant-specific (identical across tenants only when the same
+    rule package is deployed), so auto-detected name maps must be scoped to the
+    export's tenant rather than shared machine-wide."""
+    match = re.match(r"^Export-([A-Za-z][A-Za-z0-9]*)-\d{8}", name)
+    return match.group(1).lower() if match else None
+
+
 def resolve_sit_names_path(
     input_dir: Path, explicit: Path | None, default: Path | None = None,
+    tenant_default: Path | None = None,
 ) -> Path | None:
     """SIT name-map resolution: --sit-names > export root (one level deep) >
-    repo-default ConfigFiles/CurrentTenantSITs.json. Names are best-effort,
-    so a missing map is fine (GUID fallback) — but an explicit path that does
-    not exist is a hard error."""
+    tenant-prefixed ConfigFiles/SITNames-{prefix}.local.json (when the export
+    dir name carries a tenant prefix) > repo-default
+    ConfigFiles/CurrentTenantSITs.json. Names are best-effort, so a missing
+    map is fine (GUID fallback) — but an explicit path that does not exist is
+    a hard error."""
     if explicit is not None:
         if not explicit.exists():
             raise EnrichmentError(f"--sit-names does not exist: {explicit}")
@@ -310,6 +323,8 @@ def resolve_sit_names_path(
     found = _search_one(input_dir, _SIT_NAMES_FILENAME)
     if found is not None:
         return found
+    if tenant_default is not None and tenant_default.exists():
+        return tenant_default
     if default is not None and default.exists():
         return default
     return None

@@ -515,6 +515,41 @@ def test_sit_name_map_loader_validation(tmp_path) -> None:
         load_sit_name_map(not_object)
 
 
+def test_tenant_prefix_from_export_dir() -> None:
+    from parquet_builder.star.enrich import tenant_prefix_from_export_dir
+
+    assert tenant_prefix_from_export_dir("Export-zava-20260514-101010") == "zava"
+    assert tenant_prefix_from_export_dir("Export-QFES-20260609-162814") == "qfes"
+    assert tenant_prefix_from_export_dir("Export-20260609-162814") is None
+    assert tenant_prefix_from_export_dir("SomeOtherDir") is None
+
+
+def test_sit_names_tenant_scoped_resolution(tmp_path) -> None:
+    """Auto-detect order: export root > tenant-prefixed config > generic default.
+    GUIDs are tenant-specific, so the tenant slot must beat the generic one."""
+    from parquet_builder.star.enrich import resolve_sit_names_path
+
+    export_dir = tmp_path / "Export-zava-20260514-101010"
+    export_dir.mkdir()
+    tenant_map = tmp_path / "SITNames-zava.local.json"
+    generic_map = tmp_path / "CurrentTenantSITs.json"
+    tenant_map.write_text("{}", encoding="utf-8")
+    generic_map.write_text("{}", encoding="utf-8")
+
+    # Tenant-prefixed slot wins over the generic default
+    assert resolve_sit_names_path(
+        export_dir, None, generic_map, tenant_default=tenant_map) == tenant_map
+    # Generic default applies when the tenant slot is absent
+    assert resolve_sit_names_path(
+        export_dir, None, generic_map,
+        tenant_default=tmp_path / "SITNames-other.local.json") == generic_map
+    # Export-root map beats both
+    in_export = export_dir / "CurrentTenantSITs.json"
+    in_export.write_text("{}", encoding="utf-8")
+    assert resolve_sit_names_path(
+        export_dir, None, generic_map, tenant_default=tenant_map) == in_export
+
+
 def test_archive_raw_written_by_default(converted) -> None:
     rows = {row["record_identity"]: row for row in _read(converted, "archive_raw").to_pylist()}
     assert len(rows) == 5
