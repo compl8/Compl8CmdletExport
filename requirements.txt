@@ -1,6 +1,7 @@
 # Runtime
 pyarrow>=14.0
 pyyaml>=6.0
+openpyxl>=3.1  # star-schema enrichment (SIT risk workbook loader)
 
 # Development
 pytest>=8.0
