@@ -1,0 +1,87 @@
+{
+  "name": "c3821d273d2987050430",
+  "expression": {
+    "Column": {
+      "Expression": {
+        "SourceRef": {
+          "Entity": "SIT_Reference"
+        }
+      },
+      "Property": "SITName"
+    }
+  },
+  "filter": {
+    "Version": 2,
+    "From": [
+      {
+        "Name": "s",
+        "Entity": "SIT_Reference",
+        "Type": 0
+      }
+    ],
+    "Where": [
+      {
+        "Condition": {
+          "Not": {
+            "Expression": {
+              "In": {
+                "Expressions": [
+                  {
+                    "Column": {
+                      "Expression": {
+                        "SourceRef": {
+                          "Source": "s"
+                        }
+                      },
+                      "Property": "SITName"
+                    }
+                  }
+                ],
+                "Values": [
+                  [
+                    {
+                      "Literal": {
+                        "Value": "null"
+                      }
+                    }
+                  ],
+                  [
+                    {
+                      "Literal": {
+                        "Value": "'Croatia Driver''s License Number'"
+                      }
+                    }
+                  ],
+                  [
+                    {
+                      "Literal": {
+                        "Value": "'Croatia Identity Card Number'"
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "type": "Advanced",
+  "howCreated": 1,
+  "objects": {
+    "general": [
+      {
+        "properties": {
+          "isInvertedSelectionMode": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

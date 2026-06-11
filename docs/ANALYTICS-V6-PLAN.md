@@ -72,10 +72,16 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
 
 ## Task checklist
 
-- [ ] **T1 — Data layer**: `parquet_builder/star/` (schema.py SSOT, keys, enrich, convert CLI) + pytest
-      (synthetic fixtures) + QFD parity run: 447,011 rows, nonzero risk scores, 30-day continuous
-      dim_date, ~49,450 email subjects, superset checklist vs legacy columns, F2 diagnosed/fixed.
-      Output to `<export>\PowerBI-AE-Parquet-v6\` + schema.json + manifest.
+- [x] **T1 — Data layer** (`688f073`): `parquet_builder/star/` — 27 tables, 65 relationships, CLI
+      `py -m parquet_builder.star.convert`. QFD parity ALL PASS (447,011 exact; risk max 17,153 exact;
+      30 continuous dates; 49,450 email details; 955,581 SIT matches pre-exclusion; 79/79 legacy
+      columns mapped). F2 root cause: PowerShell ConvertTo-Json unwraps 1-element arrays → dict
+      Records pages; fixed. Output: `<export>\PowerBI-AE-Parquet-v6\` + schema.json + manifest.json.
+      Notes for T2/T3: exclusions applied at ETL (24.5% of SIT match rows on QFD; activities risk
+      metrics still include them, faithful to legacy); fact_activity_detail→fact_activity declared 1:1
+      relationship (confirm TMDL treatment); derive_target_domain ON by default (old report depends on
+      it, incl. dotted-ItemName-derived "domains"); contract cols typed string; dim_sit = 1,194 workbook
+      + observed-unknown rows with observed flag.
 - [ ] **T2 — PBI builder core**: `PowerBI/builders/pbi_project.py` — TMDL model generated from
       star.schema; visual factories (incl. pie/line/pivotTable/clusteredColumn/actionButton/WordCloud);
       theme embedding; vcObjects titles (fix non-schema `title` key); report/page/visual filter +

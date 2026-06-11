@@ -28,6 +28,9 @@ notneeded/
 PowerBI/__pycache__/
 PowerBI/_archive*/
 
+# Generated smoke project (ActivityExplorer/ContentExplorerSITRisk projects ARE tracked)
+PowerBI/projects/_smoke/
+
 # Build artifacts
 *.zip
 

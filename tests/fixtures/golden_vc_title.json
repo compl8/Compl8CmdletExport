@@ -1,0 +1,13 @@
+[
+  {
+    "properties": {
+      "text": {
+        "expr": {
+          "Literal": {
+            "Value": "'Detections by Classification'"
+          }
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "properties": {
+      "value": {
+        "expr": {
+          "Literal": {
+            "Value": "177.21736102535482D"
+          }
+        }
+      }
+    },
+    "selector": {
+      "metadata": "Domains.Domain"
+    }
+  }
+]

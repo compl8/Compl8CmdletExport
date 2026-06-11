@@ -1,0 +1,44 @@
+{
+  "visualType": "actionButton",
+  "drillFilterOtherVisuals": true,
+  "objects": {
+    "icon": [
+      {
+        "properties": {
+          "shapeType": {
+            "expr": {
+              "Literal": {
+                "Value": "'back'"
+              }
+            }
+          }
+        },
+        "selector": {
+          "id": "default"
+        }
+      }
+    ]
+  },
+  "vcObjects": {
+    "visualLink": [
+      {
+        "properties": {
+          "show": {
+            "expr": {
+              "Literal": {
+                "Value": "true"
+              }
+            }
+          },
+          "type": {
+            "expr": {
+              "Literal": {
+                "Value": "'Back'"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

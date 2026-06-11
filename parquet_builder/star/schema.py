@@ -38,9 +38,14 @@ __all__ = [
     "RELATIONSHIPS",
     "TABLES",
     "emit_schema_json",
+    "model_relationships",
+    "model_tables",
     "pyarrow_schema",
     "validate_schema",
 ]
+
+# Table kinds that are NOT loaded into the Power BI semantic model.
+NON_MODEL_KINDS = frozenset({"pipeline_only", "index"})
 
 _ALL_TABLES = (*DIM_TABLES, *FACT_TABLES, *AGG_TABLES, ACTIVITY_RECORD_INDEX, ARCHIVE_RAW)
 
@@ -128,6 +133,20 @@ RELATIONSHIPS: tuple[RelationshipSpec, ...] = (
     # index provenance
     _rel("activity_record_index", "page_id", "dim_source_page", "page_id"),
 )
+
+
+def model_tables() -> list[TableSpec]:
+    """Tables loaded into the Power BI semantic model (skips pipeline_only/index)."""
+    return [table for table in TABLES.values() if table.kind not in NON_MODEL_KINDS]
+
+
+def model_relationships() -> list[RelationshipSpec]:
+    """Relationships whose both endpoints are loaded into the semantic model."""
+    loaded = {table.name for table in model_tables()}
+    return [
+        rel for rel in RELATIONSHIPS
+        if rel.from_table in loaded and rel.to_table in loaded
+    ]
 
 
 def pyarrow_schema(table_name: str):

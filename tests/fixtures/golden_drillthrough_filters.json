@@ -1,0 +1,32 @@
+[
+  {
+    "name": "2b8c85b2a1f6d623034c",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "SIT_Reference"
+          }
+        },
+        "Property": "SITName"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "9d22f1b98e5eda886764",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "Domains"
+          }
+        },
+        "Property": "Domain"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]
