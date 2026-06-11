@@ -1,0 +1,241 @@
+{
+  "name": "7dfc68e84ee35dca972d",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 512,
+        "z": 12000,
+        "width": 602.0,
+        "height": 168,
+        "tabOrder": 12000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactSankeySensitivityFlow.flow_rank"
+        },
+        {
+          "queryRef": "FactSankeySensitivityFlow.location_name"
+        },
+        {
+          "queryRef": "FactSankeySensitivityFlow.qgiscf_dlm"
+        },
+        {
+          "queryRef": "FactSankeySensitivityFlow.sit_name"
+        },
+        {
+          "queryRef": "FactSankeySensitivityFlow.risk_band"
+        },
+        {
+          "queryRef": "FactLocationSIT.Sankey Sensitivity Files"
+        },
+        {
+          "queryRef": "FactLocationSIT.Sankey Sensitivity Risk"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactSankeySensitivityFlow",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "flow_rank"
+          },
+          "Name": "FactSankeySensitivityFlow.flow_rank"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "FactSankeySensitivityFlow.location_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "FactSankeySensitivityFlow.qgiscf_dlm"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "FactSankeySensitivityFlow.sit_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "FactSankeySensitivityFlow.risk_band"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Sankey Sensitivity Files"
+          },
+          "Name": "FactLocationSIT.Sankey Sensitivity Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Sankey Sensitivity Risk"
+          },
+          "Name": "FactLocationSIT.Sankey Sensitivity Risk"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Sankey Sensitivity Risk"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactSankeySensitivityFlow.flow_rank": {
+        "displayName": "Rank"
+      },
+      "FactSankeySensitivityFlow.location_name": {
+        "displayName": "Location"
+      },
+      "FactSankeySensitivityFlow.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      },
+      "FactSankeySensitivityFlow.sit_name": {
+        "displayName": "SIT"
+      },
+      "FactSankeySensitivityFlow.risk_band": {
+        "displayName": "Risk Band"
+      },
+      "FactLocationSIT.Sankey Sensitivity Files": {
+        "displayName": "Files"
+      },
+      "FactLocationSIT.Sankey Sensitivity Risk": {
+        "displayName": "Risk"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Top Sensitivity Flows'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,122 @@
+table FactAreaSIT
+
+	column area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_sit_pair_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_sit_pair_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column low_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: low_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column medium_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: medium_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column observed_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: observed_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_band
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_band
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_weighted_file_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_weighted_file_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_unrated
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_unrated
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactAreaSIT = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_area_sit.parquet")),
+				    Columns = Table.SelectColumns(Source, {"area_key", "sit_key", "sit_name", "file_count", "file_sit_pair_count", "total_match_count", "low_confidence_match_count", "medium_confidence_match_count", "high_confidence_match_count", "observed_count", "risk_score", "risk_band", "risk_weighted_file_count", "is_unrated"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"area_key", type text}, {"sit_key", type text}, {"sit_name", type text}, {"file_count", Int64.Type}, {"file_sit_pair_count", Int64.Type}, {"total_match_count", Int64.Type}, {"low_confidence_match_count", Int64.Type}, {"medium_confidence_match_count", Int64.Type}, {"high_confidence_match_count", Int64.Type}, {"observed_count", Int64.Type}, {"risk_score", Int64.Type}, {"risk_band", type text}, {"risk_weighted_file_count", Int64.Type}, {"is_unrated", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

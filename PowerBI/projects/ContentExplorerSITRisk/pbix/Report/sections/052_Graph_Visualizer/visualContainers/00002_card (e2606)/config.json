@@ -1,0 +1,105 @@
+{
+  "name": "e2606abe1b6c5b30b8f5",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 227.0,
+        "y": 64,
+        "z": 3000,
+        "width": 183.0,
+        "height": 88,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "card",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactLocationSIT.Force Graph Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Force Graph Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Force Graph Risk Pressure"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactLocationSIT.Force Graph Risk Pressure": {
+        "displayName": "Risk Pressure"
+      }
+    },
+    "objects": {
+      "categoryLabels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "labels": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "23D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Risk Pressure'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

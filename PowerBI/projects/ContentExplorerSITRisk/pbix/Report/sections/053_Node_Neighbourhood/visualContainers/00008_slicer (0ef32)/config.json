@@ -1,0 +1,70 @@
+{
+  "name": "0ef322702e62575ca0df",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 242.0,
+        "y": 160,
+        "z": 9000,
+        "width": 198.0,
+        "height": 74,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphAdjacency.connected_node_type"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "connected_node_type"
+          },
+          "Name": "FactGraphAdjacency.connected_node_type"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactGraphAdjacency.connected_node_type": {
+        "displayName": "Connected Type"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Connected Type'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

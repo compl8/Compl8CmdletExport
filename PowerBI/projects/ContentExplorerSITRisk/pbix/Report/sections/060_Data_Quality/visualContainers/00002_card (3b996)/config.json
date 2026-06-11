@@ -1,0 +1,105 @@
+{
+  "name": "3b99657fc7d451dca838",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 259.0,
+        "y": 64,
+        "z": 3000,
+        "width": 215.0,
+        "height": 88,
+        "tabOrder": 3000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "card",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactLocationSIT.Unrated Aggregate Items"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Unrated Aggregate Items"
+          },
+          "Name": "FactLocationSIT.Unrated Aggregate Items"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactLocationSIT.Unrated Aggregate Items": {
+        "displayName": "Unrated Items"
+      }
+    },
+    "objects": {
+      "categoryLabels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "labels": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "23D"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Unrated Items'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

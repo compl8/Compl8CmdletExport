@@ -1,0 +1,70 @@
+{
+  "name": "28f3278d96e5515d9839",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 1108.0,
+        "y": 56,
+        "z": 8000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphEdgeFocus.focus_bucket"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphEdgeFocus",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "focus_bucket"
+          },
+          "Name": "FactGraphEdgeFocus.focus_bucket"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactGraphEdgeFocus.focus_bucket": {
+        "displayName": "Focus"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Focus'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

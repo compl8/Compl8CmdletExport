@@ -1,0 +1,108 @@
+{
+  "name": "0940b4d51f58518a851b",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 184,
+        "z": 9000,
+        "width": 602.0,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "DimSIT.qgiscf_dlm",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Aggregate Items"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimSIT",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "DimSIT.qgiscf_dlm"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Aggregate Items"
+          },
+          "Name": "FactLocationSIT.Aggregate Items"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Aggregate Items"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimSIT.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Aggregate Items by Classification (DLM)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

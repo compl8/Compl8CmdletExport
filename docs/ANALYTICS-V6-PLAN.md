@@ -82,14 +82,28 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
       relationship (confirm TMDL treatment); derive_target_domain ON by default (old report depends on
       it, incl. dotted-ItemName-derived "domains"); contract cols typed string; dim_sit = 1,194 workbook
       + observed-unknown rows with observed flag.
-- [ ] **T2 — PBI builder core**: `PowerBI/builders/pbi_project.py` — TMDL model generated from
-      star.schema; visual factories (incl. pie/line/pivotTable/clusteredColumn/actionButton/WordCloud);
-      theme embedding; vcObjects titles (fix non-schema `title` key); report/page/visual filter +
-      drillthrough emission; layout constants; LinguisticSchema/culture.
-- [ ] **T3 — AE report superset**: 29-page transfer matrix implemented; 45 measures ported/rewritten
-      (efficient star DAX per matrix); compile via pbi-tools.core.
-- [ ] **T4 — CE report port**: bring ContentExplorerSITRisk builder+project in, rewire paths/theme,
-      regenerate + compile (CE schema work itself is a later phase).
+- [x] **T2 — PBI builder core** (`bbfb9a3`): PowerBI/builders/ engine — TMDL generated from star SSOT
+      (25 tables/64 rels, date table marked, hidden FKs), all visual factories, theme
+      (themes/Compl8.Theme.json = CY26SU02 + curated palette) embedded, correct vcObjects titles,
+      filters + drillthrough emission, layout grid, en-AU/LinguisticSchema, package-on-demand custom
+      visuals. Smoke project compile gate EXIT 0. API documented in builders/__init__ + build_smoke.py.
+- [x] **T3 — AE report superset** (`22f736a`): build_activity_explorer.py + ae_*.py — 29 pages (full
+      legacy mapping in module docstring), 214 titled visuals, 4 drill pages, 73 measures (45 legacy
+      names kept, efficient star DAX, MAX-date anchoring, zero TODAY()). Compile EXIT 0; 80 tests.
+      Owner Desktop command: `.\PowerBI\Build-PowerBI.ps1 -Project ActivityExplorer -ParquetRoot
+      "C:\claudecode\C8CmdLetExportReport\Export-20260609-162814\Export-20260609-162814\PowerBI-AE-Parquet-v6"`
+      then open PowerBI\projects\ActivityExplorer\ActivityExplorerRisk.pbit.
+- [x] **T4 — CE report port**: build_content_explorer.py + ce_schema/ce_measures/ce_pages_* on the T2
+      engine, slug `content-explorer-sit-risk`. ce_schema = declarative ModelSource mirroring the
+      EXISTING CE parquet (22 tables/21 rels, legacy parquet file names, CHANGEME ParquetRoot; engine
+      ModelSource refactor keeps AE/smoke byte-identical). 15 pages / 165 titled visuals (164 legacy +
+      Back button; binding/displayName/sort parity verified against the legacy project), 71 measures
+      (3 DimFile FILTER iterators -> column predicates, same names/semantics; display folders added).
+      040_File_Drillthrough now REALLY wired (DimFile.file_name/file_extension, DimSIT.sit_name,
+      DimLocation.location_name + Back button). Compile + generate-bim EXIT 0; 95 tests. NOTE: the QFD
+      export has no CE data — owner verification needs a CE conversion run first (legacy repo
+      convert_content_explorer_to_parquet.py), then
+      `.\PowerBI\Build-PowerBI.ps1 -Project ContentExplorerSITRisk -ParquetRoot "<ce-parquet-dir>"`.
 - [ ] **T5 — Wiring & docs**: Build-PowerBI.ps1, entry-script switch (e.g. -PowerBIParquet), README,
       CLAUDE.md architecture update, retire-list for the legacy converters in the old repo.
 - [ ] **T6 — Owner Desktop verification pass** (screenshot loop), then iterate polish.

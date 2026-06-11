@@ -1,0 +1,36 @@
+table DimUser
+
+	column user_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_display_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column normalized_display_name
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: normalized_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimUser = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_user.parquet")),
+				    Columns = Table.SelectColumns(Source, {"user_id", "user_display_name", "normalized_display_name"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"user_id", type text}, {"user_display_name", type text}, {"normalized_display_name", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

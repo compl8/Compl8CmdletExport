@@ -1,0 +1,133 @@
+{
+  "name": "991cdbbf7cff5fef9cb8",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 441.3333333333333,
+        "y": 184,
+        "z": 9000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "scatterChart",
+    "projections": {
+      "X": [
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Files"
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Risk Pressure"
+        }
+      ],
+      "Category": [
+        {
+          "queryRef": "FactGraphAdjacency.connected_node_label",
+          "active": true
+        }
+      ],
+      "Size": [
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Weight"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Graph Edge Files"
+          },
+          "Name": "FactLocationSIT.Graph Edge Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Graph Edge Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Graph Edge Risk Pressure"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "connected_node_label"
+          },
+          "Name": "FactGraphAdjacency.connected_node_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Graph Edge Weight"
+          },
+          "Name": "FactLocationSIT.Graph Edge Weight"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactLocationSIT.Graph Edge Files": {
+        "displayName": "Edge Files"
+      },
+      "FactLocationSIT.Graph Edge Risk Pressure": {
+        "displayName": "Edge Risk"
+      },
+      "FactGraphAdjacency.connected_node_label": {
+        "displayName": "Connected Node"
+      },
+      "FactLocationSIT.Graph Edge Weight": {
+        "displayName": "Edge Weight"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Edge Files vs Edge Risk'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

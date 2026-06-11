@@ -1,0 +1,91 @@
+table FactDetectedSITByLocation
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column detected_sit_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: detected_sit_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column low_confidence_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: low_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column medium_confidence_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: medium_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_confidence_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_confidence_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_confidence_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactDetectedSITByLocation = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_detected_sit_by_location.parquet")),
+				    Columns = Table.SelectColumns(Source, {"location_id", "sit_key", "detected_sit_id", "workload", "workload_code", "file_count", "low_confidence_count", "medium_confidence_count", "high_confidence_count", "total_confidence_count"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"location_id", type text}, {"sit_key", type text}, {"detected_sit_id", type text}, {"workload", type text}, {"workload_code", type text}, {"file_count", Int64.Type}, {"low_confidence_count", Int64.Type}, {"medium_confidence_count", Int64.Type}, {"high_confidence_count", Int64.Type}, {"total_confidence_count", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

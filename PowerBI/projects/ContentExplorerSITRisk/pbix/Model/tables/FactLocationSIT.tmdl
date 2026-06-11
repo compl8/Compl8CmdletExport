@@ -1,0 +1,450 @@
+table FactLocationSIT
+
+	measure 'Aggregate Items' =
+			SUM ( FactLocationSIT[item_count] )
+		formatString: #,0
+		displayFolder: Aggregates
+
+	measure Locations =
+			DISTINCTCOUNT ( FactLocationSIT[location_id] )
+		formatString: #,0
+		displayFolder: Aggregates
+
+	measure 'SITs With Aggregate Hits' =
+			DISTINCTCOUNT ( FactLocationSIT[sit_key] )
+		formatString: #,0
+		displayFolder: Aggregates
+
+	measure 'Files With Exported SIT' =
+			DISTINCTCOUNT ( FactFileSITTag[file_id] )
+		formatString: #,0
+		displayFolder: Files
+
+	measure 'File SIT Tag Rows' =
+			COUNTROWS ( FactFileSITTag )
+		formatString: #,0
+		displayFolder: Files
+
+	measure 'Unique Files' =
+			DISTINCTCOUNT ( DimFile[file_id] )
+		formatString: #,0
+		displayFolder: Files
+
+	measure Areas =
+			DISTINCTCOUNT ( DimArea[area_key] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area File SIT Pairs' =
+			SUM ( FactAreaSIT[file_sit_pair_count] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area Distinct SITs' =
+			DISTINCTCOUNT ( FactAreaSIT[sit_key] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area Total Matches' =
+			SUM ( FactAreaSIT[total_match_count] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area High Confidence Matches' =
+			SUM ( FactAreaSIT[high_confidence_match_count] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area Risk Pressure' =
+			SUM ( FactAreaSIT[risk_weighted_file_count] )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area Risk Density' =
+			DIVIDE ( [Area Risk Pressure], [Files With Exported SIT] )
+		formatString: 0.0
+		displayFolder: Areas
+
+	measure 'Area SITs Per File' =
+			DIVIDE ( [Area File SIT Pairs], [Files With Exported SIT] )
+		formatString: 0.0
+		displayFolder: Areas
+
+	measure 'High Or Critical Area File SIT Pairs' =
+			CALCULATE ( [Area File SIT Pairs], DimSIT[risk_band] IN { "High", "Critical" } )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Critical Area File SIT Pairs' =
+			CALCULATE ( [Area File SIT Pairs], DimSIT[risk_band] = "Critical" )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Unrated Area File SIT Pairs' =
+			CALCULATE ( [Area File SIT Pairs], DimSIT[is_unrated] = TRUE () )
+		formatString: #,0
+		displayFolder: Areas
+
+	measure 'Area Sensitivity Label Coverage %' =
+			DIVIDE ( SUM ( FactArea[sensitivity_labelled_files] ), SUM ( FactArea[files_with_sit] ) )
+		formatString: 0.0%
+		displayFolder: Areas
+
+	measure 'Graph Nodes' =
+			DISTINCTCOUNT ( DimGraphNode[graph_node_key] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Connected Nodes' =
+			DISTINCTCOUNT ( FactGraphAdjacency[connected_node_key] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Graph Edge Weight' =
+			SUM ( FactGraphAdjacency[edge_weight] )
+		formatString: #,0.0
+		displayFolder: Graph
+
+	measure 'Graph Edge Files' =
+			SUM ( FactGraphAdjacency[file_count] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Graph Edge SIT Pairs' =
+			SUM ( FactGraphAdjacency[file_sit_pair_count] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Graph Edge Risk Pressure' =
+			SUM ( FactGraphAdjacency[risk_pressure] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Graph Edge High Confidence Matches' =
+			SUM ( FactGraphAdjacency[high_confidence_match_count] )
+		formatString: #,0
+		displayFolder: Graph
+
+	measure 'Force Graph Edges' =
+			COUNTROWS ( FactGraphEdgeFocus )
+		formatString: #,0
+		displayFolder: Force Graph
+
+	measure 'Force Graph Edge Weight' =
+			SUM ( FactGraphEdgeFocus[edge_weight] )
+		formatString: #,0.0
+		displayFolder: Force Graph
+
+	measure 'Force Graph Risk Pressure' =
+			SUM ( FactGraphEdgeFocus[risk_pressure] )
+		formatString: #,0
+		displayFolder: Force Graph
+
+	measure 'Force Graph Files' =
+			SUM ( FactGraphEdgeFocus[file_count] )
+		formatString: #,0
+		displayFolder: Force Graph
+
+	measure 'Force Graph High Confidence Matches' =
+			SUM ( FactGraphEdgeFocus[high_confidence_match_count] )
+		formatString: #,0
+		displayFolder: Force Graph
+
+	measure 'Sankey User Location Weight' =
+			SUM ( FactSankeyUserLocationFlow[flow_weight] )
+		formatString: #,0.0
+		displayFolder: Sankey
+
+	measure 'Sankey User Location Files' =
+			SUM ( FactSankeyUserLocationFlow[file_count] )
+		formatString: #,0
+		displayFolder: Sankey
+
+	measure 'Sankey User Location Risk' =
+			SUM ( FactSankeyUserLocationFlow[risk_pressure] )
+		formatString: #,0
+		displayFolder: Sankey
+
+	measure 'Sankey Sensitivity Weight' =
+			SUM ( FactSankeySensitivityFlow[flow_weight] )
+		formatString: #,0.0
+		displayFolder: Sankey
+
+	measure 'Sankey Sensitivity Files' =
+			SUM ( FactSankeySensitivityFlow[file_count] )
+		formatString: #,0
+		displayFolder: Sankey
+
+	measure 'Sankey Sensitivity Risk' =
+			SUM ( FactSankeySensitivityFlow[risk_pressure] )
+		formatString: #,0
+		displayFolder: Sankey
+
+	measure 'Graph Clusters' =
+			DISTINCTCOUNT ( DimGraphCluster[graph_cluster_key] )
+		formatString: #,0
+		displayFolder: Clusters
+
+	measure 'Cluster Files With SIT' =
+			SUM ( DimGraphCluster[files_with_sit] )
+		formatString: #,0
+		displayFolder: Clusters
+
+	measure 'Cluster Risk Pressure' =
+			SUM ( DimGraphCluster[risk_pressure] )
+		formatString: #,0
+		displayFolder: Clusters
+
+	measure 'Cluster Risk Density' =
+			DIVIDE ( [Cluster Risk Pressure], [Cluster Files With SIT] )
+		formatString: 0.0
+		displayFolder: Clusters
+
+	measure 'Cluster High Confidence Matches' =
+			SUM ( DimGraphCluster[high_confidence_match_count] )
+		formatString: #,0
+		displayFolder: Clusters
+
+	measure 'Cluster Node Size' =
+			SUM ( DimGraphCluster[node_size] )
+		formatString: #,0.0
+		displayFolder: Clusters
+
+	measure 'Executive Findings' =
+			COUNTROWS ( FactExecFinding )
+		formatString: #,0
+		displayFolder: Executive
+
+	measure 'Critical Executive Findings' =
+			CALCULATE ( [Executive Findings], FactExecFinding[severity] = "Critical" )
+		formatString: #,0
+		displayFolder: Executive
+
+	measure 'High Or Critical Executive Findings' =
+			CALCULATE ( [Executive Findings], FactExecFinding[severity] IN { "High", "Critical" } )
+		formatString: #,0
+		displayFolder: Executive
+
+	measure 'Executive Finding Metric' =
+			SUM ( FactExecFinding[metric_value] )
+		formatString: #,0.0
+		displayFolder: Executive
+
+	measure 'Detected Files By Location' =
+			SUM ( FactDetectedSITByLocation[file_count] )
+		formatString: #,0
+		displayFolder: Confidence
+
+	measure 'Detected Confidence Matches' =
+			SUM ( FactDetectedSITByLocation[total_confidence_count] )
+		formatString: #,0
+		displayFolder: Confidence
+
+	measure 'Low Confidence Matches' =
+			SUM ( FactDetectedSITByLocation[low_confidence_count] )
+		formatString: #,0
+		displayFolder: Confidence
+
+	measure 'Medium Confidence Matches' =
+			SUM ( FactDetectedSITByLocation[medium_confidence_count] )
+		formatString: #,0
+		displayFolder: Confidence
+
+	measure 'High Confidence Matches' =
+			SUM ( FactDetectedSITByLocation[high_confidence_count] )
+		formatString: #,0
+		displayFolder: Confidence
+
+	measure 'High Confidence %' =
+			DIVIDE ( [High Confidence Matches], [Detected Confidence Matches] )
+		formatString: 0.0%
+		displayFolder: Confidence
+
+	measure 'Medium Confidence %' =
+			DIVIDE ( [Medium Confidence Matches], [Detected Confidence Matches] )
+		formatString: 0.0%
+		displayFolder: Confidence
+
+	measure 'Low Confidence %' =
+			DIVIDE ( [Low Confidence Matches], [Detected Confidence Matches] )
+		formatString: 0.0%
+		displayFolder: Confidence
+
+	measure 'Risk Weighted Aggregate Items' =
+			SUMX ( FactLocationSIT, FactLocationSIT[item_count] * COALESCE ( RELATED ( DimSIT[risk_score] ), 0 ) )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Risk Weighted Detected Files' =
+			SUMX ( FactDetectedSITByLocation, FactDetectedSITByLocation[file_count] * COALESCE ( RELATED ( DimSIT[risk_score] ), 0 ) )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Weighted Average Risk' =
+			DIVIDE ( [Risk Weighted Aggregate Items], [Aggregate Items] )
+		formatString: 0.0
+		displayFolder: Risk
+
+	measure 'Critical Aggregate Items' =
+			CALCULATE ( [Aggregate Items], DimSIT[risk_band] = "Critical" )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'High Or Critical Aggregate Items' =
+			CALCULATE ( [Aggregate Items], DimSIT[risk_band] IN { "High", "Critical" } )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Critical Detected Files' =
+			CALCULATE ( [Detected Files By Location], DimSIT[risk_band] = "Critical" )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'High Or Critical Detected Files' =
+			CALCULATE ( [Detected Files By Location], DimSIT[risk_band] IN { "High", "Critical" } )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Unrated Aggregate Items' =
+			CALCULATE ( [Aggregate Items], DimSIT[is_unrated] = TRUE () )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Unrated SITs' =
+			CALCULATE ( DISTINCTCOUNT ( DimSIT[sit_key] ), DimSIT[is_unrated] = TRUE () )
+		formatString: #,0
+		displayFolder: Risk
+
+	measure 'Unlabelled Files With SIT' =
+			CALCULATE ( [Files With Exported SIT], DimFile[sensitivity_label] = "" )
+		formatString: #,0
+		displayFolder: Labels
+
+	measure 'Critical Unlabelled Files' =
+			CALCULATE ( [Unlabelled Files With SIT], DimSIT[risk_band] = "Critical" )
+		formatString: #,0
+		displayFolder: Labels
+
+	measure 'Files With Retention Label' =
+			CALCULATE ( [Unique Files], DimFile[retention_label] <> "" )
+		formatString: #,0
+		displayFolder: Labels
+
+	measure 'Files With Sensitivity Label' =
+			CALCULATE ( [Unique Files], DimFile[sensitivity_label] <> "" )
+		formatString: #,0
+		displayFolder: Labels
+
+	measure 'Sensitivity Label Coverage %' =
+			DIVIDE ( [Files With Sensitivity Label], [Unique Files] )
+		formatString: 0.0%
+		displayFolder: Labels
+
+	measure 'Users On Files' =
+			DISTINCTCOUNT ( BridgeFileUser[user_id] )
+		formatString: #,0
+		displayFolder: Users
+
+	measure 'User Files' =
+			DISTINCTCOUNT ( BridgeFileUser[file_id] )
+		formatString: #,0
+		displayFolder: Users
+
+	measure 'User File SIT Tags' =
+			VAR SelectedFiles = VALUES ( BridgeFileUser[file_id] ) RETURN CALCULATE ( [Files With Exported SIT], TREATAS ( SelectedFiles, FactFileSITTag[file_id] ) )
+		formatString: #,0
+		displayFolder: Users
+
+	column fact_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: fact_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column exported_at
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: exported_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column tag_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: tag_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column item_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: item_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column error
+		dataType: string
+		summarizeBy: none
+		sourceColumn: error
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactLocationSIT = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_location_sit_aggregate.parquet")),
+				    Columns = Table.SelectColumns(Source, {"fact_id", "exported_at", "tag_type", "sit_key", "sit_name", "workload", "workload_code", "location_id", "location_url", "item_count", "error"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"fact_id", type text}, {"exported_at", type datetime}, {"tag_type", type text}, {"sit_key", type text}, {"sit_name", type text}, {"workload", type text}, {"workload_code", type text}, {"location_id", type text}, {"location_url", type text}, {"item_count", Int64.Type}, {"error", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

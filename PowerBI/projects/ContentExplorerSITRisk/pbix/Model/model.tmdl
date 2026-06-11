@@ -1,0 +1,36 @@
+model Model
+	culture: en-AU
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-AU
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["ParquetRoot", "DimSIT", "DimQGISCFDLM", "DimLocation", "DimArea", "DimFile", "DimUser", "BridgeFileUser", "DimClassifier", "FactLocationSIT", "FactFileSITTag", "FactArea", "FactAreaSIT", "FactDetectedSITByLocation", "DimGraphCluster", "DimGraphNode", "DimUserDepartment", "FactGraphEdge", "FactGraphEdgeFocus", "FactSankeyUserLocationFlow", "FactSankeySensitivityFlow", "FactGraphAdjacency", "FactExecFinding"]
+
+ref table DimSIT
+ref table DimQGISCFDLM
+ref table DimLocation
+ref table DimArea
+ref table DimFile
+ref table DimUser
+ref table BridgeFileUser
+ref table DimClassifier
+ref table FactLocationSIT
+ref table FactFileSITTag
+ref table FactArea
+ref table FactAreaSIT
+ref table FactDetectedSITByLocation
+ref table DimGraphCluster
+ref table DimGraphNode
+ref table DimUserDepartment
+ref table FactGraphEdge
+ref table FactGraphEdgeFocus
+ref table FactSankeyUserLocationFlow
+ref table FactSankeySensitivityFlow
+ref table FactGraphAdjacency
+ref table FactExecFinding
+
+ref cultureInfo en-AU

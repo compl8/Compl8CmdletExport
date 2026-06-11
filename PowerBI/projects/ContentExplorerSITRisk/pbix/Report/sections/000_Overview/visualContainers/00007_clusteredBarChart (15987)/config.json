@@ -1,0 +1,108 @@
+{
+  "name": "159874fb3cea504cbf90",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 8000,
+        "width": 401.3333333333333,
+        "height": 224,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "DimSIT.risk_band",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Aggregate Items"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimSIT",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "DimSIT.risk_band"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Aggregate Items"
+          },
+          "Name": "FactLocationSIT.Aggregate Items"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Aggregate Items"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimSIT.risk_band": {
+        "displayName": "Risk Band"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Aggregate Items by Risk Band'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

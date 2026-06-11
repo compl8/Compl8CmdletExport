@@ -1,0 +1,70 @@
+{
+  "name": "c6503bcb0364589db44b",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 804.0,
+        "y": 56,
+        "z": 6000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimSIT.risk_band"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "DimSIT.risk_band"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimSIT.risk_band": {
+        "displayName": "Risk Band"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Risk Band'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

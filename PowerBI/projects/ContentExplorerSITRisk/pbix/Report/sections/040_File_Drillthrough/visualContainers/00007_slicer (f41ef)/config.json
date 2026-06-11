@@ -1,0 +1,70 @@
+{
+  "name": "f41ef4bde54558c6885b",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 1108.0,
+        "y": 56,
+        "z": 8000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimFile.file_extension"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimFile",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_extension"
+          },
+          "Name": "DimFile.file_extension"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimFile.file_extension": {
+        "displayName": "Extension"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Extension'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

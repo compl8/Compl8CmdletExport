@@ -1,0 +1,305 @@
+{
+  "name": "7a4ecfcc9f375bba8195",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 240.0,
+        "z": 10000,
+        "width": 784.0,
+        "height": 440.0,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "ForceGraph1449359463895",
+    "projections": {
+      "Source": [
+        {
+          "queryRef": "FactGraphAdjacency.selected_visual_label",
+          "active": true
+        }
+      ],
+      "Target": [
+        {
+          "queryRef": "FactGraphAdjacency.connected_visual_label",
+          "active": true
+        }
+      ],
+      "Weight": [
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Weight"
+        }
+      ],
+      "LinkType": [
+        {
+          "queryRef": "FactGraphAdjacency.relationship_type",
+          "active": true
+        }
+      ],
+      "SourceType": [
+        {
+          "queryRef": "FactGraphAdjacency.selected_node_type"
+        }
+      ],
+      "TargetType": [
+        {
+          "queryRef": "FactGraphAdjacency.connected_node_type"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "selected_visual_label"
+          },
+          "Name": "FactGraphAdjacency.selected_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "connected_visual_label"
+          },
+          "Name": "FactGraphAdjacency.connected_visual_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge Weight"
+          },
+          "Name": "FactLocationSIT.Graph Edge Weight"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "relationship_type"
+          },
+          "Name": "FactGraphAdjacency.relationship_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "selected_node_type"
+          },
+          "Name": "FactGraphAdjacency.selected_node_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "connected_node_type"
+          },
+          "Name": "FactGraphAdjacency.connected_node_type"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Graph Edge Weight"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphAdjacency.selected_visual_label": {
+        "displayName": "Selected"
+      },
+      "FactGraphAdjacency.connected_visual_label": {
+        "displayName": "Connected"
+      },
+      "FactLocationSIT.Graph Edge Weight": {
+        "displayName": "Weight"
+      },
+      "FactGraphAdjacency.relationship_type": {
+        "displayName": "Link Type"
+      },
+      "FactGraphAdjacency.selected_node_type": {
+        "displayName": "Selected Type"
+      },
+      "FactGraphAdjacency.connected_node_type": {
+        "displayName": "Connected Type"
+      }
+    },
+    "objects": {
+      "animation": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "allowIntersection": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "links": [
+        {
+          "properties": {
+            "showArrow": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "showLabel": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "thickenLink": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "properties": {
+            "displayImage": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "nameMaxLength": {
+              "expr": {
+                "Literal": {
+                  "Value": "56D"
+                }
+              }
+            },
+            "highlightReachableLinks": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "size": [
+        {
+          "properties": {
+            "charge": {
+              "expr": {
+                "Literal": {
+                  "Value": "-110D"
+                }
+              }
+            },
+            "boundedByBox": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Selected Node Neighbourhood'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

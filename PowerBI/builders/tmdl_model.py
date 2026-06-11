@@ -1,15 +1,18 @@
-"""TMDL semantic-model emission generated from `parquet_builder.star.schema`.
+"""TMDL semantic-model emission from a declarative `ModelSource`.
 
-Every table, column, type, and relationship in the model comes from the star
-schema SSOT — nothing is declared here. Measures are supplied declaratively
-by report builders (T3+) via `MeasureSpec`.
+The default source is `parquet_builder.star.schema` (the AE star SSOT); other
+projects (e.g. the Content Explorer port, whose parquet layout predates the
+SSOT) supply their own `ModelSource` built from the same TableSpec /
+RelationshipSpec types. Measures are supplied declaratively by report
+builders via `MeasureSpec`.
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
+from typing import Mapping
 
 from parquet_builder.star.schema import (
     RelationshipSpec,
@@ -41,9 +44,42 @@ _TMDL_TYPE_BY_DTYPE = {
     "string": ("string", "type text"),
     "bool": ("boolean", "type logical"),
     "timestamp_us": ("dateTime", "type datetime"),
+    "timestamp_tz": ("dateTime", "type datetimezone"),
     "date32": ("dateTime", "type date"),
     "double": ("double", "type number"),
 }
+
+
+@dataclass(frozen=True)
+class ModelSource:
+    """A pluggable semantic-model source for the TMDL emitter.
+
+    `parquet_files` maps table name -> parquet file name when it differs from
+    `{table.name}.parquet`; `extra_hidden` lists columns hidden in the model
+    beyond keys and relationship endpoints (e.g. normalisation helpers).
+    """
+
+    tables: tuple[TableSpec, ...]
+    relationships: tuple[RelationshipSpec, ...]
+    date_table: str | None = None
+    date_column: str | None = None
+    sort_by: Mapping[tuple[str, str], str] = dataclass_field(default_factory=dict)
+    parquet_files: Mapping[str, str] = dataclass_field(default_factory=dict)
+    extra_hidden: Mapping[str, tuple[str, ...]] = dataclass_field(default_factory=dict)
+
+    def parquet_file(self, table_name: str) -> str:
+        return self.parquet_files.get(table_name, f"{table_name}.parquet")
+
+
+def star_model_source() -> ModelSource:
+    """The default source: the AE star-schema SSOT."""
+    return ModelSource(
+        tables=tuple(model_tables()),
+        relationships=tuple(model_relationships()),
+        date_table=DATE_TABLE,
+        date_column=DATE_COLUMN,
+        sort_by=SORT_BY_COLUMN,
+    )
 
 
 @dataclass(frozen=True)
@@ -73,10 +109,11 @@ def relationship_id(project_slug: str, rel: RelationshipSpec) -> str:
     return str(stable_uuid(seed))
 
 
-def hidden_columns(table: TableSpec) -> set[str]:
-    """Columns hidden in the model: relationship FKs/keys and surrogate keys."""
+def hidden_columns(table: TableSpec, source: ModelSource) -> set[str]:
+    """Columns hidden in the model: relationship FKs/keys, surrogate keys,
+    and any source-declared extra hidden columns."""
     hidden: set[str] = set()
-    for rel in model_relationships():
+    for rel in source.relationships:
         if rel.from_table == table.name:
             hidden.add(rel.from_column)
         if rel.to_table == table.name:
@@ -88,6 +125,7 @@ def hidden_columns(table: TableSpec) -> set[str]:
             hidden.add("activity_id")
     if table.kind == "dim" and table.key:
         hidden.add(table.key)
+    hidden.update(source.extra_hidden.get(table.name, ()))
     return hidden
 
 
@@ -102,8 +140,8 @@ def _m_transform_types(table: TableSpec) -> str:
     return "{" + items + "}"
 
 
-def _column_lines(table: TableSpec) -> list[str]:
-    hidden = hidden_columns(table)
+def _column_lines(table: TableSpec, source: ModelSource) -> list[str]:
+    hidden = hidden_columns(table, source)
     lines: list[str] = []
     for column in table.columns:
         tmdl_type, _m_type = _TMDL_TYPE_BY_DTYPE[column.dtype]
@@ -111,7 +149,7 @@ def _column_lines(table: TableSpec) -> list[str]:
             lines.append(f"\t/// {column.description}")
         lines.append(f"\tcolumn {q(column.name)}")
         lines.append(f"\t\tdataType: {tmdl_type}")
-        if table.name == DATE_TABLE and column.name == DATE_COLUMN:
+        if table.name == source.date_table and column.name == source.date_column:
             lines.append("\t\tisKey")
         if column.name in hidden:
             lines.append("\t\tisHidden")
@@ -119,7 +157,7 @@ def _column_lines(table: TableSpec) -> list[str]:
             lines.append(f"\t\tformatString: {column.format_string}")
         elif column.dtype == "int64":
             lines.append("\t\tformatString: 0")
-        sort_by = SORT_BY_COLUMN.get((table.name, column.name))
+        sort_by = source.sort_by.get((table.name, column.name))
         if sort_by:
             lines.append(f"\t\tsortByColumn: {q(sort_by)}")
         lines.append(f"\t\tsummarizeBy: {column.summarize_by}")
@@ -149,14 +187,14 @@ def _measure_lines(measures: list[MeasureSpec]) -> list[str]:
     return lines
 
 
-def _partition_lines(table: TableSpec) -> list[str]:
-    """M Parquet partition: load, prune to SSOT columns, set SSOT types."""
+def _partition_lines(table: TableSpec, source: ModelSource) -> list[str]:
+    """M Parquet partition: load, prune to declared columns, set types."""
     return [
         f"\tpartition {q(table.name)} = m",
         "\t\tmode: import",
         "\t\tsource =",
         "\t\t\t\tlet",
-        f'\t\t\t\t    Source = Parquet.Document(File.Contents(ParquetRoot & "\\{table.name}.parquet")),',
+        f'\t\t\t\t    Source = Parquet.Document(File.Contents(ParquetRoot & "\\{source.parquet_file(table.name)}")),',
         f"\t\t\t\t    Columns = Table.SelectColumns(Source, {_m_select_columns(table)}, MissingField.UseNull),",
         f'\t\t\t\t    #"Changed Type" = Table.TransformColumnTypes(Columns, {_m_transform_types(table)})',
         "\t\t\t\tin",
@@ -165,31 +203,31 @@ def _partition_lines(table: TableSpec) -> list[str]:
     ]
 
 
-def table_tmdl(table: TableSpec, measures: list[MeasureSpec]) -> str:
+def table_tmdl(table: TableSpec, measures: list[MeasureSpec], source: ModelSource) -> str:
     lines: list[str] = []
     if table.description:
         lines.append(f"/// {table.description}")
     lines.append(f"table {q(table.name)}")
-    if table.name == DATE_TABLE:
+    if table.name == source.date_table:
         lines.append("\tdataCategory: Time")
     lines.append("")
     lines.extend(_measure_lines([m for m in measures if m.table == table.name]))
-    lines.extend(_column_lines(table))
-    lines.extend(_partition_lines(table))
+    lines.extend(_column_lines(table, source))
+    lines.extend(_partition_lines(table, source))
     lines.append("\tannotation PBI_ResultType = Table")
     lines.append("")
     return "\n".join(lines)
 
 
-def relationships_tmdl(project_slug: str) -> str:
-    """All SSOT relationships between loaded tables, active and inactive.
+def relationships_tmdl(project_slug: str, source: ModelSource) -> str:
+    """All declared relationships between loaded tables, active and inactive.
 
-    The declared fact_activity_detail -> fact_activity 1:1 is emitted as a
-    regular single-direction many-to-one (no cardinality override): TMDL 1:1
-    forces both-direction cross-filtering, which the SSOT forbids.
+    A declared 1:1 (e.g. the star SSOT's fact_activity_detail ->
+    fact_activity) is emitted as a regular single-direction many-to-one (no
+    cardinality override): TMDL 1:1 forces both-direction cross-filtering.
     """
     blocks: list[str] = []
-    for rel in model_relationships():
+    for rel in source.relationships:
         blocks.append(f"relationship {relationship_id(project_slug, rel)}")
         if not rel.active:
             blocks.append("\tisActive: false")
@@ -209,8 +247,8 @@ def expressions_tmdl(parquet_root: str) -> str:
     )
 
 
-def model_tmdl() -> str:
-    table_names = [table.name for table in model_tables()]
+def model_tmdl(source: ModelSource) -> str:
+    table_names = [table.name for table in source.tables]
     refs = "\n".join(f"ref table {q(name)}" for name in table_names)
     query_order = json.dumps(["ParquetRoot", *table_names])
     return (
@@ -251,21 +289,24 @@ def write_model(
     project_slug: str,
     parquet_root: str = DEFAULT_PARQUET_ROOT,
     measures: list[MeasureSpec] | None = None,
+    source: ModelSource | None = None,
 ) -> None:
-    """Emit the full Model/ folder (TMDL) from the star schema SSOT."""
+    """Emit the full Model/ folder (TMDL) from a ModelSource (default: star SSOT)."""
+    source = source or star_model_source()
     measures = measures or []
-    _validate_measures(measures)
+    _validate_measures(measures, source)
     _write(model_dir / "database.tmdl", database_tmdl(model_name))
     _write(model_dir / "expressions.tmdl", expressions_tmdl(parquet_root))
-    _write(model_dir / "model.tmdl", model_tmdl())
-    _write(model_dir / "relationships.tmdl", relationships_tmdl(project_slug))
+    _write(model_dir / "model.tmdl", model_tmdl(source))
+    _write(model_dir / "relationships.tmdl", relationships_tmdl(project_slug, source))
     _write(model_dir / "cultures" / "en-AU.tmdl", culture_tmdl())
-    for table in model_tables():
-        _write(model_dir / "tables" / f"{table.name}.tmdl", table_tmdl(table, measures))
+    for table in source.tables:
+        _write(model_dir / "tables" / f"{table.name}.tmdl",
+               table_tmdl(table, measures, source))
 
 
-def _validate_measures(measures: list[MeasureSpec]) -> None:
-    loaded = {table.name for table in model_tables()}
+def _validate_measures(measures: list[MeasureSpec], source: ModelSource) -> None:
+    loaded = {table.name for table in source.tables}
     names: set[str] = set()
     for measure in measures:
         if measure.table not in loaded:

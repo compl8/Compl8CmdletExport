@@ -1,0 +1,83 @@
+relationship 8a02a57f-8371-5806-9636-0f7d59091819
+	fromColumn: FactLocationSIT.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship 1d935829-6aba-5b6d-ae71-fc1890e295b5
+	fromColumn: FactFileSITTag.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship 7a66712a-55dc-5373-b550-79ed16c50b9b
+	fromColumn: FactDetectedSITByLocation.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship b1593230-9d9f-56e3-9ea1-289945f03747
+	fromColumn: FactAreaSIT.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship 457d7d2c-4b2e-5ad6-9cf2-07d475f07f35
+	fromColumn: DimClassifier.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship 58702906-acba-55b1-a94a-88f86fa8f838
+	fromColumn: FactLocationSIT.location_id
+	toColumn: DimLocation.location_id
+
+relationship 21c84ebd-f1c2-542f-b57d-6b6311e5f574
+	fromColumn: FactDetectedSITByLocation.location_id
+	toColumn: DimLocation.location_id
+
+relationship 62e03c63-cc65-5be0-a07b-6e36f2b90a07
+	fromColumn: DimFile.location_id
+	toColumn: DimLocation.location_id
+
+relationship 17d699c3-05b0-5d85-80c6-6f8b566d247d
+	fromColumn: FactFileSITTag.leaf_area_key
+	toColumn: DimArea.area_key
+
+relationship cb3d306e-750d-505c-ac8c-ddad437fe855
+	fromColumn: FactArea.area_key
+	toColumn: DimArea.area_key
+
+relationship a0a25d30-6dd0-5d10-9470-c92076c70317
+	fromColumn: FactAreaSIT.area_key
+	toColumn: DimArea.area_key
+
+relationship 3b82e0bc-6b64-5034-bc5b-463df6faf24c
+	fromColumn: FactFileSITTag.file_id
+	toColumn: DimFile.file_id
+
+relationship ab1f67d6-f55a-57b0-a0a2-bfc2d78ca749
+	fromColumn: BridgeFileUser.file_id
+	toColumn: DimFile.file_id
+
+relationship 78f9114f-7fcf-5484-99b9-ee3240276227
+	fromColumn: BridgeFileUser.user_id
+	toColumn: DimUser.user_id
+
+relationship 049a5f9e-f046-5df5-9af0-6f1d3b333e98
+	fromColumn: FactGraphAdjacency.selected_node_key
+	toColumn: DimGraphNode.graph_node_key
+
+relationship 3e603244-7efe-5762-ade6-4e3d71cd4060
+	fromColumn: FactGraphEdgeFocus.graph_cluster_key
+	toColumn: DimGraphCluster.graph_cluster_key
+
+relationship 141b67ef-7b75-50fd-a2fa-9877153cb357
+	fromColumn: FactSankeyUserLocationFlow.user_id
+	toColumn: DimUserDepartment.user_id
+
+relationship ce224890-8483-53c8-b001-9fe6804570b8
+	fromColumn: FactSankeyUserLocationFlow.location_id
+	toColumn: DimLocation.location_id
+
+relationship 4f12561a-e9e3-588a-8be7-d53df462cf19
+	fromColumn: FactSankeyUserLocationFlow.sit_key
+	toColumn: DimSIT.sit_key
+
+relationship d3074b97-b3fa-5d3b-83df-f75a408b1d8a
+	fromColumn: FactSankeySensitivityFlow.location_id
+	toColumn: DimLocation.location_id
+
+relationship 0c3fcd4d-04f4-5138-87e0-4727ac7a9866
+	fromColumn: FactSankeySensitivityFlow.sit_key
+	toColumn: DimSIT.sit_key

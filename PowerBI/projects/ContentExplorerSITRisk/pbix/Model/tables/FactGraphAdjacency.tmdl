@@ -1,0 +1,149 @@
+table FactGraphAdjacency
+
+	column adjacency_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: adjacency_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column selected_node_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: selected_node_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column connected_node_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: connected_node_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column selected_node_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: selected_node_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column connected_node_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: connected_node_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column selected_node_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: selected_node_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column connected_node_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: connected_node_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column selected_visual_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: selected_visual_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column connected_visual_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: connected_visual_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column relationship_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: relationship_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column graph_cluster_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: graph_cluster_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_sit_pair_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_sit_pair_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column distinct_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: distinct_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_pressure
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_pressure
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column edge_weight
+		dataType: double
+		summarizeBy: none
+		sourceColumn: edge_weight
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactGraphAdjacency = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_graph_adjacency.parquet")),
+				    Columns = Table.SelectColumns(Source, {"adjacency_key", "selected_node_key", "connected_node_key", "selected_node_type", "connected_node_type", "selected_node_label", "connected_node_label", "selected_visual_label", "connected_visual_label", "relationship_type", "graph_cluster_key", "file_count", "file_sit_pair_count", "distinct_sit_count", "risk_pressure", "high_confidence_match_count", "total_match_count", "edge_weight"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"adjacency_key", type text}, {"selected_node_key", type text}, {"connected_node_key", type text}, {"selected_node_type", type text}, {"connected_node_type", type text}, {"selected_node_label", type text}, {"connected_node_label", type text}, {"selected_visual_label", type text}, {"connected_visual_label", type text}, {"relationship_type", type text}, {"graph_cluster_key", type text}, {"file_count", Int64.Type}, {"file_sit_pair_count", Int64.Type}, {"distinct_sit_count", Int64.Type}, {"risk_pressure", Int64.Type}, {"high_confidence_match_count", Int64.Type}, {"total_match_count", Int64.Type}, {"edge_weight", type number}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

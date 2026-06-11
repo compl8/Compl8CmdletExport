@@ -1,0 +1,111 @@
+{
+  "name": "9b1b794e8880595cbb5c",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 445.3333333333333,
+        "y": 184,
+        "z": 9000,
+        "width": 802.6666666666666,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "FactExecFinding.entity_label",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Executive Finding Metric"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactExecFinding",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "entity_label"
+          },
+          "Name": "FactExecFinding.entity_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Executive Finding Metric"
+          },
+          "Name": "FactLocationSIT.Executive Finding Metric"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Executive Finding Metric"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactExecFinding.entity_label": {
+        "displayName": "Entity"
+      },
+      "FactLocationSIT.Executive Finding Metric": {
+        "displayName": "Metric"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Finding Metric by Entity'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

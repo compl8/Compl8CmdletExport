@@ -1,0 +1,192 @@
+table FactSankeyUserLocationFlow
+
+	column flow_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: flow_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column flow_stage
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: flow_stage
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_node
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_node
+
+		annotation SummarizationSetBy = Automatic
+
+	column target_node
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_node
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column target_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: target_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column department
+		dataType: string
+		summarizeBy: none
+		sourceColumn: department
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_display_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_band
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_band
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	column qgiscf_dlm
+		dataType: string
+		summarizeBy: none
+		sourceColumn: qgiscf_dlm
+
+		annotation SummarizationSetBy = Automatic
+
+	column pspf_classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pspf_classification
+
+		annotation SummarizationSetBy = Automatic
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_sit_pair_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_sit_pair_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_pressure
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_pressure
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column flow_weight
+		dataType: double
+		summarizeBy: none
+		sourceColumn: flow_weight
+
+		annotation SummarizationSetBy = Automatic
+
+	column flow_rank
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: flow_rank
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactSankeyUserLocationFlow = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_sankey_user_location_flow.parquet")),
+				    Columns = Table.SelectColumns(Source, {"flow_key", "flow_stage", "source_node", "target_node", "source_type", "target_type", "department", "user_id", "user_display_name", "location_id", "location_name", "sit_key", "sit_name", "risk_band", "risk_score", "qgiscf_dlm", "pspf_classification", "category", "file_count", "file_sit_pair_count", "risk_pressure", "high_confidence_match_count", "flow_weight", "flow_rank"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"flow_key", type text}, {"flow_stage", Int64.Type}, {"source_node", type text}, {"target_node", type text}, {"source_type", type text}, {"target_type", type text}, {"department", type text}, {"user_id", type text}, {"user_display_name", type text}, {"location_id", type text}, {"location_name", type text}, {"sit_key", type text}, {"sit_name", type text}, {"risk_band", type text}, {"risk_score", Int64.Type}, {"qgiscf_dlm", type text}, {"pspf_classification", type text}, {"category", type text}, {"file_count", Int64.Type}, {"file_sit_pair_count", Int64.Type}, {"risk_pressure", Int64.Type}, {"high_confidence_match_count", Int64.Type}, {"flow_weight", type number}, {"flow_rank", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

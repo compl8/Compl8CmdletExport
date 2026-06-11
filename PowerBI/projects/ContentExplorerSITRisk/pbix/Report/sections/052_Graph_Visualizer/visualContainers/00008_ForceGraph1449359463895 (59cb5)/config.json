@@ -1,0 +1,305 @@
+{
+  "name": "59cb55310453509d929e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 184,
+        "z": 9000,
+        "width": 784.0,
+        "height": 496,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "ForceGraph1449359463895",
+    "projections": {
+      "Source": [
+        {
+          "queryRef": "FactGraphEdgeFocus.source_visual_label",
+          "active": true
+        }
+      ],
+      "Target": [
+        {
+          "queryRef": "FactGraphEdgeFocus.target_visual_label",
+          "active": true
+        }
+      ],
+      "Weight": [
+        {
+          "queryRef": "FactLocationSIT.Force Graph Edge Weight"
+        }
+      ],
+      "LinkType": [
+        {
+          "queryRef": "FactGraphEdgeFocus.edge_type",
+          "active": true
+        }
+      ],
+      "SourceType": [
+        {
+          "queryRef": "FactGraphEdgeFocus.source_node_type"
+        }
+      ],
+      "TargetType": [
+        {
+          "queryRef": "FactGraphEdgeFocus.target_node_type"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphEdgeFocus",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "source_visual_label"
+          },
+          "Name": "FactGraphEdgeFocus.source_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "target_visual_label"
+          },
+          "Name": "FactGraphEdgeFocus.target_visual_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Force Graph Edge Weight"
+          },
+          "Name": "FactLocationSIT.Force Graph Edge Weight"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "edge_type"
+          },
+          "Name": "FactGraphEdgeFocus.edge_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "source_node_type"
+          },
+          "Name": "FactGraphEdgeFocus.source_node_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "target_node_type"
+          },
+          "Name": "FactGraphEdgeFocus.target_node_type"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Force Graph Edge Weight"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphEdgeFocus.source_visual_label": {
+        "displayName": "Source"
+      },
+      "FactGraphEdgeFocus.target_visual_label": {
+        "displayName": "Target"
+      },
+      "FactLocationSIT.Force Graph Edge Weight": {
+        "displayName": "Weight"
+      },
+      "FactGraphEdgeFocus.edge_type": {
+        "displayName": "Link Type"
+      },
+      "FactGraphEdgeFocus.source_node_type": {
+        "displayName": "Source Type"
+      },
+      "FactGraphEdgeFocus.target_node_type": {
+        "displayName": "Target Type"
+      }
+    },
+    "objects": {
+      "animation": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "allowIntersection": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "links": [
+        {
+          "properties": {
+            "showArrow": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "showLabel": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "thickenLink": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "properties": {
+            "displayImage": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            },
+            "nameMaxLength": {
+              "expr": {
+                "Literal": {
+                  "Value": "48D"
+                }
+              }
+            },
+            "highlightReachableLinks": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "size": [
+        {
+          "properties": {
+            "charge": {
+              "expr": {
+                "Literal": {
+                  "Value": "-80D"
+                }
+              }
+            },
+            "boundedByBox": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Sensitive Data Movement Graph'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

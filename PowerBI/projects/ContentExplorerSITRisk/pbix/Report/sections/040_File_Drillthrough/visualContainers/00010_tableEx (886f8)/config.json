@@ -1,0 +1,344 @@
+{
+  "name": "886f84665e4b5c32b202",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 11000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimFile.file_name"
+        },
+        {
+          "queryRef": "DimLocation.location_name"
+        },
+        {
+          "queryRef": "FactFileSITTag.sit_name"
+        },
+        {
+          "queryRef": "DimSIT.risk_band"
+        },
+        {
+          "queryRef": "DimFile.file_extension"
+        },
+        {
+          "queryRef": "DimFile.sensitivity_label"
+        },
+        {
+          "queryRef": "DimFile.retention_label"
+        },
+        {
+          "queryRef": "FactFileSITTag.tag_high_confidence_count"
+        },
+        {
+          "queryRef": "FactFileSITTag.tag_total_count"
+        },
+        {
+          "queryRef": "DimFile.last_modified_date"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimFile",
+          "Type": 0
+        },
+        {
+          "Name": "i",
+          "Entity": "DimLocation",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactFileSITTag",
+          "Type": 0
+        },
+        {
+          "Name": "m",
+          "Entity": "DimSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_name"
+          },
+          "Name": "DimFile.file_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "i"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "DimLocation.location_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "FactFileSITTag.sit_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "m"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "DimSIT.risk_band"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_extension"
+          },
+          "Name": "DimFile.file_extension"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sensitivity_label"
+          },
+          "Name": "DimFile.sensitivity_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "retention_label"
+          },
+          "Name": "DimFile.retention_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "tag_high_confidence_count"
+          },
+          "Name": "FactFileSITTag.tag_high_confidence_count"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "tag_total_count"
+          },
+          "Name": "FactFileSITTag.tag_total_count"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "last_modified_date"
+          },
+          "Name": "DimFile.last_modified_date"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimFile.file_name": {
+        "displayName": "File"
+      },
+      "DimLocation.location_name": {
+        "displayName": "Location"
+      },
+      "FactFileSITTag.sit_name": {
+        "displayName": "SIT"
+      },
+      "DimSIT.risk_band": {
+        "displayName": "Risk Band"
+      },
+      "DimFile.file_extension": {
+        "displayName": "Extension"
+      },
+      "DimFile.sensitivity_label": {
+        "displayName": "Sensitivity Label"
+      },
+      "DimFile.retention_label": {
+        "displayName": "Retention Label"
+      },
+      "FactFileSITTag.tag_high_confidence_count": {
+        "displayName": "High Confidence Count"
+      },
+      "FactFileSITTag.tag_total_count": {
+        "displayName": "Total Count"
+      },
+      "DimFile.last_modified_date": {
+        "displayName": "Last Modified Date"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "220.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimFile.file_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "160.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimLocation.location_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "200.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "FactFileSITTag.sit_name"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "140.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimFile.sensitivity_label"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'File Evidence'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

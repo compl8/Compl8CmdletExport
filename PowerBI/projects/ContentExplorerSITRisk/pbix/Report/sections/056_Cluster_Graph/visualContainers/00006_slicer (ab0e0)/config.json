@@ -1,0 +1,70 @@
+{
+  "name": "ab0e0fc4b7595cf3a964",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 1108.0,
+        "y": 56,
+        "z": 7000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimGraphCluster.location_name"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphCluster",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "DimGraphCluster.location_name"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimGraphCluster.location_name": {
+        "displayName": "Location"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Location'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

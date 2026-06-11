@@ -1,0 +1,142 @@
+table DimArea
+
+	column area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_path
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_depth
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: folder_depth
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_display_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_display_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_display_path
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_deep_folder
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_deep_folder
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_1
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_1
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_2
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_2
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_3
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_3
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_4
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_4
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_5
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_5
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_6
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_6
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimArea = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_area.parquet")),
+				    Columns = Table.SelectColumns(Source, {"area_key", "location_id", "workload", "workload_code", "location_type", "location_name", "folder_path", "folder_name", "folder_depth", "area_display_name", "area_display_path", "is_deep_folder", "area_level_1", "area_level_2", "area_level_3", "area_level_4", "area_level_5", "area_level_6"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"area_key", type text}, {"location_id", type text}, {"workload", type text}, {"workload_code", type text}, {"location_type", type text}, {"location_name", type text}, {"folder_path", type text}, {"folder_name", type text}, {"folder_depth", Int64.Type}, {"area_display_name", type text}, {"area_display_path", type text}, {"is_deep_folder", type logical}, {"area_level_1", type text}, {"area_level_2", type text}, {"area_level_3", type text}, {"area_level_4", type text}, {"area_level_5", type text}, {"area_level_6", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

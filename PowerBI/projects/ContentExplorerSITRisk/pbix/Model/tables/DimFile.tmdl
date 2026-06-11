@@ -1,0 +1,211 @@
+table DimFile
+
+	column file_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_extension
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_extension
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_source_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: file_source_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column relative_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: relative_path
+
+		annotation SummarizationSetBy = Automatic
+
+	column path_depth
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: path_depth
+
+		annotation SummarizationSetBy = Automatic
+
+	column leaf_area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: leaf_area_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_path
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: folder_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column folder_depth
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: folder_depth
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_1
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_1
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_2
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_2
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_3
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_3
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_4
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_4
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_5
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_5
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_level_6
+		dataType: string
+		summarizeBy: none
+		sourceColumn: area_level_6
+
+		annotation SummarizationSetBy = Automatic
+
+	column sensitivity_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sensitivity_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column retention_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: retention_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column trainable_classifiers
+		dataType: string
+		summarizeBy: none
+		sourceColumn: trainable_classifiers
+
+		annotation SummarizationSetBy = Automatic
+
+	column created_by
+		dataType: string
+		summarizeBy: none
+		sourceColumn: created_by
+
+		annotation SummarizationSetBy = Automatic
+
+	column modified_by
+		dataType: string
+		summarizeBy: none
+		sourceColumn: modified_by
+
+		annotation SummarizationSetBy = Automatic
+
+	column last_modified_at
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: last_modified_at
+
+		annotation SummarizationSetBy = Automatic
+
+	column last_modified_date
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: last_modified_date
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimFile = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_file.parquet")),
+				    Columns = Table.SelectColumns(Source, {"file_id", "file_url", "file_name", "file_extension", "file_source_url", "location_id", "workload", "workload_code", "relative_path", "path_depth", "leaf_area_key", "folder_path", "folder_name", "folder_depth", "area_level_1", "area_level_2", "area_level_3", "area_level_4", "area_level_5", "area_level_6", "sensitivity_label", "retention_label", "trainable_classifiers", "created_by", "modified_by", "last_modified_at", "last_modified_date"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"file_id", type text}, {"file_url", type text}, {"file_name", type text}, {"file_extension", type text}, {"file_source_url", type text}, {"location_id", type text}, {"workload", type text}, {"workload_code", type text}, {"relative_path", type text}, {"path_depth", Int64.Type}, {"leaf_area_key", type text}, {"folder_path", type text}, {"folder_name", type text}, {"folder_depth", Int64.Type}, {"area_level_1", type text}, {"area_level_2", type text}, {"area_level_3", type text}, {"area_level_4", type text}, {"area_level_5", type text}, {"area_level_6", type text}, {"sensitivity_label", type text}, {"retention_label", type text}, {"trainable_classifiers", type text}, {"created_by", type text}, {"modified_by", type text}, {"last_modified_at", type datetime}, {"last_modified_date", type date}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

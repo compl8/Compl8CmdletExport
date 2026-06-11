@@ -1,0 +1,257 @@
+{
+  "name": "81811ca31a125c12adfc",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 184,
+        "z": 10000,
+        "width": 602.0,
+        "height": 224,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimSIT.sit_name"
+        },
+        {
+          "queryRef": "DimSIT.risk_band"
+        },
+        {
+          "queryRef": "DimSIT.category"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area Total Matches"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area High Confidence Matches"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimSIT",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "DimSIT.sit_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "DimSIT.risk_band"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "category"
+          },
+          "Name": "DimSIT.category"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area File SIT Pairs"
+          },
+          "Name": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Total Matches"
+          },
+          "Name": "FactLocationSIT.Area Total Matches"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Area High Confidence Matches"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Area Risk Pressure"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Area File SIT Pairs"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimSIT.sit_name": {
+        "displayName": "SIT"
+      },
+      "DimSIT.risk_band": {
+        "displayName": "Risk Band"
+      },
+      "DimSIT.category": {
+        "displayName": "Category"
+      },
+      "FactLocationSIT.Area File SIT Pairs": {
+        "displayName": "File/SIT Pairs"
+      },
+      "FactLocationSIT.Area Total Matches": {
+        "displayName": "Matches"
+      },
+      "FactLocationSIT.Area High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      },
+      "FactLocationSIT.Area Risk Pressure": {
+        "displayName": "Risk Pressure"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "220.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimSIT.sit_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Composition of Selected Area'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

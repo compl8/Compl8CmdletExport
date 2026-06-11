@@ -1,0 +1,133 @@
+table FactArea
+
+	column area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column files_with_sit
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: files_with_sit
+
+		annotation SummarizationSetBy = Automatic
+
+	column unlabelled_files_with_sit
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: unlabelled_files_with_sit
+
+		annotation SummarizationSetBy = Automatic
+
+	column sensitivity_labelled_files
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: sensitivity_labelled_files
+
+		annotation SummarizationSetBy = Automatic
+
+	column file_sit_pair_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: file_sit_pair_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column distinct_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: distinct_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column critical_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: critical_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_or_critical_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_or_critical_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column unrated_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: unrated_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column critical_file_sit_pairs
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: critical_file_sit_pairs
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_or_critical_file_sit_pairs
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_or_critical_file_sit_pairs
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column high_confidence_match_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: high_confidence_match_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_weighted_file_sit_count
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_weighted_file_sit_count
+
+		annotation SummarizationSetBy = Automatic
+
+	column max_risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: max_risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactArea = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_area.parquet")),
+				    Columns = Table.SelectColumns(Source, {"area_key", "files_with_sit", "unlabelled_files_with_sit", "sensitivity_labelled_files", "file_sit_pair_count", "distinct_sit_count", "critical_sit_count", "high_or_critical_sit_count", "unrated_sit_count", "critical_file_sit_pairs", "high_or_critical_file_sit_pairs", "total_match_count", "high_confidence_match_count", "risk_weighted_file_sit_count", "max_risk_score"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"area_key", type text}, {"files_with_sit", Int64.Type}, {"unlabelled_files_with_sit", Int64.Type}, {"sensitivity_labelled_files", Int64.Type}, {"file_sit_pair_count", Int64.Type}, {"distinct_sit_count", Int64.Type}, {"critical_sit_count", Int64.Type}, {"high_or_critical_sit_count", Int64.Type}, {"unrated_sit_count", Int64.Type}, {"critical_file_sit_pairs", Int64.Type}, {"high_or_critical_file_sit_pairs", Int64.Type}, {"total_match_count", Int64.Type}, {"high_confidence_match_count", Int64.Type}, {"risk_weighted_file_sit_count", Int64.Type}, {"max_risk_score", Int64.Type}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

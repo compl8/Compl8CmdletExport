@@ -1,0 +1,257 @@
+{
+  "name": "05cfd770e83d5668bf8e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 9000,
+        "width": 602.0,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimArea.area_display_path"
+        },
+        {
+          "queryRef": "DimArea.folder_depth"
+        },
+        {
+          "queryRef": "FactLocationSIT.Files With Exported SIT"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area Risk Density"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area SITs Per File"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "area_display_path"
+          },
+          "Name": "DimArea.area_display_path"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "folder_depth"
+          },
+          "Name": "DimArea.folder_depth"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Exported SIT"
+          },
+          "Name": "FactLocationSIT.Files With Exported SIT"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area File SIT Pairs"
+          },
+          "Name": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Risk Density"
+          },
+          "Name": "FactLocationSIT.Area Risk Density"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area SITs Per File"
+          },
+          "Name": "FactLocationSIT.Area SITs Per File"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Area Risk Density"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimArea.area_display_path": {
+        "displayName": "Area"
+      },
+      "DimArea.folder_depth": {
+        "displayName": "Depth"
+      },
+      "FactLocationSIT.Files With Exported SIT": {
+        "displayName": "Files With SIT"
+      },
+      "FactLocationSIT.Area File SIT Pairs": {
+        "displayName": "File/SIT Pairs"
+      },
+      "FactLocationSIT.Area Risk Density": {
+        "displayName": "Risk / File"
+      },
+      "FactLocationSIT.Area SITs Per File": {
+        "displayName": "SITs / File"
+      },
+      "FactLocationSIT.Area High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimArea.area_display_path"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Areas (Risk per File)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

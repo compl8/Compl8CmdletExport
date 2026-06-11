@@ -1,0 +1,62 @@
+[
+  {
+    "name": "89336c67aaa95f20a41b",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "DimFile"
+          }
+        },
+        "Property": "file_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "bf48d1d35f8f59178334",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "DimSIT"
+          }
+        },
+        "Property": "sit_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "dbec931196675573b33c",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "DimLocation"
+          }
+        },
+        "Property": "location_name"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  },
+  {
+    "name": "89bdfd6698c55e13ac4d",
+    "expression": {
+      "Column": {
+        "Expression": {
+          "SourceRef": {
+            "Entity": "DimFile"
+          }
+        },
+        "Property": "file_extension"
+      }
+    },
+    "type": "Categorical",
+    "howCreated": 5
+  }
+]

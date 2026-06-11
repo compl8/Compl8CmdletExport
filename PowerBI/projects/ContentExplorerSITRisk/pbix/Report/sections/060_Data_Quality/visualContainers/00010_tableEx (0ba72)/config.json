@@ -1,0 +1,195 @@
+{
+  "name": "0ba7219437525542a8e0",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 436,
+        "z": 11000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimFile.file_extension"
+        },
+        {
+          "queryRef": "FactLocationSIT.Unique Files"
+        },
+        {
+          "queryRef": "FactLocationSIT.Files With Sensitivity Label"
+        },
+        {
+          "queryRef": "FactLocationSIT.Files With Retention Label"
+        },
+        {
+          "queryRef": "FactLocationSIT.Sensitivity Label Coverage %"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimFile",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_extension"
+          },
+          "Name": "DimFile.file_extension"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Unique Files"
+          },
+          "Name": "FactLocationSIT.Unique Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Sensitivity Label"
+          },
+          "Name": "FactLocationSIT.Files With Sensitivity Label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Retention Label"
+          },
+          "Name": "FactLocationSIT.Files With Retention Label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Sensitivity Label Coverage %"
+          },
+          "Name": "FactLocationSIT.Sensitivity Label Coverage %"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Unique Files"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimFile.file_extension": {
+        "displayName": "Extension"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Label Coverage by Extension'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

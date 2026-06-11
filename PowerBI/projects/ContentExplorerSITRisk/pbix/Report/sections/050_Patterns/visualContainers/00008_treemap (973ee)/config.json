@@ -1,0 +1,111 @@
+{
+  "name": "973ee2d3edb25eb5a044",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 441.3333333333333,
+        "y": 184,
+        "z": 9000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "treemap",
+    "projections": {
+      "Group": [
+        {
+          "queryRef": "DimFile.file_extension",
+          "active": true
+        }
+      ],
+      "Values": [
+        {
+          "queryRef": "FactLocationSIT.Files With Exported SIT"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimFile",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_extension"
+          },
+          "Name": "DimFile.file_extension"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Exported SIT"
+          },
+          "Name": "FactLocationSIT.Files With Exported SIT"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Files With Exported SIT"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimFile.file_extension": {
+        "displayName": "Extension"
+      },
+      "FactLocationSIT.Files With Exported SIT": {
+        "displayName": "Files With SIT"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Files With SIT by Extension'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

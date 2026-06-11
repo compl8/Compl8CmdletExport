@@ -1,0 +1,111 @@
+{
+  "name": "bc24e737ad3d57ecad81",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 850.6666666666666,
+        "y": 184,
+        "z": 10000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "FactGraphAdjacency.connected_node_label",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "connected_node_label"
+          },
+          "Name": "FactGraphAdjacency.connected_node_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Graph Edge Risk Pressure"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Graph Edge Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphAdjacency.connected_node_label": {
+        "displayName": "Connected Node"
+      },
+      "FactLocationSIT.Graph Edge Risk Pressure": {
+        "displayName": "Edge Risk"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Riskiest Connected Nodes'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

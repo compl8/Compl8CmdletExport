@@ -1,0 +1,70 @@
+{
+  "name": "cfda2680ac2b5faea4da",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 956.0,
+        "y": 56,
+        "z": 6000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactExecFinding.severity"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactExecFinding",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "severity"
+          },
+          "Name": "FactExecFinding.severity"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactExecFinding.severity": {
+        "displayName": "Severity"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Severity'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "id": 0,
+  "layoutOptimization": 0,
+  "pods": [
+    {
+      "boundSection": "5bc3bdb53fdb52eba955",
+      "config": "{}",
+      "name": "adb7dd6e18125fdb9228",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "a4eb68ffc6855f5b8dff",
+      "config": "{}",
+      "name": "fc8fc3faf9af5b558b48",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "db4fd179ca7c51d9b08d",
+      "config": "{}",
+      "name": "8121f1df40aa5171830a",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "6bd0f89789695e1c9ef1",
+      "config": "{}",
+      "name": "8f6da01668a75ce9843d",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "82cdccb3450950de8418",
+      "config": "{}",
+      "name": "3dc039d43dc259cd9469",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "4e1aba40637f53c78e30",
+      "config": "{}",
+      "name": "675e2838631958ccb6c4",
+      "parameters": "[{\"name\": \"f29647819ad85ebca665\", \"boundFilter\": \"89336c67aaa95f20a41b\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"DimFile\"}}, \"Property\": \"file_name\"}}}, {\"name\": \"4231f5bd1aec5dac93ab\", \"boundFilter\": \"bf48d1d35f8f59178334\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"DimSIT\"}}, \"Property\": \"sit_name\"}}}, {\"name\": \"e82f02c087255788b92c\", \"boundFilter\": \"dbec931196675573b33c\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"DimLocation\"}}, \"Property\": \"location_name\"}}}, {\"name\": \"c3196b69f6685c1ba637\", \"boundFilter\": \"89bdfd6698c55e13ac4d\", \"fieldExpr\": {\"Column\": {\"Expression\": {\"SourceRef\": {\"Entity\": \"DimFile\"}}, \"Property\": \"file_extension\"}}}]",
+      "type": 1
+    },
+    {
+      "boundSection": "df7a6fce87f55b7081e7",
+      "config": "{}",
+      "name": "93e006246a415914ad0d",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "3d5fc22ada03503cbe56",
+      "config": "{}",
+      "name": "047507cb80ef5b6f9eed",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "48f37b9e73be5a3691b9",
+      "config": "{}",
+      "name": "14733de19bc6531e9044",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "c48af80583de53529161",
+      "config": "{}",
+      "name": "2478e05bda895b299fcf",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "edae415b4a705dc0ae42",
+      "config": "{}",
+      "name": "6860181118aa5b299939",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "6f189bc637c15751b7b4",
+      "config": "{}",
+      "name": "64c0b70a4887567099d1",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "d4a5e0da27845799bb26",
+      "config": "{}",
+      "name": "80d2ba0a4cd256498005",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "7a3c3d243fc55daa8402",
+      "config": "{}",
+      "name": "8ff1badbfdb853408dde",
+      "referenceScope": 1
+    },
+    {
+      "boundSection": "4755effa6ff05584b60c",
+      "config": "{}",
+      "name": "4b001e0a43aa59ba8ad1",
+      "referenceScope": 1
+    }
+  ],
+  "resourcePackages": [
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "ForceGraph1449359463895.pbiviz.json",
+            "path": "ForceGraph1449359463895.pbiviz.json",
+            "type": 5
+          }
+        ],
+        "name": "ForceGraph1449359463895",
+        "type": 0
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020.pbiviz.json",
+            "path": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020.pbiviz.json",
+            "type": 5
+          }
+        ],
+        "name": "sankey02300D1BE6F5427989F3DE31CCA9E0F32020",
+        "type": 0
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "Compl8.Theme.json",
+            "path": "Compl8.Theme.json",
+            "type": 202
+          }
+        ],
+        "name": "RegisteredResources",
+        "type": 1
+      }
+    },
+    {
+      "resourcePackage": {
+        "disabled": false,
+        "items": [
+          {
+            "name": "CY26SU02",
+            "path": "BaseThemes/CY26SU02.json",
+            "type": 202
+          }
+        ],
+        "name": "SharedResources",
+        "type": 2
+      }
+    }
+  ],
+  "publicCustomVisuals": [
+    "ForceGraph1449359463895",
+    "sankey02300D1BE6F5427989F3DE31CCA9E0F32020"
+  ]
+}

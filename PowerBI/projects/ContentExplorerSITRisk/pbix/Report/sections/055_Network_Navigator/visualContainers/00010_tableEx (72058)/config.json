@@ -1,0 +1,220 @@
+{
+  "name": "72058553d8e85489afe6",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 436,
+        "z": 11000,
+        "width": 397.3333333333333,
+        "height": 244,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimGraphNode.node_type"
+        },
+        {
+          "queryRef": "DimGraphNode.node_label"
+        },
+        {
+          "queryRef": "DimGraphNode.node_subtype"
+        },
+        {
+          "queryRef": "DimGraphNode.files_with_sit"
+        },
+        {
+          "queryRef": "DimGraphNode.file_sit_pair_count"
+        },
+        {
+          "queryRef": "DimGraphNode.risk_pressure"
+        },
+        {
+          "queryRef": "DimGraphNode.node_note"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphNode",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "node_type"
+          },
+          "Name": "DimGraphNode.node_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "node_label"
+          },
+          "Name": "DimGraphNode.node_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "node_subtype"
+          },
+          "Name": "DimGraphNode.node_subtype"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "files_with_sit"
+          },
+          "Name": "DimGraphNode.files_with_sit"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_sit_pair_count"
+          },
+          "Name": "DimGraphNode.file_sit_pair_count"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_pressure"
+          },
+          "Name": "DimGraphNode.risk_pressure"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "node_note"
+          },
+          "Name": "DimGraphNode.node_note"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimGraphNode.node_type": {
+        "displayName": "Type"
+      },
+      "DimGraphNode.node_label": {
+        "displayName": "Selected Node"
+      },
+      "DimGraphNode.node_subtype": {
+        "displayName": "Subtype"
+      },
+      "DimGraphNode.files_with_sit": {
+        "displayName": "Files"
+      },
+      "DimGraphNode.file_sit_pair_count": {
+        "displayName": "File/SIT Pairs"
+      },
+      "DimGraphNode.risk_pressure": {
+        "displayName": "Risk Pressure"
+      },
+      "DimGraphNode.node_note": {
+        "displayName": "Note"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Node Inventory'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

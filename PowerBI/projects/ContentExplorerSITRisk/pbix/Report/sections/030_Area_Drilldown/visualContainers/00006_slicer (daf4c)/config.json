@@ -1,0 +1,70 @@
+{
+  "name": "daf4c8670a4b5088872c",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 956.0,
+        "y": 56,
+        "z": 7000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimArea.area_level_1"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "area_level_1"
+          },
+          "Name": "DimArea.area_level_1"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimArea.area_level_1": {
+        "displayName": "Level 1"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Level 1'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

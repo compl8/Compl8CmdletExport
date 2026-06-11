@@ -1,0 +1,282 @@
+{
+  "name": "b442f806c8ce52728dd5",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 10000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimSIT.sit_name"
+        },
+        {
+          "queryRef": "DimSIT.category"
+        },
+        {
+          "queryRef": "DimSIT.risk_score"
+        },
+        {
+          "queryRef": "DimSIT.risk_band"
+        },
+        {
+          "queryRef": "DimSIT.pspf_classification"
+        },
+        {
+          "queryRef": "DimSIT.qgiscf_dlm"
+        },
+        {
+          "queryRef": "FactLocationSIT.Aggregate Items"
+        },
+        {
+          "queryRef": "FactLocationSIT.Detected Files By Location"
+        },
+        {
+          "queryRef": "FactLocationSIT.High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimSIT",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "sit_name"
+          },
+          "Name": "DimSIT.sit_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "category"
+          },
+          "Name": "DimSIT.category"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_score"
+          },
+          "Name": "DimSIT.risk_score"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "DimSIT.risk_band"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "pspf_classification"
+          },
+          "Name": "DimSIT.pspf_classification"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "DimSIT.qgiscf_dlm"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Aggregate Items"
+          },
+          "Name": "FactLocationSIT.Aggregate Items"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Detected Files By Location"
+          },
+          "Name": "FactLocationSIT.Detected Files By Location"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.High Confidence Matches"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Aggregate Items"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimSIT.sit_name": {
+        "displayName": "SIT"
+      },
+      "DimSIT.category": {
+        "displayName": "Category"
+      },
+      "DimSIT.risk_score": {
+        "displayName": "Risk Score"
+      },
+      "DimSIT.risk_band": {
+        "displayName": "Risk Band"
+      },
+      "DimSIT.pspf_classification": {
+        "displayName": "PSPF"
+      },
+      "DimSIT.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "280.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimSIT.sit_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'SIT Risk Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

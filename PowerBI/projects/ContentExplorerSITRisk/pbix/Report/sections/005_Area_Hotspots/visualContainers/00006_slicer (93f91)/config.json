@@ -1,0 +1,70 @@
+{
+  "name": "93f912d74bcf5ae1984e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 956.0,
+        "y": 56,
+        "z": 7000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimArea.workload"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "workload"
+          },
+          "Name": "DimArea.workload"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimArea.workload": {
+        "displayName": "Workload"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Workload'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

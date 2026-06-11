@@ -1,0 +1,170 @@
+table DimSIT
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name_norm
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_name_norm
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_id
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_slug
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_slug
+
+		annotation SummarizationSetBy = Automatic
+
+	column category
+		dataType: string
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_score
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: risk_score
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_band
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_band
+
+		annotation SummarizationSetBy = Automatic
+
+	column risk_description
+		dataType: string
+		summarizeBy: none
+		sourceColumn: risk_description
+
+		annotation SummarizationSetBy = Automatic
+
+	column reference_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: reference_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column pspf_classification
+		dataType: string
+		summarizeBy: none
+		sourceColumn: pspf_classification
+
+		annotation SummarizationSetBy = Automatic
+
+	column qgiscf
+		dataType: string
+		summarizeBy: none
+		sourceColumn: qgiscf
+
+		annotation SummarizationSetBy = Automatic
+
+	column qgiscf_dlm
+		dataType: string
+		summarizeBy: none
+		sourceColumn: qgiscf_dlm
+
+		annotation SummarizationSetBy = Automatic
+
+	column small_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: small_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	column medium_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: medium_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	column large_tenant
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: large_tenant
+
+		annotation SummarizationSetBy = Automatic
+
+	column scope
+		dataType: string
+		summarizeBy: none
+		sourceColumn: scope
+
+		annotation SummarizationSetBy = Automatic
+
+	column confidence
+		dataType: string
+		summarizeBy: none
+		sourceColumn: confidence
+
+		annotation SummarizationSetBy = Automatic
+
+	column data_categories
+		dataType: string
+		summarizeBy: none
+		sourceColumn: data_categories
+
+		annotation SummarizationSetBy = Automatic
+
+	column regulations
+		dataType: string
+		summarizeBy: none
+		sourceColumn: regulations
+
+		annotation SummarizationSetBy = Automatic
+
+	column source_sheet
+		dataType: string
+		summarizeBy: none
+		sourceColumn: source_sheet
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_unrated
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_unrated
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimSIT = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_sit.parquet")),
+				    Columns = Table.SelectColumns(Source, {"sit_key", "sit_name", "sit_name_norm", "sit_id", "sit_slug", "category", "risk_score", "risk_band", "risk_description", "reference_url", "pspf_classification", "qgiscf", "qgiscf_dlm", "small_tenant", "medium_tenant", "large_tenant", "scope", "confidence", "data_categories", "regulations", "source_sheet", "is_unrated"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"sit_key", type text}, {"sit_name", type text}, {"sit_name_norm", type text}, {"sit_id", type text}, {"sit_slug", type text}, {"category", type text}, {"risk_score", Int64.Type}, {"risk_band", type text}, {"risk_description", type text}, {"reference_url", type text}, {"pspf_classification", type text}, {"qgiscf", type text}, {"qgiscf_dlm", type text}, {"small_tenant", type logical}, {"medium_tenant", type logical}, {"large_tenant", type logical}, {"scope", type text}, {"confidence", type text}, {"data_categories", type text}, {"regulations", type text}, {"source_sheet", type text}, {"is_unrated", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

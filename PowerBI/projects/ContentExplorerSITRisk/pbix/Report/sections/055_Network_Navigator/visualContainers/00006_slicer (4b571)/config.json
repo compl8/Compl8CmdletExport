@@ -1,0 +1,70 @@
+{
+  "name": "4b57199a264f573e9d0b",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 1108.0,
+        "y": 56,
+        "z": 7000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimGraphNode.node_label"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphNode",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "node_label"
+          },
+          "Name": "DimGraphNode.node_label"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "DimGraphNode.node_label": {
+        "displayName": "Node"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Node'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

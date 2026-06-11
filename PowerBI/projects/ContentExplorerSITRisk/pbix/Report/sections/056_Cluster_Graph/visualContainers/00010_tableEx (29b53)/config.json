@@ -1,0 +1,291 @@
+{
+  "name": "29b53f68eccc5644972e",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 11000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimGraphCluster.cluster_label"
+        },
+        {
+          "queryRef": "DimGraphCluster.area_count"
+        },
+        {
+          "queryRef": "FactLocationSIT.Cluster Files With SIT"
+        },
+        {
+          "queryRef": "DimGraphCluster.file_sit_pair_count"
+        },
+        {
+          "queryRef": "DimGraphCluster.distinct_sit_count"
+        },
+        {
+          "queryRef": "FactLocationSIT.Cluster Risk Pressure"
+        },
+        {
+          "queryRef": "FactLocationSIT.Cluster Risk Density"
+        },
+        {
+          "queryRef": "FactLocationSIT.Cluster High Confidence Matches"
+        },
+        {
+          "queryRef": "DimGraphCluster.label_coverage_pct"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphCluster",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "cluster_label"
+          },
+          "Name": "DimGraphCluster.cluster_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "area_count"
+          },
+          "Name": "DimGraphCluster.area_count"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Files With SIT"
+          },
+          "Name": "FactLocationSIT.Cluster Files With SIT"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "file_sit_pair_count"
+          },
+          "Name": "DimGraphCluster.file_sit_pair_count"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "distinct_sit_count"
+          },
+          "Name": "DimGraphCluster.distinct_sit_count"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Cluster Risk Pressure"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Risk Density"
+          },
+          "Name": "FactLocationSIT.Cluster Risk Density"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Cluster High Confidence Matches"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "label_coverage_pct"
+          },
+          "Name": "DimGraphCluster.label_coverage_pct"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Cluster Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimGraphCluster.cluster_label": {
+        "displayName": "Cluster"
+      },
+      "DimGraphCluster.area_count": {
+        "displayName": "Areas"
+      },
+      "FactLocationSIT.Cluster Files With SIT": {
+        "displayName": "Files With SIT"
+      },
+      "DimGraphCluster.file_sit_pair_count": {
+        "displayName": "File/SIT Pairs"
+      },
+      "DimGraphCluster.distinct_sit_count": {
+        "displayName": "Distinct SITs"
+      },
+      "FactLocationSIT.Cluster Risk Pressure": {
+        "displayName": "Risk Pressure"
+      },
+      "FactLocationSIT.Cluster Risk Density": {
+        "displayName": "Risk / File"
+      },
+      "FactLocationSIT.Cluster High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      },
+      "DimGraphCluster.label_coverage_pct": {
+        "displayName": "Label Coverage"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimGraphCluster.cluster_label"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cluster Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

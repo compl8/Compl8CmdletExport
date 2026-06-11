@@ -1,0 +1,248 @@
+{
+  "name": "d49c599eebd35f03842a",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 436,
+        "z": 10000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimLocation.location_name"
+        },
+        {
+          "queryRef": "DimLocation.workload"
+        },
+        {
+          "queryRef": "DimLocation.location_type"
+        },
+        {
+          "queryRef": "DimLocation.owner_candidate"
+        },
+        {
+          "queryRef": "FactLocationSIT.Aggregate Items"
+        },
+        {
+          "queryRef": "FactLocationSIT.High Or Critical Aggregate Items"
+        },
+        {
+          "queryRef": "FactLocationSIT.Files With Exported SIT"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimLocation",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "DimLocation.location_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "workload"
+          },
+          "Name": "DimLocation.workload"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "location_type"
+          },
+          "Name": "DimLocation.location_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "owner_candidate"
+          },
+          "Name": "DimLocation.owner_candidate"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Aggregate Items"
+          },
+          "Name": "FactLocationSIT.Aggregate Items"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "High Or Critical Aggregate Items"
+          },
+          "Name": "FactLocationSIT.High Or Critical Aggregate Items"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Exported SIT"
+          },
+          "Name": "FactLocationSIT.Files With Exported SIT"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Aggregate Items"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimLocation.location_name": {
+        "displayName": "Location"
+      },
+      "DimLocation.workload": {
+        "displayName": "Workload"
+      },
+      "DimLocation.location_type": {
+        "displayName": "Location Type"
+      },
+      "DimLocation.owner_candidate": {
+        "displayName": "Owner Candidate"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "200.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimLocation.location_name"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Location Exposure'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

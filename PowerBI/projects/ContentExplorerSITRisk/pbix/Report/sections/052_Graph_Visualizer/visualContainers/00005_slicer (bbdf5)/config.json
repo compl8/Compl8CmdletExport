@@ -1,0 +1,70 @@
+{
+  "name": "bbdf52ada69b5399a946",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 804.0,
+        "y": 56,
+        "z": 6000,
+        "width": 140.0,
+        "height": 96,
+        "tabOrder": 6000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphEdgeFocus.edge_type"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphEdgeFocus",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "edge_type"
+          },
+          "Name": "FactGraphEdgeFocus.edge_type"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactGraphEdgeFocus.edge_type": {
+        "displayName": "Link Type"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Link Type'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

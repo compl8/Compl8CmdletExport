@@ -1,0 +1,133 @@
+{
+  "name": "0eabde378b8a52599248",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 441.3333333333333,
+        "y": 184,
+        "z": 9000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 9000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "scatterChart",
+    "projections": {
+      "X": [
+        {
+          "queryRef": "FactLocationSIT.Cluster Files With SIT"
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Cluster Risk Density"
+        }
+      ],
+      "Category": [
+        {
+          "queryRef": "DimGraphCluster.cluster_label",
+          "active": true
+        }
+      ],
+      "Size": [
+        {
+          "queryRef": "FactLocationSIT.Cluster Node Size"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        },
+        {
+          "Name": "d",
+          "Entity": "DimGraphCluster",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Files With SIT"
+          },
+          "Name": "FactLocationSIT.Cluster Files With SIT"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Risk Density"
+          },
+          "Name": "FactLocationSIT.Cluster Risk Density"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "cluster_label"
+          },
+          "Name": "DimGraphCluster.cluster_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Node Size"
+          },
+          "Name": "FactLocationSIT.Cluster Node Size"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactLocationSIT.Cluster Files With SIT": {
+        "displayName": "Files With SIT"
+      },
+      "FactLocationSIT.Cluster Risk Density": {
+        "displayName": "Risk / File"
+      },
+      "DimGraphCluster.cluster_label": {
+        "displayName": "Cluster"
+      },
+      "FactLocationSIT.Cluster Node Size": {
+        "displayName": "Cluster Size"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cluster Volume vs Risk Density'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

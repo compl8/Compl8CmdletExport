@@ -1,0 +1,113 @@
+table DimClassifier
+
+	column classifier_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: classifier_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column tag_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: tag_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sit_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_records
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_records
+
+		annotation SummarizationSetBy = Automatic
+
+	column total_pages
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: total_pages
+
+		annotation SummarizationSetBy = Automatic
+
+	column export_date
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: export_date
+
+		annotation SummarizationSetBy = Automatic
+
+	column onedrive_records
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: onedrive_records
+
+		annotation SummarizationSetBy = Automatic
+
+	column onedrive_pages
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: onedrive_pages
+
+		annotation SummarizationSetBy = Automatic
+
+	column onedrive_status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: onedrive_status
+
+		annotation SummarizationSetBy = Automatic
+
+	column sharepoint_records
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: sharepoint_records
+
+		annotation SummarizationSetBy = Automatic
+
+	column sharepoint_pages
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: sharepoint_pages
+
+		annotation SummarizationSetBy = Automatic
+
+	column sharepoint_status
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sharepoint_status
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimClassifier = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_classifier.parquet")),
+				    Columns = Table.SelectColumns(Source, {"classifier_key", "tag_type", "sit_key", "sit_name", "total_records", "total_pages", "export_date", "onedrive_records", "onedrive_pages", "onedrive_status", "sharepoint_records", "sharepoint_pages", "sharepoint_status"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"classifier_key", type text}, {"tag_type", type text}, {"sit_key", type text}, {"sit_name", type text}, {"total_records", Int64.Type}, {"total_pages", Int64.Type}, {"export_date", type datetimezone}, {"onedrive_records", Int64.Type}, {"onedrive_pages", Int64.Type}, {"onedrive_status", type text}, {"sharepoint_records", Int64.Type}, {"sharepoint_pages", Int64.Type}, {"sharepoint_status", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

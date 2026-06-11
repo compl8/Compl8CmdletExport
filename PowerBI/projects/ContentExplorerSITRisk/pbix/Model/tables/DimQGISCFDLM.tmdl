@@ -1,0 +1,49 @@
+table DimQGISCFDLM
+
+	column label_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: label_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column label_order
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: label_order
+
+		annotation SummarizationSetBy = Automatic
+
+	column visual_marking
+		dataType: string
+		summarizeBy: none
+		sourceColumn: visual_marking
+
+		annotation SummarizationSetBy = Automatic
+
+	column encrypt
+		dataType: string
+		summarizeBy: none
+		sourceColumn: encrypt
+
+		annotation SummarizationSetBy = Automatic
+
+	column description
+		dataType: string
+		summarizeBy: none
+		sourceColumn: description
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimQGISCFDLM = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_qgiscf_dlm.parquet")),
+				    Columns = Table.SelectColumns(Source, {"label_name", "label_order", "visual_marking", "encrypt", "description"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"label_name", type text}, {"label_order", Int64.Type}, {"visual_marking", type text}, {"encrypt", type text}, {"description", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

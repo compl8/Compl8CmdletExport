@@ -17,7 +17,9 @@ param(
     [ValidateSet('ActivityExplorer', 'ContentExplorerSITRisk', '_smoke')]
     [string] $Project,
 
-    [string] $ParquetRoot = 'C:\CHANGEME\PowerBI-AE-Parquet-v6',
+    # When omitted, each builder's own CHANGEME placeholder default applies
+    # (AE: PowerBI-AE-Parquet-v6, CE: PowerBI-CE-Parquet).
+    [string] $ParquetRoot = '',
 
     [string] $PbiToolsCorePath = 'C:\Tools\pbi-tools-net9\pbi-tools.core.exe'
 )
@@ -30,7 +32,7 @@ $repoRoot = Split-Path -Parent $powerBIRoot
 $builderModules = @{
     '_smoke'                 = 'PowerBI.builders.build_smoke'
     'ActivityExplorer'       = 'PowerBI.builders.build_activity_explorer'
-    'ContentExplorerSITRisk' = 'PowerBI.builders.build_content_explorer'    # lands in T4
+    'ContentExplorerSITRisk' = 'PowerBI.builders.build_content_explorer'
 }
 $pbitNames = @{
     '_smoke'                 = 'Compl8Smoke.pbit'
@@ -60,7 +62,11 @@ $outputPbit = Join-Path $powerBIRoot "projects\$Project\$($pbitNames[$Project])"
 Push-Location $repoRoot
 try {
     Write-Host "Generating project '$Project' -> $projectDir"
-    py -m $builderModule --output-dir $projectDir --parquet-root $ParquetRoot --overwrite
+    $generateArgs = @('-m', $builderModule, '--output-dir', $projectDir, '--overwrite')
+    if ($ParquetRoot) {
+        $generateArgs += @('--parquet-root', $ParquetRoot)
+    }
+    py @generateArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Project generation failed with exit code $LASTEXITCODE"
     }
@@ -75,7 +81,8 @@ try {
     Write-Host ''
     Write-Host "Project folder : $projectDir"
     Write-Host "Compiled PBIT  : $outputPbit"
-    Write-Host "ParquetRoot    : $ParquetRoot (change in Power BI Desktop via Transform data > Edit parameters)"
+    $effectiveRoot = if ($ParquetRoot) { $ParquetRoot } else { '(builder CHANGEME default)' }
+    Write-Host "ParquetRoot    : $effectiveRoot (change in Power BI Desktop via Transform data > Edit parameters)"
 }
 finally {
     Pop-Location

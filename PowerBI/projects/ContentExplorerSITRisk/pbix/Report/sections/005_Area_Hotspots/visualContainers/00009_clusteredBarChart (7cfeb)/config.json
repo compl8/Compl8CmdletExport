@@ -1,0 +1,111 @@
+{
+  "name": "7cfeb2732b38553fa79d",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 441.3333333333333,
+        "y": 184,
+        "z": 10000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "DimArea.area_display_path",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Area Risk Density"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "area_display_path"
+          },
+          "Name": "DimArea.area_display_path"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Risk Density"
+          },
+          "Name": "FactLocationSIT.Area Risk Density"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Area Risk Density"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimArea.area_display_path": {
+        "displayName": "Area"
+      },
+      "FactLocationSIT.Area Risk Density": {
+        "displayName": "Risk / File"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Riskiest Areas (Risk per File)'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

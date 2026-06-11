@@ -1,0 +1,43 @@
+table BridgeFileUser
+
+	column file_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: file_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_display_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_role
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_role
+
+		annotation SummarizationSetBy = Automatic
+
+	partition BridgeFileUser = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\bridge_file_user.parquet")),
+				    Columns = Table.SelectColumns(Source, {"file_id", "user_id", "user_display_name", "user_role"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"file_id", type text}, {"user_id", type text}, {"user_display_name", type text}, {"user_role", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

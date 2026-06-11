@@ -1,0 +1,111 @@
+{
+  "name": "57beb199c2e35bf69d20",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 184,
+        "z": 8000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "treemap",
+    "projections": {
+      "Group": [
+        {
+          "queryRef": "DimGraphCluster.cluster_label",
+          "active": true
+        }
+      ],
+      "Values": [
+        {
+          "queryRef": "FactLocationSIT.Cluster Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphCluster",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "cluster_label"
+          },
+          "Name": "DimGraphCluster.cluster_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Cluster Risk Pressure"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Cluster Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimGraphCluster.cluster_label": {
+        "displayName": "Cluster"
+      },
+      "FactLocationSIT.Cluster Risk Pressure": {
+        "displayName": "Risk Pressure"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Risk Pressure by Cluster'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

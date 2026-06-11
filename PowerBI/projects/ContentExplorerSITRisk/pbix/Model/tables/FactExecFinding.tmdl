@@ -1,0 +1,137 @@
+table FactExecFinding
+
+	column finding_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: finding_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column finding_rank
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: finding_rank
+
+		annotation SummarizationSetBy = Automatic
+
+	column severity
+		dataType: string
+		summarizeBy: none
+		sourceColumn: severity
+
+		annotation SummarizationSetBy = Automatic
+
+	column finding_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: finding_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column entity_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: entity_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column entity_key
+		dataType: string
+		summarizeBy: none
+		sourceColumn: entity_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column entity_label
+		dataType: string
+		summarizeBy: none
+		sourceColumn: entity_label
+
+		annotation SummarizationSetBy = Automatic
+
+	column area_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: area_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column sit_key
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: sit_key
+
+		annotation SummarizationSetBy = Automatic
+
+	column metric_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: metric_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column metric_value
+		dataType: double
+		summarizeBy: none
+		sourceColumn: metric_value
+
+		annotation SummarizationSetBy = Automatic
+
+	column secondary_metric_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: secondary_metric_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column secondary_metric_value
+		dataType: double
+		summarizeBy: none
+		sourceColumn: secondary_metric_value
+
+		annotation SummarizationSetBy = Automatic
+
+	column finding_title
+		dataType: string
+		summarizeBy: none
+		sourceColumn: finding_title
+
+		annotation SummarizationSetBy = Automatic
+
+	column finding_evidence
+		dataType: string
+		summarizeBy: none
+		sourceColumn: finding_evidence
+
+		annotation SummarizationSetBy = Automatic
+
+	column recommended_action
+		dataType: string
+		summarizeBy: none
+		sourceColumn: recommended_action
+
+		annotation SummarizationSetBy = Automatic
+
+	partition FactExecFinding = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\fact_exec_finding.parquet")),
+				    Columns = Table.SelectColumns(Source, {"finding_id", "finding_rank", "severity", "finding_type", "entity_type", "entity_key", "entity_label", "area_key", "location_id", "sit_key", "metric_name", "metric_value", "secondary_metric_name", "secondary_metric_value", "finding_title", "finding_evidence", "recommended_action"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"finding_id", type text}, {"finding_rank", Int64.Type}, {"severity", type text}, {"finding_type", type text}, {"entity_type", type text}, {"entity_key", type text}, {"entity_label", type text}, {"area_key", type text}, {"location_id", type text}, {"sit_key", type text}, {"metric_name", type text}, {"metric_value", type number}, {"secondary_metric_name", type text}, {"secondary_metric_value", type number}, {"finding_title", type text}, {"finding_evidence", type text}, {"recommended_action", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

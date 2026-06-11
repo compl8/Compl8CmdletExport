@@ -1,0 +1,84 @@
+table DimLocation
+
+	column location_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: location_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_url
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_url
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_type
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload
+
+		annotation SummarizationSetBy = Automatic
+
+	column workload_code
+		dataType: string
+		summarizeBy: none
+		sourceColumn: workload_code
+
+		annotation SummarizationSetBy = Automatic
+
+	column host
+		dataType: string
+		summarizeBy: none
+		sourceColumn: host
+
+		annotation SummarizationSetBy = Automatic
+
+	column site_path
+		dataType: string
+		summarizeBy: none
+		sourceColumn: site_path
+
+		annotation SummarizationSetBy = Automatic
+
+	column location_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: location_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column owner_slug
+		dataType: string
+		summarizeBy: none
+		sourceColumn: owner_slug
+
+		annotation SummarizationSetBy = Automatic
+
+	column owner_candidate
+		dataType: string
+		summarizeBy: none
+		sourceColumn: owner_candidate
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimLocation = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_location.parquet")),
+				    Columns = Table.SelectColumns(Source, {"location_id", "location_url", "location_type", "workload", "workload_code", "host", "site_path", "location_name", "owner_slug", "owner_candidate"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"location_id", type text}, {"location_url", type text}, {"location_type", type text}, {"workload", type text}, {"workload_code", type text}, {"host", type text}, {"site_path", type text}, {"location_name", type text}, {"owner_slug", type text}, {"owner_candidate", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

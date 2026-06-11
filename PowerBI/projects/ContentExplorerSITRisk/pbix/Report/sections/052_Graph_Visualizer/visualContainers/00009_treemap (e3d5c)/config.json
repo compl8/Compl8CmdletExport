@@ -1,0 +1,111 @@
+{
+  "name": "e3d5cf736f805ed78dac",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 828.0,
+        "y": 184.0,
+        "z": 10000,
+        "width": 420.0,
+        "height": 157.33333333333334,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "treemap",
+    "projections": {
+      "Group": [
+        {
+          "queryRef": "FactGraphEdgeFocus.edge_type",
+          "active": true
+        }
+      ],
+      "Values": [
+        {
+          "queryRef": "FactLocationSIT.Force Graph Risk Pressure"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphEdgeFocus",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "edge_type"
+          },
+          "Name": "FactGraphEdgeFocus.edge_type"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Force Graph Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Force Graph Risk Pressure"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Force Graph Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphEdgeFocus.edge_type": {
+        "displayName": "Link Type"
+      },
+      "FactLocationSIT.Force Graph Risk Pressure": {
+        "displayName": "Risk Pressure"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Risk Pressure by Link Type'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

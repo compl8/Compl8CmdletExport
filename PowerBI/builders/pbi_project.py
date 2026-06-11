@@ -1,8 +1,9 @@
 """Facade: assemble a complete pbi-tools PbixProj from a ProjectSpec.
 
-The semantic model is generated from `parquet_builder.star.schema` (the SSOT)
-via `tmdl_model`; report content (pages, visuals, measures, filters) is
-declared by per-project builders (build_smoke now, AE/CE in T3/T4).
+The semantic model is generated from the project's `ModelSource` (default:
+`parquet_builder.star.schema`, the AE SSOT) via `tmdl_model`; report content
+(pages, visuals, measures, filters) is declared by per-project builders
+(build_smoke, build_activity_explorer, build_content_explorer).
 """
 
 from __future__ import annotations
@@ -10,8 +11,6 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
-
-from parquet_builder.star.schema import model_tables
 
 from .report_layout import (
     PageSpec,
@@ -23,7 +22,13 @@ from .report_layout import (
     write_text,
 )
 from .theme import copy_custom_visuals, embed_theme, linguistic_schema_xml, theme_collection
-from .tmdl_model import DEFAULT_PARQUET_ROOT, MeasureSpec, write_model
+from .tmdl_model import (
+    DEFAULT_PARQUET_ROOT,
+    MeasureSpec,
+    ModelSource,
+    star_model_source,
+    write_model,
+)
 from .visual_factories import CUSTOM_VISUAL_GUIDS, VisualSpec
 
 
@@ -37,6 +42,7 @@ class ProjectSpec:
     measures: list[MeasureSpec] = dataclass_field(default_factory=list)
     report_filters: list[dict[str, object]] = dataclass_field(default_factory=list)
     active_section_index: int = 0
+    model: ModelSource | None = None  # None -> the AE star-schema SSOT
 
 
 def used_custom_visuals(pages: list[PageSpec]) -> list[str]:
@@ -48,8 +54,8 @@ def used_custom_visuals(pages: list[PageSpec]) -> list[str]:
     return used
 
 
-def _diagram_layout() -> dict[str, object]:
-    tables = [table.name for table in model_tables()]
+def _diagram_layout(source: ModelSource) -> dict[str, object]:
+    tables = [table.name for table in source.tables]
     per_row = 6
     nodes = [
         {
@@ -82,6 +88,7 @@ def build_project(
     overwrite: bool = False,
 ) -> Path:
     """Generate the PbixProj folder; returns out_dir."""
+    source = spec.model or star_model_source()
     if out_dir.exists():
         if not overwrite:
             raise FileExistsError(f"Output folder already exists: {out_dir}")
@@ -97,7 +104,7 @@ def build_project(
     write_json(out_dir / "ReportMetadata.json", {
         "Version": 5,
         "AutoCreatedRelationships": [],
-        "FileDescription": f"{spec.name} (generated from the star-schema SSOT)",
+        "FileDescription": f"{spec.name} (generated from a declarative model spec)",
         "CreatedFrom": "pbi-tools",
         "CreatedFromRelease": "1.2.0",
     })
@@ -111,7 +118,7 @@ def build_project(
             "Version": "2.153.910.0",
         },
     })
-    write_json(out_dir / "DiagramLayout.json", _diagram_layout())
+    write_json(out_dir / "DiagramLayout.json", _diagram_layout(source))
     write_text(out_dir / "LinguisticSchema.xml", linguistic_schema_xml())
 
     write_model(
@@ -120,6 +127,7 @@ def build_project(
         project_slug=spec.slug,
         parquet_root=parquet_root,
         measures=spec.measures,
+        source=source,
     )
 
     theme_packages = embed_theme(out_dir)
@@ -150,6 +158,7 @@ def build_project(
 
 __all__ = [
     "MeasureSpec",
+    "ModelSource",
     "PageSpec",
     "ProjectSpec",
     "VisualSpec",

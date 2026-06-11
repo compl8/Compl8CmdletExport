@@ -1,0 +1,111 @@
+{
+  "name": "9d21800f7965507fb92d",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 850.6666666666666,
+        "y": 184,
+        "z": 10000,
+        "width": 397.3333333333333,
+        "height": 224,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "clusteredBarChart",
+    "projections": {
+      "Category": [
+        {
+          "queryRef": "DimGraphCluster.cluster_label",
+          "active": true
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Cluster High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimGraphCluster",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "cluster_label"
+          },
+          "Name": "DimGraphCluster.cluster_label"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Cluster High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Cluster High Confidence Matches"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Cluster High Confidence Matches"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimGraphCluster.cluster_label": {
+        "displayName": "Cluster"
+      },
+      "FactLocationSIT.Cluster High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'High Confidence Matches by Cluster'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

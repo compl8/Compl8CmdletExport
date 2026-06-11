@@ -1,0 +1,274 @@
+{
+  "name": "3c1d6b35c09950869df5",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 646.0,
+        "y": 436,
+        "z": 12000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 12000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "DimArea.location_name"
+        },
+        {
+          "queryRef": "DimArea.folder_name"
+        },
+        {
+          "queryRef": "DimArea.folder_path"
+        },
+        {
+          "queryRef": "FactLocationSIT.Files With Exported SIT"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area Distinct SITs"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area Risk Density"
+        },
+        {
+          "queryRef": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        },
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "DimArea.location_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "folder_name"
+          },
+          "Name": "DimArea.folder_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "folder_path"
+          },
+          "Name": "DimArea.folder_path"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Exported SIT"
+          },
+          "Name": "FactLocationSIT.Files With Exported SIT"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area File SIT Pairs"
+          },
+          "Name": "FactLocationSIT.Area File SIT Pairs"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Distinct SITs"
+          },
+          "Name": "FactLocationSIT.Area Distinct SITs"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Risk Density"
+          },
+          "Name": "FactLocationSIT.Area Risk Density"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "Area Risk Density"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "DimArea.location_name": {
+        "displayName": "Location"
+      },
+      "DimArea.folder_name": {
+        "displayName": "Folder"
+      },
+      "DimArea.folder_path": {
+        "displayName": "Folder Path"
+      },
+      "FactLocationSIT.Files With Exported SIT": {
+        "displayName": "Files With SIT"
+      },
+      "FactLocationSIT.Area File SIT Pairs": {
+        "displayName": "File/SIT Pairs"
+      },
+      "FactLocationSIT.Area Distinct SITs": {
+        "displayName": "Distinct SITs"
+      },
+      "FactLocationSIT.Area Risk Density": {
+        "displayName": "Risk / File"
+      },
+      "FactLocationSIT.Area High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "200.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "DimArea.folder_path"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Folder Pattern Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

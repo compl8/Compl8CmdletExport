@@ -1,0 +1,70 @@
+{
+  "name": "acfcfab1be225ca48144",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 160,
+        "z": 8000,
+        "width": 198.0,
+        "height": 74,
+        "tabOrder": 8000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "slicer",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphAdjacency.relationship_type"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "relationship_type"
+          },
+          "Name": "FactGraphAdjacency.relationship_type"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactGraphAdjacency.relationship_type": {
+        "displayName": "Link Type"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Link Type'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

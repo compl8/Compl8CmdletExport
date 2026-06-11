@@ -1,0 +1,280 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "nodeIndex": "DimSIT",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 0
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 0
+          },
+          "nodeIndex": "DimQGISCFDLM",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 0
+          },
+          "nodeIndex": "DimLocation",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 0
+          },
+          "nodeIndex": "DimArea",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 0
+          },
+          "nodeIndex": "DimFile",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 4
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 0
+          },
+          "nodeIndex": "DimUser",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 5
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 320
+          },
+          "nodeIndex": "BridgeFileUser",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 6
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 320
+          },
+          "nodeIndex": "DimClassifier",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 7
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 320
+          },
+          "nodeIndex": "FactLocationSIT",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 8
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 320
+          },
+          "nodeIndex": "FactFileSITTag",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 9
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 320
+          },
+          "nodeIndex": "FactArea",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 10
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 320
+          },
+          "nodeIndex": "FactAreaSIT",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 11
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 640
+          },
+          "nodeIndex": "FactDetectedSITByLocation",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 12
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 640
+          },
+          "nodeIndex": "DimGraphCluster",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 13
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 640
+          },
+          "nodeIndex": "DimGraphNode",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 14
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 640
+          },
+          "nodeIndex": "DimUserDepartment",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 15
+        },
+        {
+          "location": {
+            "x": 1280,
+            "y": 640
+          },
+          "nodeIndex": "FactGraphEdge",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 16
+        },
+        {
+          "location": {
+            "x": 1600,
+            "y": 640
+          },
+          "nodeIndex": "FactGraphEdgeFocus",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 17
+        },
+        {
+          "location": {
+            "x": 0,
+            "y": 960
+          },
+          "nodeIndex": "FactSankeyUserLocationFlow",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 18
+        },
+        {
+          "location": {
+            "x": 320,
+            "y": 960
+          },
+          "nodeIndex": "FactSankeySensitivityFlow",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 19
+        },
+        {
+          "location": {
+            "x": 640,
+            "y": 960
+          },
+          "nodeIndex": "FactGraphAdjacency",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 20
+        },
+        {
+          "location": {
+            "x": 960,
+            "y": 960
+          },
+          "nodeIndex": "FactExecFinding",
+          "size": {
+            "height": 240,
+            "width": 260
+          },
+          "zIndex": 21
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 65
+    }
+  ]
+}

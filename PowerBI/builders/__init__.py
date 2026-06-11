@@ -15,12 +15,13 @@ from __future__ import annotations
 from .expressions import Field, col, meas
 from .pbi_project import ProjectSpec, build_project
 from .report_layout import PageSpec
-from .tmdl_model import DEFAULT_PARQUET_ROOT, MeasureSpec
+from .tmdl_model import DEFAULT_PARQUET_ROOT, MeasureSpec, ModelSource
 
 __all__ = [
     "DEFAULT_PARQUET_ROOT",
     "Field",
     "MeasureSpec",
+    "ModelSource",
     "PageSpec",
     "ProjectSpec",
     "build_project",

@@ -1,0 +1,60 @@
+{
+  "name": "f13678cbc8875f639ebd",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 850.6666666666666,
+        "y": 286,
+        "z": 7000,
+        "width": 397.3333333333333,
+        "height": 176,
+        "tabOrder": 7000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "textbox",
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "QGISCF DLM and PSPF: risk workbook fields used to connect Microsoft SITs to Queensland Government and PSPF classification concepts.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Drilldown: select a location, folder, risk band, SIT, or treemap segment to cross-filter the tables on the page. Area Drilldown then shows both SIT composition and file-level evidence.",
+                    "textStyle": {
+                      "fontSize": "11pt"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

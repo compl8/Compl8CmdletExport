@@ -1,0 +1,241 @@
+{
+  "name": "fe19db7b35f55dbc9d77",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 828.0,
+        "y": 522.6666666666667,
+        "z": 12000,
+        "width": 420.0,
+        "height": 157.33333333333334,
+        "tabOrder": 12000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphEdgeFocus.focus_rank"
+        },
+        {
+          "queryRef": "FactGraphEdgeFocus.source_visual_label"
+        },
+        {
+          "queryRef": "FactGraphEdgeFocus.target_visual_label"
+        },
+        {
+          "queryRef": "FactGraphEdgeFocus.edge_type"
+        },
+        {
+          "queryRef": "FactLocationSIT.Force Graph Files"
+        },
+        {
+          "queryRef": "FactLocationSIT.Force Graph Risk Pressure"
+        },
+        {
+          "queryRef": "FactLocationSIT.Force Graph Edge Weight"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphEdgeFocus",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "focus_rank"
+          },
+          "Name": "FactGraphEdgeFocus.focus_rank"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "source_visual_label"
+          },
+          "Name": "FactGraphEdgeFocus.source_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "target_visual_label"
+          },
+          "Name": "FactGraphEdgeFocus.target_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "edge_type"
+          },
+          "Name": "FactGraphEdgeFocus.edge_type"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Force Graph Files"
+          },
+          "Name": "FactLocationSIT.Force Graph Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Force Graph Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Force Graph Risk Pressure"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Force Graph Edge Weight"
+          },
+          "Name": "FactLocationSIT.Force Graph Edge Weight"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Force Graph Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphEdgeFocus.focus_rank": {
+        "displayName": "Rank"
+      },
+      "FactGraphEdgeFocus.source_visual_label": {
+        "displayName": "Source"
+      },
+      "FactGraphEdgeFocus.target_visual_label": {
+        "displayName": "Target"
+      },
+      "FactGraphEdgeFocus.edge_type": {
+        "displayName": "Link Type"
+      },
+      "FactLocationSIT.Force Graph Files": {
+        "displayName": "Files"
+      },
+      "FactLocationSIT.Force Graph Risk Pressure": {
+        "displayName": "Risk Pressure"
+      },
+      "FactLocationSIT.Force Graph Edge Weight": {
+        "displayName": "Edge Weight"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Focused Edge Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,71 @@
+table DimUserDepartment
+
+	column user_id
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: user_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column user_display_name
+		dataType: string
+		summarizeBy: none
+		sourceColumn: user_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column normalized_display_name
+		dataType: string
+		isHidden
+		summarizeBy: none
+		sourceColumn: normalized_display_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column department
+		dataType: string
+		summarizeBy: none
+		sourceColumn: department
+
+		annotation SummarizationSetBy = Automatic
+
+	column division
+		dataType: string
+		summarizeBy: none
+		sourceColumn: division
+
+		annotation SummarizationSetBy = Automatic
+
+	column business_unit
+		dataType: string
+		summarizeBy: none
+		sourceColumn: business_unit
+
+		annotation SummarizationSetBy = Automatic
+
+	column mapping_source
+		dataType: string
+		summarizeBy: none
+		sourceColumn: mapping_source
+
+		annotation SummarizationSetBy = Automatic
+
+	column is_mapped
+		dataType: boolean
+		summarizeBy: none
+		sourceColumn: is_mapped
+
+		annotation SummarizationSetBy = Automatic
+
+	partition DimUserDepartment = m
+		mode: import
+		source =
+				let
+				    Source = Parquet.Document(File.Contents(ParquetRoot & "\dim_user_department.parquet")),
+				    Columns = Table.SelectColumns(Source, {"user_id", "user_display_name", "normalized_display_name", "department", "division", "business_unit", "mapping_source", "is_mapped"}, MissingField.UseNull),
+				    #"Changed Type" = Table.TransformColumnTypes(Columns, {{"user_id", type text}, {"user_display_name", type text}, {"normalized_display_name", type text}, {"department", type text}, {"division", type text}, {"business_unit", type text}, {"mapping_source", type text}, {"is_mapped", type logical}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table

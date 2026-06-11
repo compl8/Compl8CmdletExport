@@ -1,0 +1,258 @@
+{
+  "name": "36edec13699c58a3b285",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 512,
+        "z": 11000,
+        "width": 602.0,
+        "height": 168,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactSankeyUserLocationFlow.flow_rank"
+        },
+        {
+          "queryRef": "FactSankeyUserLocationFlow.department"
+        },
+        {
+          "queryRef": "FactSankeyUserLocationFlow.user_display_name"
+        },
+        {
+          "queryRef": "FactSankeyUserLocationFlow.location_name"
+        },
+        {
+          "queryRef": "FactSankeyUserLocationFlow.qgiscf_dlm"
+        },
+        {
+          "queryRef": "FactSankeyUserLocationFlow.risk_band"
+        },
+        {
+          "queryRef": "FactLocationSIT.Sankey User Location Files"
+        },
+        {
+          "queryRef": "FactLocationSIT.Sankey User Location Risk"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactSankeyUserLocationFlow",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "flow_rank"
+          },
+          "Name": "FactSankeyUserLocationFlow.flow_rank"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "department"
+          },
+          "Name": "FactSankeyUserLocationFlow.department"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "user_display_name"
+          },
+          "Name": "FactSankeyUserLocationFlow.user_display_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "FactSankeyUserLocationFlow.location_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "qgiscf_dlm"
+          },
+          "Name": "FactSankeyUserLocationFlow.qgiscf_dlm"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "risk_band"
+          },
+          "Name": "FactSankeyUserLocationFlow.risk_band"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Sankey User Location Files"
+          },
+          "Name": "FactLocationSIT.Sankey User Location Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Sankey User Location Risk"
+          },
+          "Name": "FactLocationSIT.Sankey User Location Risk"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Sankey User Location Risk"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactSankeyUserLocationFlow.flow_rank": {
+        "displayName": "Rank"
+      },
+      "FactSankeyUserLocationFlow.department": {
+        "displayName": "Department"
+      },
+      "FactSankeyUserLocationFlow.user_display_name": {
+        "displayName": "User"
+      },
+      "FactSankeyUserLocationFlow.location_name": {
+        "displayName": "Location"
+      },
+      "FactSankeyUserLocationFlow.qgiscf_dlm": {
+        "displayName": "QGISCF DLM"
+      },
+      "FactSankeyUserLocationFlow.risk_band": {
+        "displayName": "Risk Band"
+      },
+      "FactLocationSIT.Sankey User Location Files": {
+        "displayName": "Files"
+      },
+      "FactLocationSIT.Sankey User Location Risk": {
+        "displayName": "Risk"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Top User/Location Flows'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

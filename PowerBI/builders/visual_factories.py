@@ -357,23 +357,33 @@ def sankey(seed: str, source: Field, destination: Field, weight: Field, rect: Re
 
 
 def force_graph(seed: str, source: Field, target: Field, weight: Field, link_type: Field,
-                rect: Rect, *, title: str | None = None) -> VisualSpec:
+                rect: Rect, *, title: str | None = None,
+                source_type: Field | None = None, target_type: Field | None = None,
+                charge: int = -90, name_max_length: int = 48) -> VisualSpec:
+    fields = [source, target, weight, link_type,
+              *([source_type] if source_type else []),
+              *([target_type] if target_type else [])]
+    projections = {
+        "Source": _one(source, active=True),
+        "Target": _one(target, active=True),
+        "Weight": _one(weight),
+        "LinkType": _one(link_type, active=True),
+    }
+    if source_type:
+        projections["SourceType"] = _one(source_type)
+    if target_type:
+        projections["TargetType"] = _one(target_type)
     return VisualSpec(
         seed, FORCE_GRAPH_GUID, rect,
-        fields=[source, target, weight, link_type],
-        projections={
-            "Source": _one(source, active=True),
-            "Target": _one(target, active=True),
-            "Weight": _one(weight),
-            "LinkType": _one(link_type, active=True),
-        },
+        fields=fields,
+        projections=projections,
         title=title, order_by=weight,
         objects={
             "animation": [{"properties": {"show": literal_expr(False)}}],
             "labels": [{"properties": {"show": literal_expr(True), "fontSize": literal_expr(9), "allowIntersection": literal_expr(False)}}],
             "links": [{"properties": {"showArrow": literal_expr(True), "showLabel": literal_expr(False), "thickenLink": literal_expr(True)}}],
-            "nodes": [{"properties": {"displayImage": literal_expr(False), "nameMaxLength": literal_expr(48), "highlightReachableLinks": literal_expr(True)}}],
-            "size": [{"properties": {"charge": literal_expr(-90), "boundedByBox": literal_expr(True)}}],
+            "nodes": [{"properties": {"displayImage": literal_expr(False), "nameMaxLength": literal_expr(name_max_length), "highlightReachableLinks": literal_expr(True)}}],
+            "size": [{"properties": {"charge": literal_expr(charge), "boundedByBox": literal_expr(True)}}],
         },
     )
 

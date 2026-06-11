@@ -1,0 +1,133 @@
+{
+  "name": "cb7e13d1dfea524198c4",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32.0,
+        "y": 436,
+        "z": 11000,
+        "width": 602.0,
+        "height": 244,
+        "tabOrder": 11000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "scatterChart",
+    "projections": {
+      "X": [
+        {
+          "queryRef": "FactLocationSIT.Files With Exported SIT"
+        }
+      ],
+      "Y": [
+        {
+          "queryRef": "FactLocationSIT.Area Risk Density"
+        }
+      ],
+      "Category": [
+        {
+          "queryRef": "DimArea.location_name",
+          "active": true
+        }
+      ],
+      "Size": [
+        {
+          "queryRef": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        },
+        {
+          "Name": "d",
+          "Entity": "DimArea",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Files With Exported SIT"
+          },
+          "Name": "FactLocationSIT.Files With Exported SIT"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area Risk Density"
+          },
+          "Name": "FactLocationSIT.Area Risk Density"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "d"
+              }
+            },
+            "Property": "location_name"
+          },
+          "Name": "DimArea.location_name"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "Area High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Area High Confidence Matches"
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "columnProperties": {
+      "FactLocationSIT.Files With Exported SIT": {
+        "displayName": "Files With SIT"
+      },
+      "FactLocationSIT.Area Risk Density": {
+        "displayName": "Risk / File"
+      },
+      "DimArea.location_name": {
+        "displayName": "Location"
+      },
+      "FactLocationSIT.Area High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      }
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Location Volume vs Risk Density'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

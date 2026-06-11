@@ -1,0 +1,258 @@
+{
+  "name": "271a373f7e42502e95e4",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 828.0,
+        "y": 522.6666666666667,
+        "z": 13000,
+        "width": 420.0,
+        "height": 157.33333333333334,
+        "tabOrder": 13000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactGraphAdjacency.selected_visual_label"
+        },
+        {
+          "queryRef": "FactGraphAdjacency.connected_visual_label"
+        },
+        {
+          "queryRef": "FactGraphAdjacency.relationship_type"
+        },
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Files"
+        },
+        {
+          "queryRef": "FactLocationSIT.Graph Edge SIT Pairs"
+        },
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Risk Pressure"
+        },
+        {
+          "queryRef": "FactLocationSIT.Graph Edge High Confidence Matches"
+        },
+        {
+          "queryRef": "FactLocationSIT.Graph Edge Weight"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactGraphAdjacency",
+          "Type": 0
+        },
+        {
+          "Name": "a",
+          "Entity": "FactLocationSIT",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "selected_visual_label"
+          },
+          "Name": "FactGraphAdjacency.selected_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "connected_visual_label"
+          },
+          "Name": "FactGraphAdjacency.connected_visual_label"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "relationship_type"
+          },
+          "Name": "FactGraphAdjacency.relationship_type"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge Files"
+          },
+          "Name": "FactLocationSIT.Graph Edge Files"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge SIT Pairs"
+          },
+          "Name": "FactLocationSIT.Graph Edge SIT Pairs"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge Risk Pressure"
+          },
+          "Name": "FactLocationSIT.Graph Edge Risk Pressure"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge High Confidence Matches"
+          },
+          "Name": "FactLocationSIT.Graph Edge High Confidence Matches"
+        },
+        {
+          "Measure": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "a"
+              }
+            },
+            "Property": "Graph Edge Weight"
+          },
+          "Name": "FactLocationSIT.Graph Edge Weight"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Measure": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "a"
+                }
+              },
+              "Property": "Graph Edge Risk Pressure"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactGraphAdjacency.selected_visual_label": {
+        "displayName": "Selected"
+      },
+      "FactGraphAdjacency.connected_visual_label": {
+        "displayName": "Connected"
+      },
+      "FactGraphAdjacency.relationship_type": {
+        "displayName": "Relationship"
+      },
+      "FactLocationSIT.Graph Edge Files": {
+        "displayName": "Edge Files"
+      },
+      "FactLocationSIT.Graph Edge SIT Pairs": {
+        "displayName": "File/SIT Pairs"
+      },
+      "FactLocationSIT.Graph Edge Risk Pressure": {
+        "displayName": "Edge Risk"
+      },
+      "FactLocationSIT.Graph Edge High Confidence Matches": {
+        "displayName": "High Conf Matches"
+      },
+      "FactLocationSIT.Graph Edge Weight": {
+        "displayName": "Edge Weight"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Neighbourhood Edge Detail'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -18,6 +18,7 @@ PBI_TYPE_BY_DTYPE = {
     "string": "String",
     "bool": "Boolean",
     "timestamp_us": "DateTime",
+    "timestamp_tz": "DateTime",  # tz-aware (legacy CE parquet export_date)
     "date32": "DateTime",
     "double": "Double",
 }

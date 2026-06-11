@@ -1,0 +1,314 @@
+{
+  "name": "d6dac4385ec856168905",
+  "layouts": [
+    {
+      "id": 0,
+      "position": {
+        "x": 32,
+        "y": 436,
+        "z": 10000,
+        "width": 1216,
+        "height": 244,
+        "tabOrder": 10000
+      }
+    }
+  ],
+  "singleVisual": {
+    "visualType": "tableEx",
+    "projections": {
+      "Values": [
+        {
+          "queryRef": "FactExecFinding.severity"
+        },
+        {
+          "queryRef": "FactExecFinding.finding_type"
+        },
+        {
+          "queryRef": "FactExecFinding.finding_title"
+        },
+        {
+          "queryRef": "FactExecFinding.finding_evidence"
+        },
+        {
+          "queryRef": "FactExecFinding.recommended_action"
+        },
+        {
+          "queryRef": "FactExecFinding.metric_name"
+        },
+        {
+          "queryRef": "FactExecFinding.metric_value"
+        },
+        {
+          "queryRef": "FactExecFinding.secondary_metric_name"
+        },
+        {
+          "queryRef": "FactExecFinding.secondary_metric_value"
+        }
+      ]
+    },
+    "prototypeQuery": {
+      "Version": 2,
+      "From": [
+        {
+          "Name": "f",
+          "Entity": "FactExecFinding",
+          "Type": 0
+        }
+      ],
+      "Select": [
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "severity"
+          },
+          "Name": "FactExecFinding.severity"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "finding_type"
+          },
+          "Name": "FactExecFinding.finding_type"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "finding_title"
+          },
+          "Name": "FactExecFinding.finding_title"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "finding_evidence"
+          },
+          "Name": "FactExecFinding.finding_evidence"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "recommended_action"
+          },
+          "Name": "FactExecFinding.recommended_action"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "metric_name"
+          },
+          "Name": "FactExecFinding.metric_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "metric_value"
+          },
+          "Name": "FactExecFinding.metric_value"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "secondary_metric_name"
+          },
+          "Name": "FactExecFinding.secondary_metric_name"
+        },
+        {
+          "Column": {
+            "Expression": {
+              "SourceRef": {
+                "Source": "f"
+              }
+            },
+            "Property": "secondary_metric_value"
+          },
+          "Name": "FactExecFinding.secondary_metric_value"
+        }
+      ],
+      "OrderBy": [
+        {
+          "Direction": 2,
+          "Expression": {
+            "Column": {
+              "Expression": {
+                "SourceRef": {
+                  "Source": "f"
+                }
+              },
+              "Property": "finding_rank"
+            }
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true,
+    "hasDefaultSort": true,
+    "columnProperties": {
+      "FactExecFinding.severity": {
+        "displayName": "Severity"
+      },
+      "FactExecFinding.finding_type": {
+        "displayName": "Finding Type"
+      },
+      "FactExecFinding.finding_title": {
+        "displayName": "Finding"
+      },
+      "FactExecFinding.finding_evidence": {
+        "displayName": "Evidence"
+      },
+      "FactExecFinding.recommended_action": {
+        "displayName": "Recommended Action"
+      },
+      "FactExecFinding.metric_name": {
+        "displayName": "Metric"
+      },
+      "FactExecFinding.metric_value": {
+        "displayName": "Value"
+      },
+      "FactExecFinding.secondary_metric_name": {
+        "displayName": "Secondary Metric"
+      },
+      "FactExecFinding.secondary_metric_value": {
+        "displayName": "Secondary Value"
+      }
+    },
+    "objects": {
+      "total": [
+        {
+          "properties": {
+            "totals": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "values": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnHeaders": [
+        {
+          "properties": {
+            "fontSize": {
+              "expr": {
+                "Literal": {
+                  "Value": "9D"
+                }
+              }
+            },
+            "wordWrap": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "columnWidth": [
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "220.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "FactExecFinding.finding_title"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "260.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "FactExecFinding.finding_evidence"
+          }
+        },
+        {
+          "properties": {
+            "value": {
+              "expr": {
+                "Literal": {
+                  "Value": "240.0D"
+                }
+              }
+            }
+          },
+          "selector": {
+            "metadata": "FactExecFinding.recommended_action"
+          }
+        }
+      ]
+    },
+    "vcObjects": {
+      "title": [
+        {
+          "properties": {
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Executive Findings'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
