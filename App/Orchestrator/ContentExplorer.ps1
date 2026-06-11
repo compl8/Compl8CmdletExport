@@ -2071,6 +2071,10 @@ function Invoke-ContentExplorerExport {
         Write-ExportLog -Message ("Current tenant: {0} ({1})" -f $currentTenant.TenantDomain, $currentTenant.TenantId) -Level Info
     }
 
+    # SIT reference snapshot: GUID->name map (flat list + rule packages) written to the
+    # export root so downstream analytics resolve SIT/sub-entity GUIDs to display names.
+    Export-SitReferenceSnapshot -ExportRunDirectory $script:ExportRunDirectory | Out-Null
+
     # Find aggregates matching current tenant (or all if no tenant filter)
     $tenantFilter = if ($currentTenant) { $currentTenant.TenantId } else { $null }
     $recentAggregates = Find-RecentAggregateCsv -OutputDirectory $baseOutputDir -MaxAgeDays 30 -TenantId $tenantFilter

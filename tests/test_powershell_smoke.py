@@ -467,6 +467,128 @@ def test_split_powershell_sections_parse_cleanly() -> None:
     assert "PARSE=OK" in output
 
 
+_RULEPACK_GUID_ENTITY = "11111111-1111-1111-1111-111111111111"
+_RULEPACK_GUID_AFFINITY = "22222222-2222-2222-2222-222222222222"
+
+
+def _write_synthetic_rulepack(path: Path) -> Path:
+    """UTF-16 RulePackage XML fixture (synthetic; no tenant data)."""
+    xml = f"""<?xml version="1.0" encoding="utf-16"?>
+<RulePackage xmlns="http://schemas.microsoft.com/office/2011/mce">
+  <RulePack id="44444444-4444-4444-4444-444444444444">
+    <Version build="0" major="1" minor="0" revision="0"/>
+    <Publisher id="33333333-3333-3333-3333-333333333333"/>
+    <Details defaultLangCode="en-us">
+      <LocalizedDetails langcode="en-us">
+        <PublisherName>Synthetic</PublisherName>
+        <Name>Synthetic Rule Pack</Name>
+        <Description>Test fixture.</Description>
+      </LocalizedDetails>
+    </Details>
+  </RulePack>
+  <Rules>
+    <Entity id="{_RULEPACK_GUID_ENTITY}" patternsProximity="300" recommendedConfidence="75">
+      <Pattern confidenceLevel="75"><IdMatch idRef="Regex_a"/></Pattern>
+    </Entity>
+    <Affinity id="{_RULEPACK_GUID_AFFINITY}" evidencesProximity="300" thresholdConfidenceLevel="75">
+      <Evidence confidenceLevel="75"><Match idRef="Regex_a"/></Evidence>
+    </Affinity>
+    <Regex id="Regex_a">(\\d{{9}})</Regex>
+    <LocalizedStrings>
+      <Resource idRef="{_RULEPACK_GUID_ENTITY}">
+        <Name default="false" langcode="de-de">Mitarbeiter-ID</Name>
+        <Name default="true" langcode="en-us">Employee ID</Name>
+      </Resource>
+      <Resource idRef="{_RULEPACK_GUID_AFFINITY}">
+        <Name langcode="en-us">All Credentials Bundle</Name>
+      </Resource>
+      <Resource idRef="not-a-guid">
+        <Name default="true" langcode="en-us">Ignored Non-Guid</Name>
+      </Resource>
+    </LocalizedStrings>
+  </Rules>
+</RulePackage>
+"""
+    path.write_bytes(xml.encode("utf-16"))
+    return path
+
+
+def test_get_sit_names_from_rulepack_xml_parses_localized_strings(tmp_path: Path) -> None:
+    """Entity + Affinity GUIDs resolve; default-language name preferred; non-GUID ids dropped."""
+    xml_path = _write_synthetic_rulepack(tmp_path / "pack.xml").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $names = Get-SitNamesFromRulePackXml -Path '{xml_path}'
+        Write-Output ('COUNT=' + $names.Count)
+        Write-Output ('ENTITY=' + $names['{_RULEPACK_GUID_ENTITY}'])
+        Write-Output ('AFFINITY=' + $names['{_RULEPACK_GUID_AFFINITY}'])
+        """
+    )
+    output = run_pwsh(script)
+    assert "COUNT=2" in output, output
+    assert "ENTITY=Employee ID" in output, output  # default="true" beats first (de-de) name
+    assert "AFFINITY=All Credentials Bundle" in output, output
+
+
+def test_export_sit_reference_snapshot_merges_flat_list_and_rule_packs(tmp_path: Path) -> None:
+    """Flat-list names win, rule-pack XML fills the gaps; raw pack XML is saved;
+    a second run without -Force skips (idempotent across CE+AE in a full export)."""
+    xml_path = _write_synthetic_rulepack(tmp_path / "pack.xml").as_posix()
+    export_dir = tmp_path / "Export-20260612-000000"
+    export_dir.mkdir()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        function Get-DlpSensitiveInformationType {{
+            [pscustomobject]@{{ Id = [guid]'{_RULEPACK_GUID_ENTITY}'; Name = 'Flat Alpha'; Publisher = 'Microsoft Corporation' }}
+        }}
+
+        function Get-DlpSensitiveInformationTypeRulePackage {{
+            [pscustomobject]@{{
+                RuleCollectionName = 'Synthetic Rule Package'
+                SerializedClassificationRuleCollection = [System.IO.File]::ReadAllBytes('{xml_path}')
+            }}
+        }}
+
+        $result = Export-SitReferenceSnapshot -ExportRunDirectory '{export_dir.as_posix()}'
+        Write-Output ('TOTAL=' + $result.TotalNames)
+        Write-Output ('PACKS=' + $result.RulePackCount)
+        Write-Output ('PACKNAMES=' + $result.RulePackNameCount)
+        $second = Export-SitReferenceSnapshot -ExportRunDirectory '{export_dir.as_posix()}'
+        Write-Output ('SECOND_SKIPPED=' + ($null -eq $second))
+        """
+    )
+    output = run_pwsh(script)
+    assert "TOTAL=2" in output, output
+    assert "PACKS=1" in output, output
+    assert "PACKNAMES=2" in output, output
+    assert "SECOND_SKIPPED=True" in output, output
+
+    snapshot = json.loads((export_dir / "CurrentTenantSITs.json").read_text(encoding="utf-8-sig"))
+    assert snapshot[_RULEPACK_GUID_ENTITY] == "Flat Alpha"  # flat-list name wins
+    assert snapshot[_RULEPACK_GUID_AFFINITY] == "All Credentials Bundle"  # pack fills gap
+    saved_packs = list((export_dir / "Data" / "Reference" / "RulePackages").glob("*.xml"))
+    assert len(saved_packs) == 1, saved_packs
+
+
+def test_export_sit_reference_snapshot_skips_without_cmdlets(tmp_path: Path) -> None:
+    """No S&C session (cmdlet absent): warn + return $null, write nothing."""
+    export_dir = tmp_path / "Export-20260612-000001"
+    export_dir.mkdir()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $result = Export-SitReferenceSnapshot -ExportRunDirectory '{export_dir.as_posix()}'
+        Write-Output ('NULL=' + ($null -eq $result))
+        Write-Output ('FILE=' + (Test-Path '{(export_dir / "CurrentTenantSITs.json").as_posix()}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "NULL=True" in output, output
+    assert "FILE=False" in output, output
+
+
 def test_build_auth_parameters_reads_root_level_auth_config(tmp_path: Path) -> None:
     script_root = tmp_path / "portable-root"
     config_dir = script_root / "ConfigFiles"

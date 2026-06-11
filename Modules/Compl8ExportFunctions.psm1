@@ -128,6 +128,8 @@ Export-ModuleMember -Function @(
     'Get-Compl8TenantInfo',
     'Get-SitGuidMapping',
     'Get-TrainableClassifiersFromCache',
+    'Get-SitNamesFromRulePackXml',
+    'Export-SitReferenceSnapshot',
 
     # Content Explorer - Basic
     'Export-ContentExplorer',

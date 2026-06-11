@@ -465,6 +465,10 @@ function Invoke-AEMultiExport {
             PageSize       = $PageSize
             SelectorConfig = $selectorConfig
         }
+
+        # SIT reference snapshot: GUID->name map (flat list + rule packages) written to the
+        # export root so downstream analytics resolve SIT/sub-entity GUIDs to display names.
+        Export-SitReferenceSnapshot -ExportRunDirectory $exportDir | Out-Null
     }
 
     # ==== Shared multi-terminal dispatch (both fresh and resume paths) ====
@@ -709,6 +713,10 @@ function Invoke-ActivityExplorerExport {
     if (-not (Test-Path $aeOutputDir)) {
         New-Item -ItemType Directory -Force -Path $aeOutputDir | Out-Null
     }
+
+    # SIT reference snapshot: GUID->name map (flat list + rule packages) written to the
+    # export root so downstream analytics resolve SIT/sub-entity GUIDs to display names.
+    Export-SitReferenceSnapshot -ExportRunDirectory $script:ExportRunDirectory | Out-Null
 
     # Initialize run tracker
     $trackerPath = Join-Path (Get-CoordinationDir $script:ExportRunDirectory) "AE-RunTracker.json"

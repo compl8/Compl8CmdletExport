@@ -1,32 +1,37 @@
-"""CLI: distil portal-extract artifacts into a SIT GUID->name map.
+"""CLI: distil SIT-name artifacts into a SIT GUID->name map.
 
 Why this exists: Activity Explorer detections mostly carry classification
-sub-entity GUIDs that neither ``Get-DlpSensitiveInformationType`` (the
-CurrentTenantSITs.json snapshot) nor the risk workbook know, so they fall
-back to GUID labels in dim_sit. The Purview portal names ALL of them, and
-portal-API extract tools (Compl8Extractor_new, C8PortalPuller) persist the
-GUID->name pairs in their outputs. This tool reads those artifacts and emits
-one merged flat map in the CurrentTenantSITs.json shape that
-``py -m parquet_builder.star.convert --sit-names`` already accepts.
+sub-entity GUIDs that neither the flat ``Get-DlpSensitiveInformationType``
+list nor the risk workbook know, so they fall back to GUID labels in
+dim_sit. The tenant's DLP rule packages name every classification rule GUID
+(the export tool saves them via ``Export-SitReferenceSnapshot`` and merges
+the names into ``<ExportDir>/CurrentTenantSITs.json`` automatically), and
+portal export artifacts carry the same pairs. This tool reads any of those
+artifacts and emits one merged flat map in the CurrentTenantSITs.json shape
+that ``py -m parquet_builder.star.convert --sit-names`` already accepts.
 
 Supported input formats (sniffed by content/extension, not filename):
 
 - flat map      ``{"<guid>": "<name>"}`` — CurrentTenantSITs.json or a
                 previous output of this tool (``_``-prefixed keys ignored)
+- rule-pack XML ``ClassificationRuleCollection`` / ``RulePackage`` XML as
+                exported by ``Get-DlpSensitiveInformationTypeRulePackage``
+                (saved under ``Data/Reference/RulePackages/*.xml``); Entity
+                AND Affinity GUIDs are named via the LocalizedStrings
+                resources, preferring the default-language name
 - tag groups    ``[{"TagRecords": [{"Id", "Name"}], ...}]`` — portal
-                getTypes dump (C8PortalPuller ``ip-gettypes.json``; includes
-                the TrainableClassifier group, so TC GUIDs resolve too)
-- records       ``{"Records": [{"Id", "Name"}]}`` — portal preindex
-                aggregate probe (Compl8Extractor_new ``_preindex_v2_full.json``)
-- folder index  ``{"sits": {"<guid>": {"name": ...}}}`` — Compl8Extractor_new
-                ``sit_folder_index*.json``
-- sit catalog   parquet with ``sit_id``/``sit_name`` columns —
-                Compl8Extractor_new warehouse ``sit_catalog.parquet``
-- csv           any CSV with an Id column and a DisplayName/Name column —
-                GetTCs ``trainable_classifiers.csv``
+                type-catalog export (includes the TrainableClassifier
+                group, so TC GUIDs resolve too)
+- records       ``{"Records": [{"Id", "Name"}]}`` — portal aggregate-probe
+                export
+- folder index  ``{"sits": {"<guid>": {"name": ...}}}`` — portal export
+                folder index
+- sit catalog   parquet with ``sit_id``/``sit_name`` columns
+- csv           any CSV with an Id column and a DisplayName/Name column
+                (e.g. a trainable-classifier export)
 
 Inputs are processed in CLI order and the FIRST source naming a GUID wins,
-so list the tenant's own snapshot before cross-tenant portal artifacts.
+so list the tenant's own snapshot before cross-tenant artifacts.
 
 ``--strip-prefix`` (repeatable) removes a deployment-pack display prefix
 (e.g. ``"QGISCF - "``) from incoming names: custom-pack SITs keep the same
@@ -37,8 +42,8 @@ metadata + exclusion behavior) instead of creating a bare named row.
 
 Usage (the merged-map generation command):
     py -m parquet_builder.star.extract_sit_names
-        --input ConfigFiles/CurrentTenantSITs.json
-        --input <portal-extract>/ip-gettypes.json
+        --input <ExportDir>/CurrentTenantSITs.json
+        --input <ExportDir>/Data/Reference/RulePackages/Microsoft_Rule_Package.xml
         --strip-prefix "QGISCF - "
         [--output ConfigFiles/SITNames.local.json]
 
@@ -52,6 +57,7 @@ import argparse
 import csv
 import json
 import sys
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -101,17 +107,17 @@ def _pairs_from_id_name_records(records: list[Any]) -> list[tuple[str, Any]]:
 def _pairs_from_json(payload: Any, path: Path) -> list[tuple[str, Any]]:
     """Sniff the JSON artifact shape and extract raw (guid, name) pairs."""
     if isinstance(payload, dict) and isinstance(payload.get("sits"), dict):
-        # Compl8Extractor_new sit_folder_index*.json
+        # Portal export folder index (sit_folder_index*.json)
         return [
             (str(guid), entry.get("name"))
             for guid, entry in payload["sits"].items()
             if isinstance(entry, dict)
         ]
     if isinstance(payload, dict) and isinstance(payload.get("Records"), list):
-        # Portal preindex aggregate probe (_preindex_v2_full.json)
+        # Portal aggregate-probe export ({"Records": [{Id, Name}]})
         return _pairs_from_id_name_records(payload["Records"])
     if isinstance(payload, list):
-        # Portal getTypes dump (ip-gettypes.json): groups with TagRecords.
+        # Portal type-catalog export: groups with TagRecords.
         pairs: list[tuple[str, Any]] = []
         matched = False
         for group in payload:
@@ -125,6 +131,48 @@ def _pairs_from_json(payload: Any, path: Path) -> list[tuple[str, Any]]:
         # Flat CurrentTenantSITs.json-shaped map (also this tool's own output).
         return _pairs_from_flat_map(payload)
     raise EnrichmentError(f"Unrecognised JSON artifact format: {path}")
+
+
+def _xml_local_name(tag: Any) -> str:
+    """Local element name without the XML namespace prefix."""
+    return str(tag).rsplit("}", 1)[-1]
+
+
+def _pairs_from_rulepack_xml(path: Path) -> list[tuple[str, Any]]:
+    """Extract (guid, name) pairs from ClassificationRuleCollection XML.
+
+    The rule-package schema requires a ``LocalizedStrings/Resource`` element
+    (keyed by ``idRef`` GUID) for every Entity and Affinity rule, so the
+    Resource elements name ALL classification rule GUIDs in the pack —
+    including sub-entity GUIDs the flat SIT list does not surface. The
+    default-language ``Name`` (``default="true"``) is preferred, falling
+    back to the first non-empty ``Name``. Namespace-agnostic.
+    """
+    try:
+        root = ET.parse(path).getroot()
+    except (OSError, ET.ParseError) as exc:
+        raise EnrichmentError(f"Cannot parse rule-pack XML {path}: {exc}") from exc
+
+    pairs: list[tuple[str, Any]] = []
+    for element in root.iter():
+        if _xml_local_name(element.tag) != "Resource":
+            continue
+        guid = str(element.get("idRef") or "")
+        default_name: str | None = None
+        first_name: str | None = None
+        for child in element:
+            if _xml_local_name(child.tag) != "Name":
+                continue
+            text = (child.text or "").strip()
+            if not text:
+                continue
+            if first_name is None:
+                first_name = text
+            if (child.get("default") or "").strip().lower() == "true":
+                default_name = text
+                break
+        pairs.append((guid, default_name or first_name))
+    return pairs
 
 
 def _pairs_from_parquet(path: Path) -> list[tuple[str, Any]]:
@@ -170,9 +218,20 @@ def extract_pairs(path: Path) -> list[tuple[str, Any]]:
         return _pairs_from_parquet(path)
     if suffix == ".csv":
         return _pairs_from_csv(path)
+    if suffix == ".xml":
+        return _pairs_from_rulepack_xml(path)
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        # Not JSON: rule-pack XML may arrive without a .xml extension. Sniff
+        # for a leading '<' (errors="ignore" tolerates UTF-16 raw bytes) and
+        # let ElementTree do the real, encoding-aware parse.
+        try:
+            head = path.read_text(encoding="utf-8", errors="ignore")[:256]
+        except OSError:
+            head = ""
+        if head.lstrip("\ufeff\x00 \t\r\n").startswith("<"):
+            return _pairs_from_rulepack_xml(path)
         raise EnrichmentError(f"Cannot read artifact {path}: {exc}") from exc
     return _pairs_from_json(payload, path)
 
@@ -229,15 +288,16 @@ def write_name_map(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Distil portal-extract artifacts into one merged SIT GUID->name "
-            "map (CurrentTenantSITs.json shape) for convert --sit-names."
+            "Distil SIT-name artifacts (tenant snapshots, rule-pack XML, "
+            "portal export artifacts) into one merged SIT GUID->name map "
+            "(CurrentTenantSITs.json shape) for convert --sit-names."
         )
     )
     parser.add_argument(
         "--input", action="append", required=True, metavar="PATH",
         help="Artifact to read (repeatable; first source naming a GUID wins). "
-             "Formats: flat map / portal getTypes / preindex Records / "
-             "sit_folder_index JSON, sit_catalog parquet, Id+Name CSV.")
+             "Formats: flat map / type-catalog / Records / folder-index JSON, "
+             "rule-pack XML, sit_catalog parquet, Id+Name CSV.")
     parser.add_argument(
         "--output", default=str(_DEFAULT_OUTPUT),
         help=f"Output JSON path (default: {_DEFAULT_OUTPUT}; gitignored).")
