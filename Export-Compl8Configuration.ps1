@@ -186,6 +186,16 @@ param(
 
     [switch]$UnifiedParquet,
 
+    # Post-export: convert Activity Explorer output to the Power BI star-schema
+    # (v6) Parquet model via `py -m parquet_builder.star.convert`. AE data only —
+    # if the run produced no Data\ActivityExplorer, the conversion is skipped
+    # with a warning. Enrichment inputs (risk workbook + department CSV) come
+    # from ConfigFiles/AEStarEnrichment.local.json when present; otherwise the
+    # model is built --allow-unenriched with a prominent warning.
+    [switch]$PowerBIParquet,
+
+    [string]$PowerBIParquetDir,
+
     # Tenant prefix for the export directory (e.g. 'zava' -> Export-zava-20260514-...).
     # If omitted, resolved in this order: AuthConfig.json Organization (cert auth),
     # then the last-used value from ConfigFiles/LastTenant.local.json.
@@ -313,6 +323,8 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host "  -UnifiedParquet              Convert output to unified Parquet format"
     Write-Host "  -UnifiedParquetDir <path>    Parquet output directory (default: <export-run>\C8TuningInput)"
     Write-Host "  -UsersCsv <path>             GAL Scraper or Entra user CSV (repeatable)"
+    Write-Host "  -PowerBIParquet              Convert AE output to the Power BI star-schema (v6) Parquet model"
+    Write-Host "  -PowerBIParquetDir <path>    Star-schema output directory (default: <export-run>\PowerBI-AE-Parquet-v6)"
     Write-Host ""
     Write-Host "Multi-Tenant Options:" -ForegroundColor Yellow
     Write-Host "  -TenantPrefix <name>         Prefix the export directory (Export-<name>-<timestamp>)."
@@ -462,6 +474,19 @@ function Resolve-UnifiedParquetOutputDir {
     }
 
     return Join-Path $ExportRunDirectory "C8TuningInput"
+}
+
+function Resolve-PowerBIParquetOutputDir {
+    param(
+        [string]$ConfiguredPath,
+        [string]$ExportRunDirectory
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ConfiguredPath)) {
+        return $ConfiguredPath
+    }
+
+    return Join-Path $ExportRunDirectory "PowerBI-AE-Parquet-v6"
 }
 
 # Initialize logging in the export run directory

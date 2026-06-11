@@ -1,0 +1,5 @@
+{
+  "_Description": "Enrichment inputs for the -PowerBIParquet star-schema conversion (parquet_builder.star.convert). Copy to AEStarEnrichment.local.json (gitignored) and set absolute paths. When the .local.json file is absent, the conversion runs with --allow-unenriched: risk scores are 0 and departments unmapped - do not ship that output to reporting consumers.",
+  "RiskWorkbookPath": "C:\\Path\\To\\SIT-Risk-Analysis.xlsx",
+  "DepartmentCsvPath": "C:\\Path\\To\\GAL_Clean.csv"
+}

@@ -104,8 +104,19 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
       export has no CE data — owner verification needs a CE conversion run first (legacy repo
       convert_content_explorer_to_parquet.py), then
       `.\PowerBI\Build-PowerBI.ps1 -Project ContentExplorerSITRisk -ParquetRoot "<ce-parquet-dir>"`.
-- [ ] **T5 — Wiring & docs**: Build-PowerBI.ps1, entry-script switch (e.g. -PowerBIParquet), README,
-      CLAUDE.md architecture update, retire-list for the legacy converters in the old repo.
+- [x] **T5 — Wiring & docs**: `-PowerBIParquet`/`-PowerBIParquetDir` entry-script switches (mirror
+      of -UnifiedParquet; synchronous post-export `py -m parquet_builder.star.convert` with py→python
+      fallback, exit-code check, log capture). AE-only guard: skips with a warning unless the run
+      produced Data\ActivityExplorer. Enrichment via NEW ConfigFiles\AEStarEnrichment.local.json
+      (template AEStarEnrichment.example.json; added missing `*.local.json` gitignore rule — the
+      existing rule was `*-local.json` and never matched `.local.json` files); absent → 
+      --allow-unenriched + prominent warnings; malformed → conversion skipped, not degraded.
+      README "Power BI Reports & Star Schema" section + CLAUDE.md File Structure / "Analytics &
+      Power BI" subsection (anti-drift rule). docs/LEGACY-RETIREMENT.md checklist (retire-after-T6
+      vs must-keep). Gates: parse-check entry/MainExecution/Build-PowerBI/Menu ALL OK; full pytest
+      95 passed; 5-scenario smoke of the new block (guard, unenriched, enriched + custom out dir,
+      malformed config, menu fallback unchanged) ALL PASS. Menu's Test-NoParametersProvided
+      deliberately NOT changed — -PowerBIParquet alone shows the menu, same as -UnifiedParquet.
 - [ ] **T6 — Owner Desktop verification pass** (screenshot loop), then iterate polish.
 
 One commit per task; testing on QFD data in place; review between tasks.

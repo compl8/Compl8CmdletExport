@@ -44,10 +44,12 @@ Modules/
   Compl8ExportFunctions/
 ConfigFiles/
 build_unified_parquet.py
+parquet_builder/
+PowerBI/
 README.md
 ```
 
-`Export-Compl8Configuration.ps1` expects `App/`, `Modules/`, and `ConfigFiles/` to sit beside it. Do not move individual files out of that layout.
+`Export-Compl8Configuration.ps1` expects `App/`, `Modules/`, and `ConfigFiles/` to sit beside it. Do not move individual files out of that layout. `parquet_builder/` is also required next to the entry script if you use `-PowerBIParquet`; `PowerBI/` only matters for building the reports.
 
 ## Run On Another Machine
 
@@ -117,6 +119,8 @@ For a full development and test environment, use `pip install -r requirements.tx
 | `-UnifiedParquet` | Convert JSON output to unified Parquet format after export |
 | `-UnifiedParquetDir` | Parquet output directory (default: the export run's `C8TuningInput` folder) |
 | `-UsersCsv` | GAL Scraper or Entra user CSV for enrichment (repeatable) |
+| `-PowerBIParquet` | Convert Activity Explorer output to the Power BI star-schema (v6) Parquet model |
+| `-PowerBIParquetDir` | Star-schema output directory (default: the export run's `PowerBI-AE-Parquet-v6` folder) |
 
 ## Content Explorer
 
@@ -214,6 +218,54 @@ python build_unified_parquet.py --input-dir Output/Export-20260301-090000 --outp
 
 The C8 tuning input root contains `content/content_files`, `content/sit_detections`, and a `c8_tuning_input_manifest.json` file that downstream run pickers can use to identify the export.
 
+## Power BI Reports & Star Schema
+
+The repository produces three analytics outputs:
+
+| Output | How | Consumers |
+|--------|-----|-----------|
+| C8 tuning input (unified Parquet) | `-UnifiedParquet` / `build_unified_parquet.py` | Classifier tuning pipeline |
+| Power BI star schema v6 (27 tables) | `-PowerBIParquet` / `py -m parquet_builder.star.convert` | Power BI, Python, MCP |
+| Power BI templates (`.pbit`) | `.\PowerBI\Build-PowerBI.ps1` | Power BI Desktop |
+
+### Single Source of Truth (anti-drift)
+
+`parquet_builder/star/schema.py` declares every table, column, type, key, relationship, and Power BI metadata item once. Both the Parquet converter **and** the Power BI TMDL model are generated from it, so the data and the report model cannot drift apart. Never hand-edit the generated projects under `PowerBI/projects/` — change the schema or the builders and regenerate.
+
+### Star-Schema Conversion
+
+```powershell
+# Post-export (Activity Explorer data only; skipped with a warning otherwise)
+.\Export-Compl8Configuration.ps1 -ActivityExplorer -PastDays 30 -PowerBIParquet
+
+# Standalone, against an existing export
+py -m parquet_builder.star.convert --input-dir "Output\Export-20260611-090000"
+```
+
+Default output is the export run's `PowerBI-AE-Parquet-v6` folder. Alongside the Parquet files the converter writes `schema.json` (machine-readable model contract for Python/MCP consumers), `manifest.json` (row counts, enrichment provenance, exclusion and drift summaries), and `SchemaDrift.json` when unknown raw fields were seen.
+
+**Enrichment:** copy `ConfigFiles/AEStarEnrichment.example.json` to `AEStarEnrichment.local.json` (gitignored) and point it at the SIT risk workbook and department CSV. Without it, `-PowerBIParquet` builds an unenriched model (`--allow-unenriched`) with a prominent warning — risk scores are 0 and departments unmapped. The standalone CLI hard-fails instead unless `--allow-unenriched` is passed explicitly.
+
+### Building the Reports
+
+Requires [pbi-tools.core](https://pbi.tools/) (expected at `C:\Tools\pbi-tools-net9`, run with `DOTNET_ROLL_FORWARD=Major` — the wrapper sets this) and Python with `pyarrow`.
+
+```powershell
+# Activity Explorer report (29 pages) from the star-schema output
+.\PowerBI\Build-PowerBI.ps1 -Project ActivityExplorer -ParquetRoot "Output\Export-20260611-090000\PowerBI-AE-Parquet-v6"
+
+# Content Explorer SIT risk report (15 pages) from a CE Parquet directory
+.\PowerBI\Build-PowerBI.ps1 -Project ContentExplorerSITRisk -ParquetRoot "<ce-parquet-dir>"
+```
+
+The wrapper regenerates the PbixProj folder (`PowerBI/projects/<Project>/pbix/`) from the builders and compiles it to a `.pbit` template.
+
+### Desktop Verification
+
+1. Open the compiled `.pbit` (e.g. `PowerBI\projects\ActivityExplorer\ActivityExplorerRisk.pbit`) in Power BI Desktop.
+2. If the data lives elsewhere, adjust the `ParquetRoot` parameter (Transform data > Edit parameters) and refresh.
+3. Review pages and visuals; report issues against the builders, not the generated project files.
+
 ## Certificate Authentication
 
 For unattended or multi-terminal operation, configure certificate-based auth:
@@ -241,6 +293,8 @@ Without certificate auth, interactive (browser) authentication is used. In multi
 | `ContentExplorerClassifiers.json` | Configure classifiers and auto-discovery settings |
 | `SITstoSkip.json` | Exclude specific SITs from Content Explorer |
 | `CurrentTenantSITs.json` | Auto-generated GUID-to-Name SIT mapping (not tracked) |
+| `AEStarEnrichment.local.json` | Risk workbook + department CSV paths for `-PowerBIParquet` (not tracked; copy from `.example`) |
+| `AEStarSITExclusions.json` | SIT names excluded from the star-schema fact and aggregate tables |
 
 Config files use `"True"`/`"False"` strings for toggles. Properties starting with `_` are metadata and ignored by the export logic.
 

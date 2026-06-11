@@ -9,6 +9,7 @@ ConfigFiles/AuthConfig.json
 ConfigFiles/CurrentTenantSITs.json
 laconfig.json
 *-local.json
+*.local.json
 
 # Telemetry data (runtime-generated)
 TelemetryDB/

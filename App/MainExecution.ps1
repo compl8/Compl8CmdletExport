@@ -270,6 +270,10 @@ if ($UnifiedParquet) {
     $plannedUnifiedParquetDir = Resolve-UnifiedParquetOutputDir -ConfiguredPath $UnifiedParquetDir -ExportRunDirectory $script:ExportRunDirectory
     Write-Host "  C8 Tuning Input:  $plannedUnifiedParquetDir"
 }
+if ($PowerBIParquet) {
+    $plannedPowerBIParquetDir = Resolve-PowerBIParquetOutputDir -ConfiguredPath $PowerBIParquetDir -ExportRunDirectory $script:ExportRunDirectory
+    Write-Host "  PBI Star Parquet: $plannedPowerBIParquetDir"
+}
 
 # Show what will be exported based on mode and config files
 Write-Host "`nData to be exported:" -ForegroundColor Yellow
@@ -648,6 +652,83 @@ try {
             }
             catch {
                 Write-ExportLog -Message "Failed to run Parquet converter: $($_.Exception.Message)" -Level Error
+            }
+        }
+    }
+
+    # Post-export: Power BI star-schema (v6) Parquet conversion — Activity Explorer data only
+    if ($PowerBIParquet) {
+        $aeDataDir = Join-Path $script:ExportRunDirectory "Data\ActivityExplorer"
+        if (-not (Test-Path $aeDataDir)) {
+            Write-ExportLog -Message "Skipping Power BI star-schema conversion: no Activity Explorer data at $aeDataDir (-PowerBIParquet applies to AE exports only)" -Level Warning
+        }
+        else {
+            $starOutputDir = Resolve-PowerBIParquetOutputDir -ConfiguredPath $PowerBIParquetDir -ExportRunDirectory $script:ExportRunDirectory
+            Write-ExportLog -Message "`nConverting to Power BI star-schema (v6) Parquet model..." -Level Info
+            Write-ExportLog -Message "  Output: $starOutputDir" -Level Info
+
+            $starArgs = @("-m", "parquet_builder.star.convert", "--input-dir", $script:ExportRunDirectory)
+            if (-not [string]::IsNullOrWhiteSpace($PowerBIParquetDir)) {
+                $starArgs += @("--output-dir", $PowerBIParquetDir)
+            }
+
+            # Enrichment inputs: ConfigFiles/AEStarEnrichment.local.json (gitignored).
+            # Present -> pass the configured paths (hard-fail enrichment policy applies).
+            # Absent  -> build an unenriched model with a prominent warning.
+            # Malformed -> skip the conversion entirely rather than silently degrading.
+            $skipStarConversion = $false
+            $enrichmentConfigPath = Join-Path $scriptRoot "ConfigFiles\AEStarEnrichment.local.json"
+            if (Test-Path $enrichmentConfigPath) {
+                try {
+                    $enrichmentConfig = Get-Content -Path $enrichmentConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if (-not [string]::IsNullOrWhiteSpace($enrichmentConfig.RiskWorkbookPath)) {
+                        $starArgs += @("--risk-workbook", $enrichmentConfig.RiskWorkbookPath)
+                    }
+                    if (-not [string]::IsNullOrWhiteSpace($enrichmentConfig.DepartmentCsvPath)) {
+                        $starArgs += @("--department-csv", $enrichmentConfig.DepartmentCsvPath)
+                    }
+                    Write-ExportLog -Message "  Enrichment config: $enrichmentConfigPath" -Level Info
+                }
+                catch {
+                    Write-ExportLog -Message "Failed to read enrichment config ${enrichmentConfigPath}: $($_.Exception.Message)" -Level Error
+                    Write-ExportLog -Message "Skipping star-schema conversion. Fix or remove the config, then run: py -m parquet_builder.star.convert --input-dir `"$script:ExportRunDirectory`"" -Level Error
+                    $skipStarConversion = $true
+                }
+            }
+            else {
+                $starArgs += "--allow-unenriched"
+                Write-ExportLog -Message "  WARNING: No enrichment config found ($enrichmentConfigPath)" -Level Warning
+                Write-ExportLog -Message "  WARNING: Building an UNENRICHED model - risk scores will be 0 and departments unmapped." -Level Warning
+                Write-ExportLog -Message "  WARNING: Copy ConfigFiles\AEStarEnrichment.example.json to AEStarEnrichment.local.json to enable enrichment." -Level Warning
+            }
+
+            if (-not $skipStarConversion) {
+                try {
+                    # py launcher preferred (matches Build-PowerBI.ps1); python fallback
+                    $pythonLauncher = if (Get-Command py -ErrorAction SilentlyContinue) { "py" } else { "python" }
+                    # -m needs the repo root on sys.path
+                    Push-Location $scriptRoot
+                    try {
+                        $starResult = & $pythonLauncher @starArgs 2>&1
+                        $starExitCode = $LASTEXITCODE
+                    }
+                    finally {
+                        Pop-Location
+                    }
+                    foreach ($line in $starResult) { Write-ExportLog -Message "  [star] $line" -Level Info }
+
+                    if ($starExitCode -eq 0) {
+                        Write-ExportLog -Message "Power BI star-schema Parquet export complete." -Level Success
+                        Write-ExportLog -Message "Star model root: $starOutputDir" -Level Info
+                        Write-ExportLog -Message "  Build the report: .\PowerBI\Build-PowerBI.ps1 -Project ActivityExplorer -ParquetRoot `"$starOutputDir`"" -Level Info
+                    }
+                    else {
+                        Write-ExportLog -Message "Power BI star-schema Parquet export failed (exit code $starExitCode)" -Level Error
+                    }
+                }
+                catch {
+                    Write-ExportLog -Message "Failed to run star-schema converter: $($_.Exception.Message)" -Level Error
+                }
             }
         }
     }
