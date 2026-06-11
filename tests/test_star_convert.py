@@ -8,20 +8,11 @@ from pathlib import Path
 import pyarrow.parquet as pq
 import pytest
 
+from parquet_builder.star import convert as convert_module
 from parquet_builder.star import schema
 from parquet_builder.star.convert import convert
-from parquet_builder.star.enrich import (
-    EnrichmentError,
-    RiskLookup,
-    is_generic_account_dn,
-    is_leaver_dn,
-    load_department_mapping,
-    parse_dn_ous,
-    region_from_dn,
-)
-from parquet_builder.star.finalize import write_dimensions
+from parquet_builder.star.enrich import EnrichmentError
 from parquet_builder.star.keys import stable_int_id
-from parquet_builder.star.registry import IdRegistry
 
 SIT_GUID_OK = "11111111-1111-1111-1111-111111111111"
 SIT_GUID_EXCLUDED = "22222222-2222-2222-2222-222222222222"
@@ -214,6 +205,17 @@ def _make_exclusions(path: Path) -> Path:
     return path
 
 
+def _make_org_mapping_config(path: Path) -> Path:
+    """QFES-style override: Division from CompanyName, Department fallback.
+
+    Deliberately partial — every other field must keep its built-in default."""
+    path.write_text(json.dumps({
+        "_Description": "test org mapping",
+        "Division": {"Source": "CompanyName", "Fallback": "Department"},
+    }), encoding="utf-8")
+    return path
+
+
 @pytest.fixture(scope="module")
 def converted(tmp_path_factory) -> dict:
     root = tmp_path_factory.mktemp("star") / "Export-20260504-120000"
@@ -221,12 +223,14 @@ def converted(tmp_path_factory) -> dict:
     workbook = _make_workbook(root.parent / "SIT-Risk-Analysis-test.xlsx")
     gal = _make_gal(root.parent / "GAL_Clean.csv")
     exclusions = _make_exclusions(root.parent / "exclusions.json")
+    org_mapping = _make_org_mapping_config(root.parent / "org-mapping.json")
 
     manifest = convert(
         export,
         risk_workbook=workbook,
         department_csv=gal,
         sit_exclusions=exclusions,
+        org_mapping=org_mapping,  # explicit: hermetic against any repo-local config
         batch_size=2,  # force multiple sink flushes
     )
     return {"export": export, "output": export / "PowerBI-AE-Parquet-v6", "manifest": manifest}
@@ -395,7 +399,8 @@ def test_schema_json_and_manifest_written(converted) -> None:
     assert manifest["row_counts"]["fact_activity"] == 4
 
 
-def test_unenriched_hard_fail_and_override(tmp_path) -> None:
+def test_unenriched_hard_fail_and_override(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(convert_module, "_DEFAULT_ORG_MAPPING", tmp_path / "absent.json")
     export = _make_export(tmp_path / "Export-20260504-130000")
     with pytest.raises(EnrichmentError):
         convert(export, sit_exclusions=None)
@@ -410,166 +415,28 @@ def test_unenriched_hard_fail_and_override(tmp_path) -> None:
     assert manifest["row_counts"]["fact_activity"] == 4
 
 
-# --- department resolution (Bug A: GAL mail aliases + case-canonical names) --
+# --- org-mapping resolution & provenance (engine unit tests live in
+# --- test_star_org_mapping.py) -------------------------------------------------
 
-def _make_alias_gal(path: Path) -> Path:
-    path.write_text(
-        "UserPrincipalName,Mail,Department\n"
-        "alice@qfes.example.com,Alice.A@fire.example.com,QFES\n"
-        "bob@qfes.example.com,Bob.B@fire.example.com,QFES\n"
-        "carol@qfes.example.com,,qfes\n"
-        ",dave@fire.example.com,Ops\n",
-        encoding="utf-8",
-    )
-    return path
-
-
-def test_department_mapping_registers_mail_aliases(tmp_path) -> None:
-    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
-    # UPN keys are primary; the same row's Mail address is an alias entry
-    assert "is_alias" not in mappings["ALICE@QFES.EXAMPLE.COM"]
-    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["is_alias"] is True
-    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["department"] == "QFES"
-    # rows with only a Mail value keep it as the primary key
-    assert "is_alias" not in mappings["DAVE@FIRE.EXAMPLE.COM"]
-    assert mappings["DAVE@FIRE.EXAMPLE.COM"]["department"] == "Ops"
-    # department casing canonicalized to the dominant variant in the file
-    assert mappings["CAROL@QFES.EXAMPLE.COM"]["department"] == "QFES"
+def test_org_mapping_recorded_in_manifest(converted) -> None:
+    org = converted["manifest"]["org_mapping"]
+    assert org["source"].endswith("org-mapping.json")
+    # config-supplied rule recorded as resolved
+    assert org["fields"]["Division"] == {"Source": "CompanyName", "Fallback": "Department"}
+    # omitted fields resolved to (and recorded as) the built-in defaults
+    assert org["fields"]["Region"] == {
+        "Source": "OnPremisesDN", "Parse": "ou_under", "Arg": "Regions"}
+    assert org["fields"]["IsGenericAccount"] == {
+        "Source": "OnPremisesDN", "Parse": "ou_name_in",
+        "Arg": ["Generic Accounts", "SharedUsers"]}
+    # the on-disk manifest carries the same provenance
+    on_disk = json.loads(
+        (converted["output"] / "manifest.json").read_text(encoding="utf-8"))
+    assert on_disk["org_mapping"] == org
 
 
-def test_activity_user_resolves_department_via_mail_and_case(tmp_path) -> None:
-    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
-    registry = IdRegistry()
-    # activity identifies the user by primary SMTP address, in different case;
-    # the GAL row is keyed by UPN — both must land on the same mapped department
-    _, dept_via_mail = registry.get_user("alice.a@FIRE.example.com", mappings)
-    _, dept_via_upn = registry.get_user("ALICE@QFES.EXAMPLE.COM", mappings)
-    assert dept_via_mail == dept_via_upn
-    row = registry.department_rows[dept_via_mail]
-    assert row["department"] == "QFES"
-    assert row["is_mapped"] is True
-
-
-def test_department_case_variants_share_one_dim_row() -> None:
-    registry = IdRegistry()
-    id_upper = registry.get_department({"department": "QFES", "is_mapped": True})
-    id_lower = registry.get_department({"department": "qfes", "is_mapped": True})
-    assert id_upper == id_lower
-    assert len(registry.department_rows) == 1
-    # display casing = first seen (loader canonicalizes to dominant casing)
-    assert registry.department_rows[id_upper]["department"] == "QFES"
-
-
-def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
-    mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
-    registry = IdRegistry()
-    write_dimensions(tmp_path / "out", registry, mappings, {}, RiskLookup(), set())
-    upns = {row["user_upn"] for row in pq.read_table(
-        tmp_path / "out" / "dim_user.parquet").to_pylist()}
-    # one dim_user row per person (UPN or mail-only primary), none per alias
-    assert upns == {
-        "ALICE@QFES.EXAMPLE.COM", "BOB@QFES.EXAMPLE.COM",
-        "CAROL@QFES.EXAMPLE.COM", "DAVE@FIRE.EXAMPLE.COM",
-    }
-
-
-# --- composite org enrichment (T6 polish 3: division/region/flags) -----------
-
-def _make_org_gal(path: Path) -> Path:
-    path.write_text(
-        "UserPrincipalName,Department,CompanyName,JobTitle,OnPremisesDN\n"
-        # CompanyName beats Department; standard Regions DN
-        "fiona@qfes.example.com,QFES,QFR,Firefighter,"
-        '"CN=Fiona,OU=Users,OU=South East,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
-        # lower-case CompanyName variant: canonicalized to the dominant casing
-        "gary@qfes.example.com,QFES,qfr,,"
-        '"CN=Gary,OU=Users,OU=Far Northern,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
-        # leaver: Leavers OU, no Regions OU anywhere
-        "wayne@qfes.example.com,QFES,,Regional Director,"
-        '"CN=Wayne,OU=QFES Leavers,OU=Leavers,OU=DES Users,DC=corp,DC=internal"\n'
-        # generic-account pool directly under Regions
-        "icc.info@qfes.example.com,QFES,,,"
-        '"CN=ICC Info,OU=Generic Accounts,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
-        # SharedUsers pool also counts as generic
-        "462.alpha@qfes.example.com,QFES,,,"
-        '"CN=462 Alpha,OU=SharedUsers,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
-        # service OU with no Regions ancestor -> region Unknown
-        "svc.sync@qfes.example.com,QFES,,,"
-        '"CN=Sync,OU=Office365Sync,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
-        # no Department, no CompanyName, no DN -> all Unknown
-        "blank@qfes.example.com,,,,\n",
-        encoding="utf-8",
-    )
-    return path
-
-
-def test_division_company_name_with_department_fallback(tmp_path) -> None:
-    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
-    # casing canonicalized to the dominant variant across the file
-    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
-    # no CompanyName -> Department fallback
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_division"] == "QFES"
-    # neither -> Unknown
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_division"] == "Unknown"
-
-
-def test_region_parsed_from_dn(tmp_path) -> None:
-    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_region"] == "South East"
-    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_region"] == "Far Northern"
-    # account-pool OUs under Regions are regions verbatim
-    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["user_region"] == "Generic Accounts"
-    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["user_region"] == "SharedUsers"
-    # leaver / service OUs have no Regions ancestor
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
-    assert mappings["SVC.SYNC@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
-
-
-def test_leaver_and_generic_account_flags(tmp_path) -> None:
-    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_leaver"] is True
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_generic_account"] is False
-    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["is_generic_account"] is True
-    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["is_generic_account"] is True
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_leaver"] is False
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_generic_account"] is False
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["job_title"] == "Firefighter"
-
-
-def test_dn_parsing_edge_cases() -> None:
-    # escaped comma inside an OU value survives the component split
-    assert parse_dn_ous(
-        r"CN=X,OU=Fire\, Rescue,OU=Regions,DC=corp"
-    ) == ["Fire, Rescue", "Regions"]
-    assert region_from_dn(r"CN=X,OU=Fire\, Rescue,OU=Regions,DC=corp") == "Fire, Rescue"
-    # Regions as the leaf OU has no child -> Unknown
-    assert region_from_dn("CN=X,OU=Regions,OU=MOE,DC=corp") == "Unknown"
-    # case-insensitive OU matching
-    assert region_from_dn("CN=X,OU=Users,OU=Central,OU=REGIONS,DC=corp") == "Central"
-    assert is_leaver_dn("CN=X,OU=qfes leavers,OU=LEAVERS,DC=corp") is True
-    assert is_generic_account_dn("CN=X,OU=GENERIC ACCOUNTS,OU=Regions,DC=corp") is True
-    # empty / missing DNs
-    assert region_from_dn(None) == "Unknown"
-    assert region_from_dn("") == "Unknown"
-    assert is_leaver_dn(None) is False
-    assert is_generic_account_dn("") is False
-
-
-def test_activity_only_user_gets_unknown_org(tmp_path) -> None:
-    mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    registry = IdRegistry()
-    user_id, _ = registry.get_user("stranger@elsewhere.example.com", mappings)
-    row = registry.user_rows[user_id]
-    assert row["division"] == "Unknown"
-    assert row["region"] == "Unknown"
-    assert row["job_title"] is None
-    assert row["is_leaver"] is False
-    assert row["is_generic_account"] is False
-
-
-def test_no_archive_raw_flag(tmp_path) -> None:
+def test_no_archive_raw_flag(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(convert_module, "_DEFAULT_ORG_MAPPING", tmp_path / "absent.json")
     export = _make_export(tmp_path / "Export-20260504-140000")
     workbook = _make_workbook(tmp_path / "SIT-Risk-Analysis-test.xlsx")
     gal = _make_gal(tmp_path / "GAL_Clean.csv")

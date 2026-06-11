@@ -1,0 +1,12 @@
+{
+  "_Description": "Org-field sourcing for dim_user in the -PowerBIParquet star-schema conversion (parquet_builder.star.convert). Controls HOW division/region/job_title/is_leaver/is_generic_account are sourced from the GAL/department file - the dim_user schema itself is fixed and tenant-independent. Copy to AEStarOrgMapping.local.json (gitignored) to customize for your tenant. Resolution order: --org-mapping <path> CLI argument > ConfigFiles/AEStarOrgMapping.local.json > built-in defaults. A malformed config, unknown field/Parse mode, or a referenced column missing from the GAL file is a hard error - the conversion never silently falls back to defaults.",
+  "_Comment_Fields": "All six fields are optional; an omitted field keeps its built-in default (the values shown below ARE the defaults). 'Source' and 'Fallback' name GAL columns, matched case-insensitively ignoring spaces/punctuation (so 'OnPremisesDN', 'on_premises_dn' and 'On Premises DN' headers all match).",
+  "_Comment_ParseModes": "Value fields (Department/Division/Region/JobTitle): omit Parse for the raw column value, or 'ou_under' = the OU directly under the Arg OU in a distinguished name (e.g. OU=Users,OU=Central,OU=Regions,... with Arg 'Regions' -> 'Central'). Flag fields (IsLeaver/IsGenericAccount): omit Parse to read a truthy column (true/yes/y/1), 'ou_contains' = any OU containing Arg (case-insensitive substring), or 'ou_name_in' = any OU exactly matching an entry of the Arg list. 'Fallback' (value fields only) names a column read raw when the primary Source/Parse yields nothing.",
+  "_Comment_Defaults": "When nothing matches, fields fall back to: Department 'Unmapped', Division/Region 'Unknown', JobTitle null, flags false - so an unconfigured tenant (or one without DNs) still renders. Example tenant override when CompanyName carries the real org unit: \"Division\": { \"Source\": \"CompanyName\", \"Fallback\": \"Department\" }.",
+  "Department": { "Source": "Department" },
+  "Division": { "Source": "Department" },
+  "Region": { "Source": "OnPremisesDN", "Parse": "ou_under", "Arg": "Regions" },
+  "JobTitle": { "Source": "JobTitle" },
+  "IsLeaver": { "Source": "OnPremisesDN", "Parse": "ou_contains", "Arg": "leaver" },
+  "IsGenericAccount": { "Source": "OnPremisesDN", "Parse": "ou_name_in", "Arg": ["Generic Accounts", "SharedUsers"] }
+}

@@ -13,6 +13,10 @@ risk ratings, ...) is overlaid onto the GUID row with the same SIT name, and
 slug rows that duplicate a GUID name are dropped. All reference columns the
 legacy sit_reference carried are parsed (plus the cross-reference extras the
 v5 loader knew about).
+
+Org-field sourcing for dim_user (division/region/job_title/is_leaver/
+is_generic_account) is config-driven — see org_mapping.py (the engine) and
+ConfigFiles/AEStarOrgMapping.example.json (the config contract).
 """
 
 from __future__ import annotations
@@ -23,19 +27,28 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from .errors import EnrichmentError
+from .org_mapping import (  # noqa: F401  (re-exported for backward compatibility)
+    ORG_MAPPING_SOURCE_DEFAULTS,
+    OrgFieldRule,
+    OrgMapping,
+    _column_value,
+    _extract_org_flag,
+    _extract_org_value,
+    _normalized_row,
+    _validate_org_columns,
+    default_org_mapping,
+    load_org_mapping,
+    ou_contains,
+    ou_name_in,
+    ou_under,
+    parse_dn_ous,
+)
+
 GUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
     r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
-
-# DN components are comma-separated; commas inside a value are escaped \,
-_DN_COMPONENT_SPLIT = re.compile(r"(?<!\\),")
-
-# OUs (anywhere in the DN) that mark shared/role-based accounts rather than a
-# person: 'Generic Accounts' and 'SharedUsers' both sit directly under the
-# Regions OU in the QFD directory, but the membership test is by OU name so a
-# future re-parenting does not silently drop the flag.
-_GENERIC_ACCOUNT_OUS = frozenset({"generic accounts", "sharedusers"})
 
 # Workbook header -> dim_sit column (the legacy 18-column reference contract).
 _WORKBOOK_COLUMNS = {
@@ -78,10 +91,6 @@ _DEPARTMENT_FILE_CANDIDATES = (
 )
 
 _RISK_GLOB = "SIT-Risk-Analysis*.xlsx"
-
-
-class EnrichmentError(RuntimeError):
-    """Raised when required enrichment inputs cannot be resolved."""
 
 
 @dataclass
@@ -140,55 +149,6 @@ def sit_key_for(name: str | None, identifier: str | None) -> str:
     if identifier:
         return identifier.lower()
     return f"name:{_norm_text(name)}"
-
-
-def parse_dn_ous(dn: str | None) -> list[str]:
-    """OU names from an AD distinguished name, leaf-first.
-
-    'CN=Jo,OU=Users,OU=Central,OU=Regions,DC=x' -> ['Users', 'Central',
-    'Regions']. Splits on unescaped commas only (values may contain '\\,').
-    """
-    if not dn or not str(dn).strip():
-        return []
-    ous: list[str] = []
-    for component in _DN_COMPONENT_SPLIT.split(str(dn)):
-        key, _, value = component.partition("=")
-        if key.strip().upper() == "OU":
-            ous.append(value.replace("\\,", ",").strip())
-    return ous
-
-
-def region_from_dn(dn: str | None) -> str:
-    """Region = the OU directly under the 'Regions' OU.
-
-    The DN is leaf-first, so that is the OU element immediately BEFORE
-    'Regions' (e.g. OU=Users,OU=Central,OU=Regions,... -> 'Central'). Verbatim
-    values include geographic regions ('Central', 'South East', 'Far
-    Northern'), HQ ('Kedron') and account-pool OUs ('Generic Accounts',
-    'SharedUsers'). DNs with no Regions OU (leavers, service OUs, no DN at
-    all) and DNs where Regions is itself the leaf OU -> 'Unknown'.
-    """
-    ous = parse_dn_ous(dn)
-    lowered = [ou.casefold() for ou in ous]
-    try:
-        index = lowered.index("regions")
-    except ValueError:
-        return "Unknown"
-    if index == 0:
-        return "Unknown"
-    return ous[index - 1] or "Unknown"
-
-
-def is_leaver_dn(dn: str | None) -> bool:
-    """True when any OU in the DN is a leavers container ('QFES Leavers',
-    'Leavers', ...) — name match, not position."""
-    return any("leaver" in ou.casefold() for ou in parse_dn_ous(dn))
-
-
-def is_generic_account_dn(dn: str | None) -> bool:
-    """True when any OU is one of the shared-account pools
-    (Generic Accounts / SharedUsers)."""
-    return any(ou.casefold() in _GENERIC_ACCOUNT_OUS for ou in parse_dn_ous(dn))
 
 
 def _read_worksheet_rows(ws) -> Iterable[dict[str, Any]]:
@@ -315,12 +275,11 @@ def sit_key_for_detected_id(sit_id: str | None, risk: RiskLookup) -> str:
     return sit_id_norm or "unknown"
 
 
-def _mapping_value(row: dict[str, Any], names: tuple[str, ...]) -> str | None:
-    normalized = {re.sub(r"[^a-z0-9]+", "", key.lower()): value for key, value in row.items()}
+def _mapping_value(normalized: dict[str, Any], names: tuple[str, ...]) -> str | None:
     for name in names:
-        value = normalized.get(re.sub(r"[^a-z0-9]+", "", name.lower()))
-        if value is not None and str(value).strip():
-            return str(value).strip()
+        value = _column_value(normalized, name)
+        if value is not None:
+            return value
     return None
 
 
@@ -339,7 +298,9 @@ def _read_mapping_rows(path: Path) -> list[dict[str, Any]]:
     return []
 
 
-def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
+def load_department_mapping(
+    path: Path, org_mapping: OrgMapping | None = None,
+) -> dict[str, dict[str, Any]]:
     """User key (uppercased) -> department mapping rows from a GAL/department file.
 
     Each row is registered under BOTH its UserPrincipalName and its Mail
@@ -353,46 +314,48 @@ def load_department_mapping(path: Path) -> dict[str, dict[str, Any]]:
     Department names are case-canonicalized across the file (most frequent
     casing wins) so variants like 'qfes'/'QFES' cannot split into two
     dim_department rows — Power BI's case-insensitive engine merges such
-    labels and displays an arbitrary casing.
+    labels and displays an arbitrary casing. Division values are
+    canonicalized the same way.
 
-    Composite org enrichment (user grain, surfaced on dim_user):
-    - ``user_division``: CompanyName (the GAL's real org-unit signal, e.g.
-      QFR/S&CS/RFSQ) falling back to Department, else 'Unknown'. Casing is
-      canonicalized like department names.
-    - ``user_region``: OU directly under the 'Regions' OU of OnPremisesDN
-      (region_from_dn); 'Unknown' for non-Regions DNs.
-    - ``is_leaver`` / ``is_generic_account``: OU-derived flags
-      (is_leaver_dn / is_generic_account_dn).
-    - ``job_title``: JobTitle verbatim.
+    Org enrichment (user grain, surfaced on dim_user) is governed by
+    ``org_mapping`` (built-in vanilla defaults when None — see
+    org_mapping.default_org_mapping):
+    - ``department`` / ``user_division`` / ``user_region`` / ``job_title``:
+      value fields ('Unmapped'/'Unknown'/'Unknown'/None when nothing matches).
+    - ``is_leaver`` / ``is_generic_account``: flag fields (default False).
+    Config-supplied rules referencing columns missing from the file raise
+    EnrichmentError (fail loudly); built-in default rules degrade silently.
     """
+    mapping = org_mapping or default_org_mapping()
+    rows = _read_mapping_rows(path)
+    _validate_org_columns(mapping, rows, path)
+
     parsed: list[tuple[str | None, str | None, dict[str, Any]]] = []
     casing_counts: dict[str, dict[str, int]] = {}
     division_casing_counts: dict[str, dict[str, int]] = {}
-    for row in _read_mapping_rows(path):
-        upn = _mapping_value(row, ("userprincipalname", "user_upn", "upn", "user", "username"))
-        mail = _mapping_value(row, ("mail", "email", "primarysmtpaddress"))
+    for row in rows:
+        normalized = _normalized_row(row)
+        upn = _mapping_value(normalized, ("userprincipalname", "user_upn", "upn", "user", "username"))
+        mail = _mapping_value(normalized, ("mail", "email", "primarysmtpaddress"))
         if not upn and not mail:
             continue
-        raw_department = _mapping_value(row, ("department", "dept"))
-        department = raw_department or "Unmapped"
+        department = _extract_org_value(mapping.fields["Department"], normalized) or "Unmapped"
         counts = casing_counts.setdefault(department.casefold(), {})
         counts[department] = counts.get(department, 0) + 1
-        company = _mapping_value(row, ("companyname", "company"))
-        user_division = company or raw_department or "Unknown"
+        user_division = _extract_org_value(mapping.fields["Division"], normalized) or "Unknown"
         division_counts = division_casing_counts.setdefault(user_division.casefold(), {})
         division_counts[user_division] = division_counts.get(user_division, 0) + 1
-        dn = _mapping_value(row, ("onpremisesdn", "distinguishedname", "dn"))
         parsed.append((upn, mail, {
             "department": department,
-            "division": _mapping_value(row, ("division", "directorate", "group")),
+            "division": _mapping_value(normalized, ("division", "directorate", "group")),
             "business_unit": _mapping_value(
-                row, ("business_unit", "businessunit", "unit", "section", "branch", "team")
+                normalized, ("business_unit", "businessunit", "unit", "section", "branch", "team")
             ),
             "user_division": user_division,
-            "user_region": region_from_dn(dn),
-            "job_title": _mapping_value(row, ("jobtitle", "job_title", "title")),
-            "is_leaver": is_leaver_dn(dn),
-            "is_generic_account": is_generic_account_dn(dn),
+            "user_region": _extract_org_value(mapping.fields["Region"], normalized) or "Unknown",
+            "job_title": _extract_org_value(mapping.fields["JobTitle"], normalized),
+            "is_leaver": _extract_org_flag(mapping.fields["IsLeaver"], normalized),
+            "is_generic_account": _extract_org_flag(mapping.fields["IsGenericAccount"], normalized),
             "mapping_source": path.name,
             "is_mapped": True,
         }))

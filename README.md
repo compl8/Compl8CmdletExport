@@ -246,6 +246,8 @@ Default output is the export run's `PowerBI-AE-Parquet-v6` folder. Alongside the
 
 **Enrichment:** copy `ConfigFiles/AEStarEnrichment.example.json` to `AEStarEnrichment.local.json` (gitignored) and point it at the SIT risk workbook and department CSV. Without it, `-PowerBIParquet` builds an unenriched model (`--allow-unenriched`) with a prominent warning — risk scores are 0 and departments unmapped. The standalone CLI hard-fails instead unless `--allow-unenriched` is passed explicitly.
 
+**Org-field mapping:** how `dim_user`'s `division`/`region`/`job_title`/`is_leaver`/`is_generic_account` are sourced from the GAL is configurable (the schema itself is fixed). Copy `ConfigFiles/AEStarOrgMapping.example.json` to `AEStarOrgMapping.local.json` (gitignored) and adjust per tenant — e.g. point `Division` at `CompanyName` with a `Department` fallback. Resolution order: `--org-mapping <path>` CLI argument > auto-detected `ConfigFiles/AEStarOrgMapping.local.json` > built-in defaults (Division mirrors Department; Region/IsLeaver/IsGenericAccount derive from `OnPremisesDN` OUs and degrade to `Unknown`/false without DNs). A malformed config or a referenced column missing from the GAL is a hard error — never a silent fallback. The resolved mapping and its source are recorded in `manifest.json`.
+
 ### Building the Reports
 
 Requires [pbi-tools.core](https://pbi.tools/) (expected at `C:\Tools\pbi-tools-net9`, run with `DOTNET_ROLL_FORWARD=Major` — the wrapper sets this) and Python with `pyarrow`.
@@ -294,6 +296,7 @@ Without certificate auth, interactive (browser) authentication is used. In multi
 | `SITstoSkip.json` | Exclude specific SITs from Content Explorer |
 | `CurrentTenantSITs.json` | Auto-generated GUID-to-Name SIT mapping (not tracked) |
 | `AEStarEnrichment.local.json` | Risk workbook + department CSV paths for `-PowerBIParquet` (not tracked; copy from `.example`) |
+| `AEStarOrgMapping.local.json` | How dim_user org fields (division/region/flags) are sourced from the GAL (not tracked; copy from `.example`; built-in defaults apply without it) |
 | `AEStarSITExclusions.json` | SIT names excluded from the star-schema fact and aggregate tables |
 
 Config files use `"True"`/`"False"` strings for toggles. Properties starting with `_` are metadata and ignored by the export logic.

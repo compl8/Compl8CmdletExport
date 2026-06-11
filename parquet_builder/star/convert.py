@@ -5,11 +5,12 @@ Usage:
         [--output-dir <dir>] [--risk-workbook X.xlsx] [--department-csv Y.csv]
         [--archive-raw | --no-archive-raw] [--allow-unenriched]
         [--derive-target-domain | --no-derive-target-domain]
-        [--sit-exclusions <json>] [--batch-size N]
+        [--sit-exclusions <json>] [--org-mapping <json>] [--batch-size N]
 
 Default output: <input-dir>/PowerBI-AE-Parquet-v6. Writes schema.json (from
-the SSOT), manifest.json (row counts, enrichment provenance, exclusion and
-drift summaries) and SchemaDrift.json (when unknown raw keys were seen).
+the SSOT), manifest.json (row counts, enrichment provenance, resolved org
+mapping, exclusion and drift summaries) and SchemaDrift.json (when unknown
+raw keys were seen).
 """
 
 from __future__ import annotations
@@ -28,11 +29,27 @@ from .enrich import (
     load_risk_workbook,
     resolve_enrichment_inputs,
 )
+from .org_mapping import OrgMapping, default_org_mapping, load_org_mapping
 from .pipeline import StarPipeline
 from .schema import SCHEMA_PROFILE, SCHEMA_VERSION, emit_schema_json
 
 _DEFAULT_OUTPUT_NAME = "PowerBI-AE-Parquet-v6"
-_DEFAULT_EXCLUSIONS = Path(__file__).resolve().parents[2] / "ConfigFiles" / "AEStarSITExclusions.json"
+_CONFIG_DIR = Path(__file__).resolve().parents[2] / "ConfigFiles"
+_DEFAULT_EXCLUSIONS = _CONFIG_DIR / "AEStarSITExclusions.json"
+_DEFAULT_ORG_MAPPING = _CONFIG_DIR / "AEStarOrgMapping.local.json"
+
+
+def resolve_org_mapping(path: Path | None) -> OrgMapping:
+    """Org-field sourcing: --org-mapping path > auto-detected local config >
+    built-in defaults. A malformed config is a hard error, never a silent
+    fall-through to defaults."""
+    if path is not None:
+        if not path.exists():
+            raise EnrichmentError(f"--org-mapping does not exist: {path}")
+        return load_org_mapping(path)
+    if _DEFAULT_ORG_MAPPING.exists():
+        return load_org_mapping(_DEFAULT_ORG_MAPPING)
+    return default_org_mapping()
 
 
 def load_sit_exclusions(path: Path | None) -> tuple[list[str], Path | None]:
@@ -58,7 +75,7 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
             risk_workbook: Path | None = None, department_csv: Path | None = None,
             archive_raw: bool = True, allow_unenriched: bool = False,
             derive_target_domain: bool = True, sit_exclusions: Path | None = None,
-            batch_size: int = 50_000) -> dict:
+            org_mapping: Path | None = None, batch_size: int = 50_000) -> dict:
     """Run the conversion; returns the manifest dict."""
     input_dir = input_dir.resolve()
     if output_dir is None:
@@ -75,8 +92,10 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
         print("  this output to reporting consumers.")
         print("=" * 70)
 
+    org_map = resolve_org_mapping(org_mapping)
     risk = load_risk_workbook(risk_path) if risk_path else RiskLookup()
-    department_mappings = load_department_mapping(dept_path) if dept_path else {}
+    department_mappings = (
+        load_department_mapping(dept_path, org_map) if dept_path else {})
     excluded_names, exclusions_path = load_sit_exclusions(sit_exclusions)
 
     primary_mappings = sum(
@@ -88,6 +107,7 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
     print(f"Risk:       {risk_path} ({len(risk.rows)} SIT reference rows)")
     print(f"GAL:        {dept_path} ({primary_mappings} user mappings, "
           f"{alias_mappings} mail aliases)")
+    print(f"Org map:    {org_map.source_label}")
     print(f"Exclusions: {exclusions_path} ({len(excluded_names)} SIT names)")
     print()
 
@@ -126,6 +146,7 @@ def convert(input_dir: Path, output_dir: Path | None = None, *,
         "missing_record_identity": stats["missing_record_identity"],
         "row_counts": stats["row_counts"],
         "enrichment": enrichment,
+        "org_mapping": org_map.to_manifest(),
         "sit_exclusions": {
             "config": str(exclusions_path) if exclusions_path else None,
             "excluded_sit_names": len(excluded_names),
@@ -174,6 +195,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="Derive target/originating domains when the export lacks them (default: on).")
     parser.add_argument("--sit-exclusions", default=None,
                         help="SIT exclusion JSON (default: ConfigFiles/AEStarSITExclusions.json).")
+    parser.add_argument("--org-mapping", default=None,
+                        help="Org-field mapping JSON controlling how dim_user division/region/"
+                             "job_title/is_leaver/is_generic_account are sourced from the GAL "
+                             "(default: ConfigFiles/AEStarOrgMapping.local.json if present, "
+                             "else built-in defaults; template AEStarOrgMapping.example.json).")
     parser.add_argument("--batch-size", type=int, default=50_000,
                         help="Rows buffered per parquet write.")
     args = parser.parse_args(argv)
@@ -193,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
             allow_unenriched=args.allow_unenriched,
             derive_target_domain=args.derive_target_domain,
             sit_exclusions=Path(args.sit_exclusions) if args.sit_exclusions else None,
+            org_mapping=Path(args.org_mapping) if args.org_mapping else None,
             batch_size=max(1, args.batch_size),
         )
     except (EnrichmentError, FileNotFoundError) as exc:
