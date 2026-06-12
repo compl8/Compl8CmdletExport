@@ -14,7 +14,7 @@ implemented HERE. C8CmdLetExportReport becomes a legacy reference; ignore its du
 - Data formats serve three consumers: Power BI, Python, MCP (machine-readable `schema.json` +
   manifest emitted next to the parquet; MCP server itself is out of scope now).
 - Indexing (`record_index`, `lookup.py`) stays separate — out of scope this phase.
-- Testing: run conversions against the existing QFD export in place:
+- Testing: run conversions against the existing reference-tenant export in place:
   `C:\claudecode\C8CmdLetExportReport\Export-20260609-162814\Export-20260609-162814`
   (447,017 raw records / 30 days; legacy `PowerBI_Data\` output there is the parity baseline).
 - Column naming aligns with the existing `parquet_builder` conventions (snake_case, constants.py
@@ -54,7 +54,7 @@ PowerBI/
 - `tools\build_activity_explorer_powerbi_project.py` (64KB) + the hand-built old report
   `...\ActivityExplorerOld\pbix\` (theme CY26SU02, vcObjects patterns, drillthrough filters.json)
 - `PowerBI\ContentExplorerSITRisk\` + its side Theme.json
-- Enrichment inputs for QFD testing: `...\ActivityExplorerOld\{SIT-Risk-Analysis-v8.xlsx, GAL_Clean.csv}`
+- Enrichment inputs for reference-tenant testing: `...\ActivityExplorerOld\{SIT-Risk-Analysis-v8.xlsx, GAL_Clean.csv}`
 
 ## v6 schema (summary — full detail in the C8CmdLetExportReport plan doc)
 
@@ -73,11 +73,11 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
 ## Task checklist
 
 - [x] **T1 — Data layer** (`688f073`): `parquet_builder/star/` — 27 tables, 65 relationships, CLI
-      `py -m parquet_builder.star.convert`. QFD parity ALL PASS (447,011 exact; risk max 17,153 exact;
+      `py -m parquet_builder.star.convert`. reference-tenant parity ALL PASS (447,011 exact; risk max 17,153 exact;
       30 continuous dates; 49,450 email details; 955,581 SIT matches pre-exclusion; 79/79 legacy
       columns mapped). F2 root cause: PowerShell ConvertTo-Json unwraps 1-element arrays → dict
       Records pages; fixed. Output: `<export>\PowerBI-AE-Parquet-v6\` + schema.json + manifest.json.
-      Notes for T2/T3: exclusions applied at ETL (24.5% of SIT match rows on QFD; activities risk
+      Notes for T2/T3: exclusions applied at ETL (24.5% of SIT match rows on reference-tenant; activities risk
       metrics still include them, faithful to legacy); fact_activity_detail→fact_activity declared 1:1
       relationship (confirm TMDL treatment); derive_target_domain ON by default (old report depends on
       it, incl. dotted-ItemName-derived "domains"); contract cols typed string; dim_sit = 1,194 workbook
@@ -100,7 +100,7 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
       Back button; binding/displayName/sort parity verified against the legacy project), 71 measures
       (3 DimFile FILTER iterators -> column predicates, same names/semantics; display folders added).
       040_File_Drillthrough now REALLY wired (DimFile.file_name/file_extension, DimSIT.sit_name,
-      DimLocation.location_name + Back button). Compile + generate-bim EXIT 0; 95 tests. NOTE: the QFD
+      DimLocation.location_name + Back button). Compile + generate-bim EXIT 0; 95 tests. NOTE: the reference-tenant
       export has no CE data — owner verification needs a CE conversion run first (legacy repo
       convert_content_explorer_to_parquet.py), then
       `.\PowerBI\Build-PowerBI.ps1 -Project ContentExplorerSITRisk -ParquetRoot "<ce-parquet-dir>"`.
@@ -119,4 +119,4 @@ to MAX(date). Fix F2 (2 records lost vs legacy: be6af93c-..., c0a27be5-... — d
       deliberately NOT changed — -PowerBIParquet alone shows the menu, same as -UnifiedParquet.
 - [ ] **T6 — Owner Desktop verification pass** (screenshot loop), then iterate polish.
 
-One commit per task; testing on QFD data in place; review between tasks.
+One commit per task; testing on reference-tenant data in place; review between tasks.

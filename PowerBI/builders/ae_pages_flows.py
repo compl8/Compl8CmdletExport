@@ -46,8 +46,8 @@ SANKEY_RISK_GATE = 100
 # Removable-media / remote-session activities (union of the legacy USB
 # Breakdown page filter and the legacy Activity Detail 'Sensitive USB' values).
 # Both naming styles the Activity Explorer API emits are listed: humanized
-# display strings (what cloud-DLP exports such as the QFD tenant contain —
-# e.g. 'DLP rule matched') and the raw enum forms used by endpoint exports
+# display strings (what cloud-DLP exports contain — e.g. 'DLP rule matched')
+# and the raw enum forms used by endpoint exports
 # (constants.EGRESS_ACTIVITIES style). Cloud-only exports legitimately match
 # zero rows here: the page is an endpoint/removable-media surface.
 USB_ACTIVITIES = (
@@ -122,8 +122,9 @@ def location_risk_page() -> PageSpec:
 
 def domain_data_flows_page() -> PageSpec:
     """320: legacy 'Domain Data Flows' (org -> target domain Sankey). The org
-    side is division since T6 polish 3 (Department is one QFES value on this
-    tenant; dim_user.division resolves to fact_activity_sit via user_id)."""
+    side is division since T6 polish 3 (Department is one wall-to-wall value
+    on the reference tenant; dim_user.division resolves to fact_activity_sit
+    via user_id)."""
     tables = grid_row(3, TABLE_ROW_Y, TABLE_HEIGHT)
     return PageSpec(
         folder="320_Domain_Data_Flows",

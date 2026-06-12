@@ -227,11 +227,12 @@ param(
     # changes to reset the baseline.
     [switch]$ForceFullRebuild,
 
-    # Refresh the trainable-classifier cache before running CE. Shells out to
-    # Helpers/Get-TrainableClassifiers.py, which uses Playwright to authenticate
-    # against the Purview portal and pull the classifier list (Microsoft does
-    # not expose a public cmdlet for this). Cache is written to
-    # ConfigFiles/CurrentTenantTCs.local.json.
+    # Report the status of the trainable-classifier cache before running CE.
+    # Microsoft does not expose a public cmdlet for listing trainable
+    # classifiers; the cache (ConfigFiles/CurrentTenantTCs.local.json) is
+    # produced by the external GetTCs tool, which the tool owner distributes
+    # separately. This switch no longer refreshes anything itself — it checks
+    # the cache and tells you how to refresh it.
     [switch]$RefreshTrainableClassifiers
 )
 
@@ -259,24 +260,14 @@ if ($CEAllSITs -and $CEAllTCs) {
 }
 if ($RefreshTrainableClassifiers) {
     Write-Host ""
-    Write-Host "Refreshing trainable classifier cache via Helpers/Get-TrainableClassifiers.py..." -ForegroundColor Cyan
-    $tcHelper = Join-Path $PSScriptRoot "Helpers" "Get-TrainableClassifiers.py"
-    if (-not (Test-Path $tcHelper)) {
-        Write-Warning "  Helper script not found: $tcHelper"
+    $tcCachePath = Join-Path $PSScriptRoot "ConfigFiles" "CurrentTenantTCs.local.json"
+    Write-Warning "  TC cache refresh requires the external GetTCs tool (distributed separately by the tool owner)."
+    Write-Warning "  Place its output at: $tcCachePath"
+    if (Test-Path $tcCachePath) {
+        Write-Host "  An existing cache was found and will be used as-is." -ForegroundColor Cyan
     }
     else {
-        try {
-            & python $tcHelper
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warning "  Trainable-classifier refresh exited with code $LASTEXITCODE. Continuing with whatever is in the cache."
-            }
-            else {
-                Write-Host "  Cache refresh complete." -ForegroundColor Green
-            }
-        }
-        catch {
-            Write-Warning ("  Trainable-classifier refresh failed: {0}" -f $_.Exception.Message)
-        }
+        Write-Host "  No cache present - the CE export will proceed without trainable classifiers." -ForegroundColor Cyan
     }
 }
 
@@ -330,9 +321,9 @@ if ($Help -or ($args -contains '--help') -or ($args -contains '-h')) {
     Write-Host "  -TenantPrefix <name>         Prefix the export directory (Export-<name>-<timestamp>)."
     Write-Host "                               If omitted: auto-detected from cert-auth Organization,"
     Write-Host "                               else the last-used value, else no prefix."
-    Write-Host "  -RefreshTrainableClassifiers Run Helpers/Get-TrainableClassifiers.py before the CE"
-    Write-Host "                               export to refresh the trainable-classifier cache."
-    Write-Host "                               (Requires playwright and a one-time portal login.)"
+    Write-Host "  -RefreshTrainableClassifiers Report trainable-classifier cache status before the CE"
+    Write-Host "                               export. The cache is produced by the external GetTCs"
+    Write-Host "                               tool; place it at ConfigFiles/CurrentTenantTCs.local.json."
     Write-Host ""
     Write-Host "Output Format Options:" -ForegroundColor Yellow
     Write-Host "  -JsonlOutput                 Per-page output as JSONL (one record per line). Append-safe."

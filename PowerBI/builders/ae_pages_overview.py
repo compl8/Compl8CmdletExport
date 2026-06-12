@@ -38,9 +38,9 @@ def executive_overview_page() -> PageSpec:
     """000: legacy 'Executive Overview' merged with the interim report's
     Executive page.
 
-    T6 polish 3: the department visuals became division (dim_user) — on this
-    tenant Department is a single QFES value, while the GAL CompanyName-derived
-    division carries the real org split. Division groupings resolve via
+    T6 polish 3: the department visuals became division (dim_user) — on the
+    reference tenant Department is a single wall-to-wall value, while the GAL
+    CompanyName-derived division carries the real org split. Division groupings resolve via
     fact_activity_sit.user_id -> dim_user, so the risk-pressure visuals use the
     fact-grain [Weighted Risk Score] (identical semantics to the agg-table
     [Department Risk Pressure]: SUM of risk_weighted_count). A Leaver
@@ -258,7 +258,7 @@ def file_analysis_page() -> PageSpec:
 def department_analysis_page() -> PageSpec:
     """200: legacy 'Department Analysis', rebound to division (T6 polish 3).
 
-    Department on this tenant is one wall-to-wall QFES value; the GAL
+    Department on the reference tenant is one wall-to-wall value; the GAL
     CompanyName-derived division is the real org axis. The rollup table moved
     from the agg_department measures to fact-grain fact_activity_sit measures
     (same semantics) so the division/region slicers actually filter it —

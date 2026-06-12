@@ -66,8 +66,8 @@ Deviations from the legacy report (intentional):
   activity values, so every legacy channel filter matched zero rows.
   Removable-media analysis stays on 370_USB_Breakdown, whose activity list
   now carries both API naming styles (humanized + raw enum).
-- T6 polish 3 — division is the primary org lens: Department on this tenant is
-  a single wall-to-wall QFES value, so the org-axis visuals (Executive
+- T6 polish 3 — division is the primary org lens: Department on the reference
+  tenant is a single wall-to-wall value, so the org-axis visuals (Executive
   treemap/summary, 200/210 analysis + treemap, 320/340/350 flow Sankeys and
   graph, 410/420/130 org tables, the standard slicer band) bind
   dim_user.division (GAL CompanyName -> Department -> 'Unknown') instead of

@@ -169,15 +169,33 @@ function Get-SitGuidMapping {
 function Get-TrainableClassifiersFromCache {
     <#
     .SYNOPSIS
-        Reads the trainable-classifier cache produced by Helpers/Get-TrainableClassifiers.py.
+        Reads the externally-provided trainable-classifier cache file.
 
     .DESCRIPTION
         Microsoft has not shipped a public cmdlet/API for listing trainable
-        classifiers, so the Compl8 pipeline gets them via a Playwright-based
-        scraper that talks to the Purview portal's internal IPML endpoints.
-        That helper writes ConfigFiles/CurrentTenantTCs.local.json. This
-        function reads it and returns objects shaped like the other CE
-        discovery cmdlets (each item has a .Name property).
+        classifiers, so the names are provided externally: the tool owner's
+        separate GetTCs utility (distributed independently of this repo)
+        produces a cache file that you drop at
+        ConfigFiles/CurrentTenantTCs.local.json (gitignored).
+
+        Input contract — the cache is a JSON object:
+          {
+            "SchemaVersion": 1,
+            "DiscoveredAt": "<ISO-8601 timestamp>",   # drives the staleness warning
+            "ClassifierCount": <int>,                  # informational
+            "Classifiers": [                           # required
+              { "Id": "<guid>", "Name": "...", "DisplayName": "...",
+                "Type": "...", "ModelStatus": "...", "IsDeprecated": false },
+              ...
+            ]
+          }
+        Only the Classifiers array is required; each entry needs at least a
+        Name (the CE discovery loop keys on .Name). Extra properties are
+        ignored. tests/test_powershell_smoke.py exercises this shape.
+
+        This function reads the cache and returns objects shaped like the
+        other CE discovery cmdlets (each item has a .Name property). If the
+        file is missing the CE export proceeds without trainable classifiers.
 
     .PARAMETER ConfigPath
         Path to the cache file. Defaults to ConfigFiles/CurrentTenantTCs.local.json
@@ -208,7 +226,7 @@ function Get-TrainableClassifiersFromCache {
 
     if (-not (Test-Path $ConfigPath)) {
         Write-ExportLog -Message "  Trainable classifier cache not found: $ConfigPath" -Level Warning
-        Write-ExportLog -Message "  Run: python Helpers/Get-TrainableClassifiers.py" -Level Info
+        Write-ExportLog -Message "  The cache is produced by the external GetTCs tool (distributed separately); place its output at ConfigFiles/CurrentTenantTCs.local.json" -Level Info
         return @()
     }
 
@@ -231,7 +249,7 @@ function Get-TrainableClassifiersFromCache {
             $discoveredAt = [datetime]::Parse($cache.DiscoveredAt)
             $age = (Get-Date) - $discoveredAt
             if ($age.TotalDays -gt $StaleAfterDays) {
-                Write-ExportLog -Message ("  Trainable classifier cache is {0:N0} days old (>{1}). Consider rerunning Helpers/Get-TrainableClassifiers.py" -f $age.TotalDays, $StaleAfterDays) -Level Warning
+                Write-ExportLog -Message ("  Trainable classifier cache is {0:N0} days old (>{1}). Consider refreshing it with the external GetTCs tool" -f $age.TotalDays, $StaleAfterDays) -Level Warning
             }
         }
     }

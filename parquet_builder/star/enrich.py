@@ -98,13 +98,13 @@ def load_department_mapping(
     Each row is registered under BOTH its UserPrincipalName and its Mail
     address: Activity Explorer identifies users by primary SMTP address,
     which routinely lives on a different domain than the UPN (e.g. UPN
-    user@qfes.qld.gov.au vs mail user@fire.qld.gov.au). Keying on UPN alone
+    user@corp.zava.com vs mail user@mail.zava.com). Keying on UPN alone
     silently drops those users into 'Unmapped' at fact grain. UPN keys win
     collisions; mail-derived entries carry ``is_alias`` so dim_user seeding
     can skip them (one dim_user row per person, not per address).
 
     Department names are case-canonicalized across the file (most frequent
-    casing wins) so variants like 'qfes'/'QFES' cannot split into two
+    casing wins) so variants like 'zava'/'ZAVA' cannot split into two
     dim_department rows — Power BI's case-insensitive engine merges such
     labels and displays an arbitrary casing. Division values are
     canonicalized the same way.

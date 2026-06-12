@@ -159,8 +159,8 @@ USER_SIT_MATCHES = meas("agg_user_sit_day", "User SIT Matches")
 # --- layout helpers ----------------------------------------------------------
 
 # Division (dim_user) replaced Department here in T6 polish 3: Department is a
-# wall of one value (QFES) on this tenant, while division carries the real org
-# split. dim_user filters reach every fact via user_id, so the swap loses
+# wall of one value on the reference tenant, while division carries the real
+# org split. dim_user filters reach every fact via user_id, so the swap loses
 # nothing on fact-grain visuals; the agg_department-bound visuals were rebound
 # to division + fact_activity_sit measures at the same time.
 STANDARD_SLICERS: tuple[Field, ...] = (DATE, WORKLOAD, DIVISION, QGISCF_DLM)

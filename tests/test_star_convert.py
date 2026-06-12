@@ -259,7 +259,7 @@ def _make_sit_names(path: Path) -> Path:
 
 
 def _make_org_mapping_config(path: Path) -> Path:
-    """QFES-style override: Division from CompanyName, Department fallback.
+    """Zava-style override: Division from CompanyName, Department fallback.
 
     Deliberately partial — every other field must keep its built-in default."""
     path.write_text(json.dumps({
@@ -519,7 +519,7 @@ def test_tenant_prefix_from_export_dir() -> None:
     from parquet_builder.star.enrich import tenant_prefix_from_export_dir
 
     assert tenant_prefix_from_export_dir("Export-zava-20260514-101010") == "zava"
-    assert tenant_prefix_from_export_dir("Export-QFES-20260609-162814") == "qfes"
+    assert tenant_prefix_from_export_dir("Export-ZAVA-20260609-162814") == "zava"
     assert tenant_prefix_from_export_dir("Export-20260609-162814") is None
     assert tenant_prefix_from_export_dir("SomeOtherDir") is None
 

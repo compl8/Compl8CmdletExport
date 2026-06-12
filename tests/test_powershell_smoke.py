@@ -235,7 +235,11 @@ def test_retry_tasks_csv_round_trips_location_columns(tmp_path: Path) -> None:
 
 
 def test_trainable_classifier_cache_round_trip(tmp_path: Path) -> None:
-    """Get-TrainableClassifiersFromCache reads the JSON the helper produces."""
+    """Get-TrainableClassifiersFromCache reads the externally-provided TC cache JSON.
+
+    The cache file is produced by the external GetTCs tool (distributed
+    separately) and dropped at ConfigFiles/CurrentTenantTCs.local.json; this
+    fixture mirrors that contract."""
     cache_path = (tmp_path / "CurrentTenantTCs.local.json").as_posix()
     cache_payload = {
         "SchemaVersion": 1,

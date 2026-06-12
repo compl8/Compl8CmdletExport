@@ -79,7 +79,7 @@ def ou_under(dn: str | None, parent: str) -> str | None:
 
 def ou_contains(dn: str | None, needle: str) -> bool:
     """True when any OU in the DN contains ``needle`` (case-insensitive) —
-    e.g. needle 'leaver' matches 'QFES Leavers', 'Leavers', ..."""
+    e.g. needle 'leaver' matches 'Zava Leavers', 'Leavers', ..."""
     needle_cf = needle.casefold()
     return any(needle_cf in ou.casefold() for ou in parse_dn_ous(dn))
 

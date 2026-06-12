@@ -173,6 +173,32 @@ Export-SitReferenceSnapshot -ExportRunDirectory "Output\Export-20260130-100000" 
 
 Copy names from the snapshot into `SITstoSkip.json` to exclude them from Content Explorer exports.
 
+### Trainable Classifier Names — Provided Externally
+
+Microsoft does not expose a public cmdlet or Graph API for enumerating trainable classifiers, so the export tool cannot discover them itself. The names come from a cache file that is produced externally — the tool owner's separate **GetTCs** utility (distributed independently of this repository) generates it; drop its output at:
+
+```
+ConfigFiles/CurrentTenantTCs.local.json    (gitignored — tenant data)
+```
+
+Expected JSON shape (only `Classifiers[].Name` is strictly required; extra properties are ignored):
+
+```json
+{
+  "SchemaVersion": 1,
+  "DiscoveredAt": "2026-05-14T07:00:00Z",
+  "ClassifierCount": 2,
+  "Classifiers": [
+    { "Id": "<guid>", "Name": "Source code", "DisplayName": "Source code",
+      "Type": "GlobalOOB", "ModelStatus": "Stable", "IsDeprecated": false }
+  ]
+}
+```
+
+`Get-TrainableClassifiersFromCache` reads this file to feed `TrainableClassifier` tag names into the Content Explorer task plan. If the file is missing the export logs a warning and proceeds without trainable classifiers; if `DiscoveredAt` is older than 30 days a staleness warning is logged. The `-RefreshTrainableClassifiers` switch reports cache status (it does not refresh anything itself).
+
+GetTCs can also emit a CSV with `Id,DisplayName` columns — `py -m parquet_builder.star.extract_sit_names` accepts that shape directly as a `--input` artifact when building SIT/classifier name maps.
+
 ## Activity Explorer
 
 ```powershell
@@ -313,6 +339,7 @@ Without certificate auth, interactive (browser) authentication is used. In multi
 | `ContentExplorerClassifiers.json` | Configure classifiers and auto-discovery settings |
 | `SITstoSkip.json` | Exclude specific SITs from Content Explorer |
 | `CurrentTenantSITs.json` | Optional GUID-to-Name SIT map fallback for the converter (not tracked; exports auto-generate their own snapshot at `<ExportDir>\CurrentTenantSITs.json`) |
+| `CurrentTenantTCs.local.json` | Trainable-classifier name cache (not tracked; produced by the external GetTCs tool — see "Trainable Classifier Names") |
 | `AEStarEnrichment.local.json` | Risk workbook + department CSV paths for `-PowerBIParquet` (not tracked; copy from `.example`) |
 | `AEStarOrgMapping.local.json` | How dim_user org fields (division/region/flags) are sourced from the GAL (not tracked; copy from `.example`; built-in defaults apply without it) |
 | `AEStarSITExclusions.json` | SIT names excluded from the star-schema fact and aggregate tables |

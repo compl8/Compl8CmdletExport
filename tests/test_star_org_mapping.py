@@ -2,7 +2,7 @@
 
 Covers the Bug A mail-alias/department-casing behavior (T6 polish 2), the org
 enrichment fields (T6 polish 3) and the config-driven sourcing engine that
-replaced the hardcoded QFES rules (T6 polish 4). Convert-level integration
+replaced the hardcoded tenant-specific rules (T6 polish 4). Convert-level integration
 tests (resolution order, manifest provenance) live in test_star_convert.py.
 """
 
@@ -36,7 +36,7 @@ from parquet_builder.star.registry import IdRegistry
 
 
 def _make_org_mapping_config(path: Path) -> Path:
-    """QFES-style override: Division from CompanyName, Department fallback.
+    """Zava-style override: Division from CompanyName, Department fallback.
 
     Deliberately partial — every other field must keep its built-in default."""
     path.write_text(json.dumps({
@@ -51,10 +51,10 @@ def _make_org_mapping_config(path: Path) -> Path:
 def _make_alias_gal(path: Path) -> Path:
     path.write_text(
         "UserPrincipalName,Mail,Department\n"
-        "alice@qfes.example.com,Alice.A@fire.example.com,QFES\n"
-        "bob@qfes.example.com,Bob.B@fire.example.com,QFES\n"
-        "carol@qfes.example.com,,qfes\n"
-        ",dave@fire.example.com,Ops\n",
+        "alice@zava.example.com,Alice.A@mail.example.com,ZAVA\n"
+        "bob@zava.example.com,Bob.B@mail.example.com,ZAVA\n"
+        "carol@zava.example.com,,zava\n"
+        ",dave@mail.example.com,Ops\n",
         encoding="utf-8",
     )
     return path
@@ -63,14 +63,14 @@ def _make_alias_gal(path: Path) -> Path:
 def test_department_mapping_registers_mail_aliases(tmp_path) -> None:
     mappings = load_department_mapping(_make_alias_gal(tmp_path / "GAL_Clean.csv"))
     # UPN keys are primary; the same row's Mail address is an alias entry
-    assert "is_alias" not in mappings["ALICE@QFES.EXAMPLE.COM"]
-    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["is_alias"] is True
-    assert mappings["ALICE.A@FIRE.EXAMPLE.COM"]["department"] == "QFES"
+    assert "is_alias" not in mappings["ALICE@ZAVA.EXAMPLE.COM"]
+    assert mappings["ALICE.A@MAIL.EXAMPLE.COM"]["is_alias"] is True
+    assert mappings["ALICE.A@MAIL.EXAMPLE.COM"]["department"] == "ZAVA"
     # rows with only a Mail value keep it as the primary key
-    assert "is_alias" not in mappings["DAVE@FIRE.EXAMPLE.COM"]
-    assert mappings["DAVE@FIRE.EXAMPLE.COM"]["department"] == "Ops"
+    assert "is_alias" not in mappings["DAVE@MAIL.EXAMPLE.COM"]
+    assert mappings["DAVE@MAIL.EXAMPLE.COM"]["department"] == "Ops"
     # department casing canonicalized to the dominant variant in the file
-    assert mappings["CAROL@QFES.EXAMPLE.COM"]["department"] == "QFES"
+    assert mappings["CAROL@ZAVA.EXAMPLE.COM"]["department"] == "ZAVA"
 
 
 def test_activity_user_resolves_department_via_mail_and_case(tmp_path) -> None:
@@ -78,22 +78,22 @@ def test_activity_user_resolves_department_via_mail_and_case(tmp_path) -> None:
     registry = IdRegistry()
     # activity identifies the user by primary SMTP address, in different case;
     # the GAL row is keyed by UPN — both must land on the same mapped department
-    _, dept_via_mail = registry.get_user("alice.a@FIRE.example.com", mappings)
-    _, dept_via_upn = registry.get_user("ALICE@QFES.EXAMPLE.COM", mappings)
+    _, dept_via_mail = registry.get_user("alice.a@MAIL.example.com", mappings)
+    _, dept_via_upn = registry.get_user("ALICE@ZAVA.EXAMPLE.COM", mappings)
     assert dept_via_mail == dept_via_upn
     row = registry.department_rows[dept_via_mail]
-    assert row["department"] == "QFES"
+    assert row["department"] == "ZAVA"
     assert row["is_mapped"] is True
 
 
 def test_department_case_variants_share_one_dim_row() -> None:
     registry = IdRegistry()
-    id_upper = registry.get_department({"department": "QFES", "is_mapped": True})
-    id_lower = registry.get_department({"department": "qfes", "is_mapped": True})
+    id_upper = registry.get_department({"department": "ZAVA", "is_mapped": True})
+    id_lower = registry.get_department({"department": "zava", "is_mapped": True})
     assert id_upper == id_lower
     assert len(registry.department_rows) == 1
     # display casing = first seen (loader canonicalizes to dominant casing)
-    assert registry.department_rows[id_upper]["department"] == "QFES"
+    assert registry.department_rows[id_upper]["department"] == "ZAVA"
 
 
 def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
@@ -104,8 +104,8 @@ def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
         tmp_path / "out" / "dim_user.parquet").to_pylist()}
     # one dim_user row per person (UPN or mail-only primary), none per alias
     assert upns == {
-        "ALICE@QFES.EXAMPLE.COM", "BOB@QFES.EXAMPLE.COM",
-        "CAROL@QFES.EXAMPLE.COM", "DAVE@FIRE.EXAMPLE.COM",
+        "ALICE@ZAVA.EXAMPLE.COM", "BOB@ZAVA.EXAMPLE.COM",
+        "CAROL@ZAVA.EXAMPLE.COM", "DAVE@MAIL.EXAMPLE.COM",
     }
 
 
@@ -114,76 +114,76 @@ def test_dim_user_seeding_skips_mail_alias_keys(tmp_path) -> None:
 def _make_org_gal(path: Path) -> Path:
     path.write_text(
         "UserPrincipalName,Department,CompanyName,JobTitle,OnPremisesDN\n"
-        # CompanyName beats Department under the QFES-style config
-        "fiona@qfes.example.com,QFES,QFR,Firefighter,"
+        # CompanyName beats Department under the Zava-style config
+        "fiona@zava.example.com,ZAVA,ZFR,Firefighter,"
         '"CN=Fiona,OU=Users,OU=South East,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
         # lower-case CompanyName variant: canonicalized to the dominant casing
-        "gary@qfes.example.com,QFES,qfr,,"
+        "gary@zava.example.com,ZAVA,zfr,,"
         '"CN=Gary,OU=Users,OU=Far Northern,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
         # leaver: Leavers OU, no Regions OU anywhere
-        "wayne@qfes.example.com,QFES,,Regional Director,"
-        '"CN=Wayne,OU=QFES Leavers,OU=Leavers,OU=DES Users,DC=corp,DC=internal"\n'
+        "wayne@zava.example.com,ZAVA,,Regional Director,"
+        '"CN=Wayne,OU=ZAVA Leavers,OU=Leavers,OU=Org Users,DC=corp,DC=internal"\n'
         # generic-account pool directly under Regions
-        "icc.info@qfes.example.com,QFES,,,"
+        "icc.info@zava.example.com,ZAVA,,,"
         '"CN=ICC Info,OU=Generic Accounts,OU=Regions,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
         # SharedUsers pool also counts as generic
-        "462.alpha@qfes.example.com,QFES,,,"
+        "462.alpha@zava.example.com,ZAVA,,,"
         '"CN=462 Alpha,OU=SharedUsers,OU=Regions,OU=MOE,DC=corp,DC=internal"\n'
         # service OU with no Regions ancestor -> region Unknown
-        "svc.sync@qfes.example.com,QFES,,,"
+        "svc.sync@zava.example.com,ZAVA,,,"
         '"CN=Sync,OU=Office365Sync,OU=Win7MOE,OU=MOE,DC=corp,DC=internal"\n'
         # no Department, no CompanyName, no DN -> all Unknown
-        "blank@qfes.example.com,,,,\n",
+        "blank@zava.example.com,,,,\n",
         encoding="utf-8",
     )
     return path
 
 
 def test_division_company_name_with_department_fallback(tmp_path) -> None:
-    """QFES-style config: Division Source CompanyName, Fallback Department."""
+    """Zava-style config: Division Source CompanyName, Fallback Department."""
     org = load_org_mapping(_make_org_mapping_config(tmp_path / "org-mapping.json"))
     mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"), org)
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["user_division"] == "ZFR"
     # casing canonicalized to the dominant variant across the file
-    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_division"] == "QFR"
+    assert mappings["GARY@ZAVA.EXAMPLE.COM"]["user_division"] == "ZFR"
     # no CompanyName -> Department fallback
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_division"] == "QFES"
+    assert mappings["WAYNE@ZAVA.EXAMPLE.COM"]["user_division"] == "ZAVA"
     # neither -> Unknown
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_division"] == "Unknown"
+    assert mappings["BLANK@ZAVA.EXAMPLE.COM"]["user_division"] == "Unknown"
 
 
 def test_default_mapping_division_mirrors_department(tmp_path) -> None:
     """No config: vanilla defaults — Division is just Department again."""
     mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_division"] == "QFES"
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_division"] == "QFES"
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_division"] == "Unknown"
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["department"] == "Unmapped"
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["user_division"] == "ZAVA"
+    assert mappings["WAYNE@ZAVA.EXAMPLE.COM"]["user_division"] == "ZAVA"
+    assert mappings["BLANK@ZAVA.EXAMPLE.COM"]["user_division"] == "Unknown"
+    assert mappings["BLANK@ZAVA.EXAMPLE.COM"]["department"] == "Unmapped"
 
 
 def test_region_parsed_from_dn(tmp_path) -> None:
     # built-in default rule: ou_under 'Regions' on OnPremisesDN
     mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["user_region"] == "South East"
-    assert mappings["GARY@QFES.EXAMPLE.COM"]["user_region"] == "Far Northern"
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["user_region"] == "South East"
+    assert mappings["GARY@ZAVA.EXAMPLE.COM"]["user_region"] == "Far Northern"
     # account-pool OUs under Regions are regions verbatim
-    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["user_region"] == "Generic Accounts"
-    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["user_region"] == "SharedUsers"
+    assert mappings["ICC.INFO@ZAVA.EXAMPLE.COM"]["user_region"] == "Generic Accounts"
+    assert mappings["462.ALPHA@ZAVA.EXAMPLE.COM"]["user_region"] == "SharedUsers"
     # leaver / service OUs have no Regions ancestor
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
-    assert mappings["SVC.SYNC@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
-    assert mappings["BLANK@QFES.EXAMPLE.COM"]["user_region"] == "Unknown"
+    assert mappings["WAYNE@ZAVA.EXAMPLE.COM"]["user_region"] == "Unknown"
+    assert mappings["SVC.SYNC@ZAVA.EXAMPLE.COM"]["user_region"] == "Unknown"
+    assert mappings["BLANK@ZAVA.EXAMPLE.COM"]["user_region"] == "Unknown"
 
 
 def test_leaver_and_generic_account_flags(tmp_path) -> None:
     mappings = load_department_mapping(_make_org_gal(tmp_path / "GAL_Clean.csv"))
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_leaver"] is True
-    assert mappings["WAYNE@QFES.EXAMPLE.COM"]["is_generic_account"] is False
-    assert mappings["ICC.INFO@QFES.EXAMPLE.COM"]["is_generic_account"] is True
-    assert mappings["462.ALPHA@QFES.EXAMPLE.COM"]["is_generic_account"] is True
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_leaver"] is False
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["is_generic_account"] is False
-    assert mappings["FIONA@QFES.EXAMPLE.COM"]["job_title"] == "Firefighter"
+    assert mappings["WAYNE@ZAVA.EXAMPLE.COM"]["is_leaver"] is True
+    assert mappings["WAYNE@ZAVA.EXAMPLE.COM"]["is_generic_account"] is False
+    assert mappings["ICC.INFO@ZAVA.EXAMPLE.COM"]["is_generic_account"] is True
+    assert mappings["462.ALPHA@ZAVA.EXAMPLE.COM"]["is_generic_account"] is True
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["is_leaver"] is False
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["is_generic_account"] is False
+    assert mappings["FIONA@ZAVA.EXAMPLE.COM"]["job_title"] == "Firefighter"
 
 
 def test_dn_parse_modes_edge_cases() -> None:
@@ -200,7 +200,7 @@ def test_dn_parse_modes_edge_cases() -> None:
     # case-insensitive OU matching, on both sides
     assert ou_under("CN=X,OU=Users,OU=Central,OU=REGIONS,DC=corp", "regions") == "Central"
     # ou_contains: substring match against any OU
-    assert ou_contains("CN=X,OU=qfes leavers,OU=LEAVERS,DC=corp", "leaver") is True
+    assert ou_contains("CN=X,OU=zava leavers,OU=LEAVERS,DC=corp", "leaver") is True
     assert ou_contains("CN=X,OU=Users,OU=Central,OU=Regions,DC=corp", "leaver") is False
     # ou_name_in: exact OU-name membership, case-insensitive
     assert ou_name_in("CN=X,OU=GENERIC ACCOUNTS,OU=Regions,DC=corp",

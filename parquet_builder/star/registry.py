@@ -101,7 +101,7 @@ class IdRegistry:
         department = str(mapping.get("department") or "Unmapped").strip() or "Unmapped"
         division = _safe_str(mapping.get("division"))
         business_unit = _safe_str(mapping.get("business_unit"))
-        # Case-insensitive identity: 'qfes' and 'QFES' must resolve to ONE
+        # Case-insensitive identity: 'zava' and 'ZAVA' must resolve to ONE
         # dim_department row (Power BI's engine is case-insensitive and would
         # merge the labels of two case-variant rows non-deterministically).
         # Display casing comes from the first mapping seen (the GAL loader

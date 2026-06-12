@@ -13,7 +13,7 @@ on the new AE and CE reports._
       surrogate keys and schemas were ported into `parquet_builder/star/` (keys.py, schema.py).
 - [ ] `Export-20260609-162814\Export-20260609-162814\ActivityExplorerOld\build_activity_explorer_old_powerbi_data.py`
       — the enhanced fork; its raw-column contract, `_derive_target_domain`, and robust JSON parsing
-      are absorbed into star v6 (T1 QFD parity ALL PASS).
+      are absorbed into star v6 (T1 reference-tenant parity ALL PASS).
 - [ ] `tools\build_activity_explorer_powerbi_project.py` — monolithic AE report generator;
       superseded by `PowerBI/builders/build_activity_explorer.py` on the shared engine.
 - [ ] `tools\build_content_explorer_powerbi_project.py` — CE report generator; superseded by
