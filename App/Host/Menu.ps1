@@ -803,8 +803,23 @@ function Test-AddWorkerKeypress {
         [Parameter(Mandatory)][ref]$NextWorkerNumber
     )
 
-    while ([Console]::KeyAvailable) {
-        $key = [Console]::ReadKey($true)
+    # Guard: when stdin is redirected (unattended/scheduled run) there is no console.
+    # [Console]::KeyAvailable throws InvalidOperationException in that case, which the
+    # dispatch loop's outer try/catch would swallow — preventing the loop from ever
+    # reaching its exit condition (infinite loop).  Short-circuit to no-op here.
+    # Belt-and-suspenders: also wrap the actual console access in try/catch, because
+    # some hosts report IsInputRedirected=$false yet still lack a real console handle.
+    if ([Console]::IsInputRedirected) { return }
+
+    while ($true) {
+        $keyAvailable = $false
+        try { $keyAvailable = [Console]::KeyAvailable } catch [System.InvalidOperationException] { return }
+        if (-not $keyAvailable) { break }
+
+        $key = $null
+        try { $key = [Console]::ReadKey($true) } catch [System.InvalidOperationException] { return }
+        if ($null -eq $key) { break }
+
         if ($key.Key -eq 'W') {
             $newWorker = Add-WorkerToExport -ExportRunDirectory $ExportRunDirectory -NextWorkerNumber $NextWorkerNumber.Value
             if ($newWorker) {
