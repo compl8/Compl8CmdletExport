@@ -1,5 +1,106 @@
 ﻿#region Interactive Menu
 
+function Select-ExportDirectory {
+    <#
+    .SYNOPSIS
+        Shared scan/filter/display/pick scaffold for the menu's "resume/retry/run-from"
+        options. Scans the Output directory for Export-* folders, applies a per-option
+        filter, displays a numbered list, prompts for a selection, and returns the chosen
+        row object (or $null on empty / out-of-range / N).
+    .PARAMETER Filter
+        Scriptblock invoked once per Export-* folder with the folder's [DirectoryInfo] as
+        $args[0] / the pipeline arg. Must return a PSCustomObject row to include the folder
+        (eligible), or $null to skip it. The row should carry a LastWrite property (used for
+        the "ago" display) plus whatever fields the caller needs after selection.
+    .PARAMETER HeaderText
+        Section header shown above the list when matches exist.
+    .PARAMETER EmptyMessage
+        Message shown (yellow) when no folders match; followed by the "Press Enter" pause.
+    .PARAMETER DisplayLine
+        Scriptblock invoked per matched row with the row as $args[0] and the pre-formatted
+        "ago" text as $args[1]; returns the second display line (printed gray, indented).
+    .PARAMETER PromptText
+        Read-Host prompt for the selection. Should contain a {0} placeholder for the count.
+    .OUTPUTS
+        The selected row PSCustomObject, or $null (no matches, empty input, out-of-range, or N).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][scriptblock]$Filter,
+        [Parameter(Mandatory)][string]$HeaderText,
+        [Parameter(Mandatory)][string]$EmptyMessage,
+        [Parameter(Mandatory)][scriptblock]$DisplayLine,
+        [Parameter(Mandatory)][string]$PromptText
+    )
+
+    # $OutputDirectory and $scriptRoot are script-level variables set by Export-Compl8Configuration.ps1
+    # before this file is dot-sourced; this helper reads them via dynamic scope, same as the inline
+    # scan code it replaced (and as Build-AuthParameters / Start-WorkerTerminals do).
+    $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
+    $matchedDirs = @()
+    if (Test-Path $baseOutputDir) {
+        $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending
+        foreach ($folder in $exportFolders) {
+            $row = & $Filter $folder
+            if ($null -ne $row) { $matchedDirs += $row }
+        }
+    }
+
+    if ($matchedDirs.Count -eq 0) {
+        Write-Host ""
+        Write-Host ("  {0}" -f $EmptyMessage) -ForegroundColor Yellow
+        Write-Host "  Press Enter to return to menu..." -ForegroundColor Gray
+        $null = Read-Host
+        return $null
+    }
+
+    Write-Host ""
+    Write-SectionHeader -Text $HeaderText -Color Cyan
+    for ($i = 0; $i -lt $matchedDirs.Count; $i++) {
+        $rd = $matchedDirs[$i]
+        $elapsed = (Get-Date) - $rd.LastWrite
+        $agoText = if ($elapsed.TotalHours -lt 1) { "{0}m ago" -f [int]$elapsed.TotalMinutes }
+                   elseif ($elapsed.TotalHours -lt 24) { "{0}h ago" -f [math]::Round($elapsed.TotalHours, 1) }
+                   else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
+
+        Write-Host ("  [{0}] {1}" -f ($i+1), $rd.DirName) -ForegroundColor White
+        Write-Host ("      {0}" -f (& $DisplayLine $rd $agoText)) -ForegroundColor Gray
+    }
+    Write-Host ""
+    $pickInput = Read-Host ($PromptText -f $matchedDirs.Count)
+
+    if (-not [string]::IsNullOrEmpty($pickInput)) {
+        $pickIndex = ($pickInput -as [int])
+        if ($pickIndex -and $pickIndex -ge 1 -and $pickIndex -le $matchedDirs.Count) {
+            return $matchedDirs[$pickIndex - 1]
+        }
+    }
+    return $null
+}
+
+function Read-ScanWorkerCountPrompt {
+    <#
+    .SYNOPSIS
+        Worker-count prompt used by the scan-and-pick resume/retry/run-from options (2, 4, 6).
+        Byte-identical to the inline prompts those options used previously: range 2-16 enables
+        multi-terminal; anything else (including empty/invalid) yields 0 (single terminal).
+    .OUTPUTS
+        Int worker count: a value 2-16, or 0 for single terminal / no valid selection.
+    #>
+    [CmdletBinding()]
+    param()
+
+    Write-Host ""
+    Write-Host "  Workers: [1] Single terminal (default)  [2-16] Multi-terminal with N workers" -ForegroundColor Gray
+    $wcInput = Read-Host "  Number of workers"
+    $wcVal = $wcInput -as [int]
+    if ($wcVal -and $wcVal -ge 2 -and $wcVal -le 16) {
+        return $wcVal
+    }
+    return 0
+}
+
 function Show-ExportMenu {
     <#
     .SYNOPSIS
@@ -89,17 +190,17 @@ function Show-ExportMenu {
             }
             "2" {
                 # Resume Previous Export - scan for ExportPhase.txt in Export-* directories
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
-                $resumableDirs = @()
-                if (Test-Path $baseOutputDir) {
-                    $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
-                        Sort-Object LastWriteTime -Descending
-                    foreach ($folder in $exportFolders) {
+                $chosen = Select-ExportDirectory `
+                    -HeaderText "Resumable Exports Found" `
+                    -EmptyMessage "No resumable exports found in Output directory." `
+                    -PromptText "  Select export to resume [1-{0}, N for new export]" `
+                    -Filter {
+                        param($folder)
                         $phasePath = Join-Path (Get-CoordinationDir $folder.FullName) "ExportPhase.txt"
                         if (Test-Path $phasePath) {
                             $phase = ([System.IO.File]::ReadAllText($phasePath)).Trim()
                             if ($phase -notin @("Completed")) {
-                                $resumableDirs += [PSCustomObject]@{
+                                return [PSCustomObject]@{
                                     ExportDir = $folder.FullName
                                     DirName = $folder.Name
                                     Phase = $phase
@@ -107,100 +208,49 @@ function Show-ExportMenu {
                                 }
                             }
                         }
+                        return $null
+                    } `
+                    -DisplayLine {
+                        param($rd, $agoText)
+                        "Phase: {0} | Last activity: {1}" -f $rd.Phase, $agoText
                     }
-                }
 
-                if ($resumableDirs.Count -eq 0) {
-                    Write-Host ""
-                    Write-Host "  No resumable exports found in Output directory." -ForegroundColor Yellow
-                    Write-Host "  Press Enter to return to menu..." -ForegroundColor Gray
-                    $null = Read-Host
-                } else {
-                    Write-Host ""
-                    Write-SectionHeader -Text "Resumable Exports Found" -Color Cyan
-                    for ($i = 0; $i -lt $resumableDirs.Count; $i++) {
-                        $rd = $resumableDirs[$i]
-                        $elapsed = (Get-Date) - $rd.LastWrite
-                        $agoText = if ($elapsed.TotalHours -lt 1) { "{0}m ago" -f [int]$elapsed.TotalMinutes }
-                                   elseif ($elapsed.TotalHours -lt 24) { "{0}h ago" -f [math]::Round($elapsed.TotalHours, 1) }
-                                   else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
+                if ($null -ne $chosen) {
+                    $result.Mode = "ContentExplorerResume"
+                    $result.CEResumePath = $chosen.ExportDir
 
-                        Write-Host ("  [{0}] {1}" -f ($i+1), $rd.DirName) -ForegroundColor White
-                        Write-Host ("      Phase: {0} | Last activity: {1}" -f $rd.Phase, $agoText) -ForegroundColor Gray
-                    }
-                    Write-Host ""
-                    $resumeInput = Read-Host ("  Select export to resume [1-{0}, N for new export]" -f $resumableDirs.Count)
-
-                    if (-not [string]::IsNullOrEmpty($resumeInput)) {
-                        $resumeIndex = ($resumeInput -as [int])
-                        if ($resumeIndex -and $resumeIndex -ge 1 -and $resumeIndex -le $resumableDirs.Count) {
-                            $result.Mode = "ContentExplorerResume"
-                            $result.CEResumePath = $resumableDirs[$resumeIndex - 1].ExportDir
-
-                            # Ask for worker count
-                            Write-Host ""
-                            Write-Host "  Workers: [1] Single terminal (default)  [2-16] Multi-terminal with N workers" -ForegroundColor Gray
-                            $wcInput = Read-Host "  Number of workers"
-                            $wcVal = $wcInput -as [int]
-                            if ($wcVal -and $wcVal -ge 2 -and $wcVal -le 16) {
-                                $result.CEWorkerCount = $wcVal
-                            }
-                            else {
-                                $result.CEWorkerCount = 0
-                            }
-                        }
-                    }
+                    # Ask for worker count
+                    $result.CEWorkerCount = Read-ScanWorkerCountPrompt
                 }
             }
             "3" {
                 # Retry Discrepant Tasks - scan for RetryTasks.csv in Export-* directories
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
-                $retryableDirs = @()
-                if (Test-Path $baseOutputDir) {
-                    $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
-                        Sort-Object LastWriteTime -Descending
-                    foreach ($folder in $exportFolders) {
+                $chosen = Select-ExportDirectory `
+                    -HeaderText "Exports with Retry Tasks" `
+                    -EmptyMessage "No exports with retry tasks found in Output directory." `
+                    -PromptText "  Select export to retry [1-{0}, N to cancel]" `
+                    -Filter {
+                        param($folder)
                         $retryPath = Join-Path (Get-CoordinationDir $folder.FullName) "RetryTasks.csv"
                         if (Test-Path $retryPath) {
                             $retryTaskCount = @(Import-Csv -Path $retryPath -Encoding UTF8).Count
-                            $retryableDirs += [PSCustomObject]@{
+                            return [PSCustomObject]@{
                                 ExportDir = $folder.FullName
                                 DirName   = $folder.Name
                                 TaskCount = $retryTaskCount
                                 LastWrite = $folder.LastWriteTime
                             }
                         }
+                        return $null
+                    } `
+                    -DisplayLine {
+                        param($rd, $agoText)
+                        "Retry tasks: {0} | Last activity: {1}" -f $rd.TaskCount, $agoText
                     }
-                }
 
-                if ($retryableDirs.Count -eq 0) {
-                    Write-Host ""
-                    Write-Host "  No exports with retry tasks found in Output directory." -ForegroundColor Yellow
-                    Write-Host "  Press Enter to return to menu..." -ForegroundColor Gray
-                    $null = Read-Host
-                } else {
-                    Write-Host ""
-                    Write-SectionHeader -Text "Exports with Retry Tasks" -Color Cyan
-                    for ($i = 0; $i -lt $retryableDirs.Count; $i++) {
-                        $rd = $retryableDirs[$i]
-                        $elapsed = (Get-Date) - $rd.LastWrite
-                        $agoText = if ($elapsed.TotalHours -lt 1) { "{0}m ago" -f [int]$elapsed.TotalMinutes }
-                                   elseif ($elapsed.TotalHours -lt 24) { "{0}h ago" -f [math]::Round($elapsed.TotalHours, 1) }
-                                   else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
-
-                        Write-Host ("  [{0}] {1}" -f ($i+1), $rd.DirName) -ForegroundColor White
-                        Write-Host ("      Retry tasks: {0} | Last activity: {1}" -f $rd.TaskCount, $agoText) -ForegroundColor Gray
-                    }
-                    Write-Host ""
-                    $retryInput = Read-Host ("  Select export to retry [1-{0}, N to cancel]" -f $retryableDirs.Count)
-
-                    if (-not [string]::IsNullOrEmpty($retryInput)) {
-                        $retryIndex = ($retryInput -as [int])
-                        if ($retryIndex -and $retryIndex -ge 1 -and $retryIndex -le $retryableDirs.Count) {
-                            $result.Mode = "ContentExplorerRetry"
-                            $result.CERetryPath = $retryableDirs[$retryIndex - 1].ExportDir
-                        }
-                    }
+                if ($null -ne $chosen) {
+                    $result.Mode = "ContentExplorerRetry"
+                    $result.CERetryPath = $chosen.ExportDir
                 }
             }
             "4" {
@@ -211,53 +261,32 @@ function Show-ExportMenu {
 
                 if ([string]::IsNullOrEmpty($csvInput)) {
                     # Scan for RemainingTasks.csv in Output directories
-                    $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
-                    $taskCsvDirs = @()
-                    if (Test-Path $baseOutputDir) {
-                        $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
-                            Sort-Object LastWriteTime -Descending
-                        foreach ($folder in $exportFolders) {
+                    $chosen = Select-ExportDirectory `
+                        -HeaderText "Exports with Remaining Tasks" `
+                        -EmptyMessage "No RemainingTasks.csv files found in Output directory." `
+                        -PromptText "  Select [1-{0}, N to cancel]" `
+                        -Filter {
+                            param($folder)
                             $remainingPath = Join-Path $folder.FullName "RemainingTasks.csv"
                             if (Test-Path $remainingPath) {
                                 $taskCount = @(Import-Csv -Path $remainingPath -Encoding UTF8).Count
-                                $taskCsvDirs += [PSCustomObject]@{
+                                return [PSCustomObject]@{
                                     CsvPath   = $remainingPath
                                     DirName   = $folder.Name
                                     TaskCount = $taskCount
                                     LastWrite = $folder.LastWriteTime
                                 }
                             }
+                            return $null
+                        } `
+                        -DisplayLine {
+                            param($td, $agoText)
+                            "Remaining tasks: {0} | Last activity: {1}" -f $td.TaskCount, $agoText
                         }
-                    }
 
-                    if ($taskCsvDirs.Count -eq 0) {
-                        Write-Host ""
-                        Write-Host "  No RemainingTasks.csv files found in Output directory." -ForegroundColor Yellow
-                        Write-Host "  Press Enter to return to menu..." -ForegroundColor Gray
-                        $null = Read-Host
-                    } else {
-                        Write-Host ""
-                        Write-SectionHeader -Text "Exports with Remaining Tasks" -Color Cyan
-                        for ($i = 0; $i -lt $taskCsvDirs.Count; $i++) {
-                            $td = $taskCsvDirs[$i]
-                            $elapsed = (Get-Date) - $td.LastWrite
-                            $agoText = if ($elapsed.TotalHours -lt 1) { "{0}m ago" -f [int]$elapsed.TotalMinutes }
-                                       elseif ($elapsed.TotalHours -lt 24) { "{0}h ago" -f [math]::Round($elapsed.TotalHours, 1) }
-                                       else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
-
-                            Write-Host ("  [{0}] {1}" -f ($i+1), $td.DirName) -ForegroundColor White
-                            Write-Host ("      Remaining tasks: {0} | Last activity: {1}" -f $td.TaskCount, $agoText) -ForegroundColor Gray
-                        }
-                        Write-Host ""
-                        $pickInput = Read-Host ("  Select [1-{0}, N to cancel]" -f $taskCsvDirs.Count)
-
-                        if (-not [string]::IsNullOrEmpty($pickInput)) {
-                            $pickIndex = ($pickInput -as [int])
-                            if ($pickIndex -and $pickIndex -ge 1 -and $pickIndex -le $taskCsvDirs.Count) {
-                                $result.Mode = "ContentExplorerTasksCsv"
-                                $result.CETasksCsvPath = $taskCsvDirs[$pickIndex - 1].CsvPath
-                            }
-                        }
+                    if ($null -ne $chosen) {
+                        $result.Mode = "ContentExplorerTasksCsv"
+                        $result.CETasksCsvPath = $chosen.CsvPath
                     }
                 }
                 else {
@@ -275,17 +304,7 @@ function Show-ExportMenu {
 
                 # Ask for worker count if a CSV was selected
                 if ($result.CETasksCsvPath) {
-                    Write-Host ""
-                    Write-Host "  Workers: [1] Single terminal (default)  [2-16] Multi-terminal with N workers" -ForegroundColor Gray
-                    $wcInput = Read-Host "  Number of workers"
-                    $wcVal = $wcInput -as [int]
-                    if ($wcVal -and $wcVal -ge 2 -and $wcVal -le 16) {
-                        $result.CEWorkerCount = $wcVal
-                    }
-                    else {
-                        $result.CEWorkerCount = 0
-                    }
-
+                    $result.CEWorkerCount = Read-ScanWorkerCountPrompt
                     $result.CEWorkloads = Get-CEWorkloadSelection
                 }
             }
@@ -303,12 +322,12 @@ function Show-ExportMenu {
             "6" {
                 # Resume Previous AE Export - scan for ExportType.txt = "ActivityExplorer" + incomplete phase
                 # OR finished (AECompleted) but with days that did not fully complete.
-                $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
-                $aeResumableDirs = @()
-                if (Test-Path $baseOutputDir) {
-                    $exportFolders = Get-ChildItem -Path $baseOutputDir -Directory -Filter "Export-*" -ErrorAction SilentlyContinue |
-                        Sort-Object LastWriteTime -Descending
-                    foreach ($folder in $exportFolders) {
+                $chosen = Select-ExportDirectory `
+                    -HeaderText "Resumable Activity Explorer Exports" `
+                    -EmptyMessage "No resumable Activity Explorer exports found in Output directory." `
+                    -PromptText "  Select export to resume [1-{0}, N for new export]" `
+                    -Filter {
+                        param($folder)
                         $coordDir = Get-CoordinationDir $folder.FullName
                         $typePath = Join-Path $coordDir "ExportType.txt"
                         $phasePath = Join-Path $coordDir "ExportPhase.txt"
@@ -327,7 +346,7 @@ function Show-ExportMenu {
                                 # Offer resume when the run was interrupted (phase not AECompleted) OR when
                                 # it finished but at least one day did not reach Completed status (errored/partial).
                                 if (($phase -ne "AECompleted") -or ($incompleteCount -gt 0)) {
-                                    $aeResumableDirs += [PSCustomObject]@{
+                                    return [PSCustomObject]@{
                                         ExportDir      = $folder.FullName
                                         DirName        = $folder.Name
                                         Phase          = $phase
@@ -338,46 +357,19 @@ function Show-ExportMenu {
                                 }
                             }
                         }
+                        return $null
+                    } `
+                    -DisplayLine {
+                        param($rd, $agoText)
+                        "Phase: {0} | {1}/{2} tasks remaining | Last activity: {3}" -f $rd.Phase, $rd.IncompleteCount, $rd.TaskCount, $agoText
                     }
-                }
 
-                if ($aeResumableDirs.Count -eq 0) {
-                    Write-Host ""
-                    Write-Host "  No resumable Activity Explorer exports found in Output directory." -ForegroundColor Yellow
-                    Write-Host "  Press Enter to return to menu..." -ForegroundColor Gray
-                    $null = Read-Host
-                } else {
-                    Write-Host ""
-                    Write-SectionHeader -Text "Resumable Activity Explorer Exports" -Color Cyan
-                    for ($i = 0; $i -lt $aeResumableDirs.Count; $i++) {
-                        $rd = $aeResumableDirs[$i]
-                        $elapsed = (Get-Date) - $rd.LastWrite
-                        $agoText = if ($elapsed.TotalHours -lt 1) { "{0}m ago" -f [int]$elapsed.TotalMinutes }
-                                   elseif ($elapsed.TotalHours -lt 24) { "{0}h ago" -f [math]::Round($elapsed.TotalHours, 1) }
-                                   else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
+                if ($null -ne $chosen) {
+                    $result.Mode = "ActivityExplorerResume"
+                    $result.AEResumePath = $chosen.ExportDir
 
-                        Write-Host ("  [{0}] {1}" -f ($i+1), $rd.DirName) -ForegroundColor White
-                        Write-Host ("      Phase: {0} | {1}/{2} tasks remaining | Last activity: {3}" -f $rd.Phase, $rd.IncompleteCount, $rd.TaskCount, $agoText) -ForegroundColor Gray
-                    }
-                    Write-Host ""
-                    $resumeInput = Read-Host ("  Select export to resume [1-{0}, N for new export]" -f $aeResumableDirs.Count)
-
-                    if (-not [string]::IsNullOrEmpty($resumeInput)) {
-                        $resumeIndex = ($resumeInput -as [int])
-                        if ($resumeIndex -and $resumeIndex -ge 1 -and $resumeIndex -le $aeResumableDirs.Count) {
-                            $result.Mode = "ActivityExplorerResume"
-                            $result.AEResumePath = $aeResumableDirs[$resumeIndex - 1].ExportDir
-
-                            # Ask for worker count
-                            Write-Host ""
-                            Write-Host "  Workers: [1] Single terminal (default)  [2-16] Multi-terminal with N workers" -ForegroundColor Gray
-                            $wcInput = Read-Host "  Number of workers"
-                            $wcVal = $wcInput -as [int]
-                            if ($wcVal -and $wcVal -ge 2 -and $wcVal -le 16) {
-                                $result.AEWorkerCount = $wcVal
-                            }
-                        }
-                    }
+                    # Ask for worker count
+                    $result.AEWorkerCount = Read-ScanWorkerCountPrompt
                 }
             }
             "7" { $result.Mode = "DLP" }
