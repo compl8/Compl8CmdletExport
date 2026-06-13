@@ -159,6 +159,17 @@ function Invoke-DispatchLoop {
             # Step 5: Adaptive worker scaling (opt-in via $env:COMPL8_ADAPTIVE_WORKERS=1).
             # Park workers when there's slack, unpark them when the queue grows.
             # Parked workers stay alive (session warm, no re-auth) but skip dispatch.
+            #
+            # KNOWN LIMITATION (L2): a parked worker does not process tasks, so it does
+            # not advance its currenttask/Progress.log heartbeat. Once it has been parked
+            # longer than the Test-WorkerAlive no-active-task staleness window (~15 min),
+            # it is classified dead and drops out of $aliveWorkers below — so this unpark
+            # loop, which only iterates $aliveWorkers, can never reactivate it. Under
+            # sustained slack the scaler therefore tends to permanently shed workers
+            # rather than truly park/unpark them. This feature is off by default. A proper
+            # fix would make worker health checks parked-aware (treat an intentionally
+            # parked, process-alive worker as alive) or have parked workers emit a
+            # heartbeat while idle.
             if ($env:COMPL8_ADAPTIVE_WORKERS -eq "1") {
                 $aliveWorkers = @($WorkerProcesses | Where-Object { Test-WorkerAlive -WorkerPID $_.PID -WorkerDir $_.WorkerDir })
                 $pendingCount = @($Tasks | Where-Object { $_.Status -eq "Pending" }).Count
