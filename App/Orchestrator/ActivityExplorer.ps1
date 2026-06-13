@@ -376,10 +376,25 @@ function Invoke-AEMultiExport {
 
                     $exportResult = Export-ActivityExplorerWithProgress @exportParams
 
-                    $task.Status = "Completed"
+                    $resultStatus = if ($exportResult.Status) { [string]$exportResult.Status } else { "Completed" }
+                    $isPartialFailure = ($exportResult.PartialFailure -eq $true) -or ($resultStatus -ne "Completed")
+
                     $task.RecordCount = $exportResult.TotalRecords
                     $task.PageCount = $exportResult.PageCount
-                    Write-ExportLog -Message ("  Day {0} complete: {1} records, {2} pages" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount) -Level Success
+                    if ($isPartialFailure) {
+                        $partialErrorSummary = $null
+                        if ($exportResult.PartialErrors -and $exportResult.PartialErrors.Count -gt 0) {
+                            $partialErrorSummary = ($exportResult.PartialErrors | Select-Object -Last 1).ErrorMessage
+                        }
+                        $task.Status = $resultStatus
+                        $task.ErrorMessage = "Day {0} export status={1} after {2} pages ({3} records). Last error: {4}" -f `
+                            $taskDay, $resultStatus, $exportResult.PageCount, $exportResult.TotalRecords, $partialErrorSummary
+                        Write-ExportLog -Message ("  Day {0} {1}: {2} records, {3} pages" -f $taskDay, $resultStatus, $exportResult.TotalRecords, $exportResult.PageCount) -Level Error
+                    }
+                    else {
+                        $task.Status = "Completed"
+                        Write-ExportLog -Message ("  Day {0} complete: {1} records, {2} pages" -f $taskDay, $exportResult.TotalRecords, $exportResult.PageCount) -Level Success
+                    }
                 }
                 catch {
                     $task.Status = "Error"
@@ -767,7 +782,19 @@ function Invoke-ActivityExplorerExport {
 
         $exportResult = Export-ActivityExplorerWithProgress @exportParams
 
-        if ($exportResult.TotalRecords -eq 0) {
+        $resultStatus = if ($exportResult.Status) { [string]$exportResult.Status } else { "Completed" }
+        $isPartialFailure = ($exportResult.PartialFailure -eq $true) -or ($resultStatus -ne "Completed")
+
+        if ($isPartialFailure) {
+            $partialErrorSummary = $null
+            if ($exportResult.PartialErrors -and $exportResult.PartialErrors.Count -gt 0) {
+                $partialErrorSummary = ($exportResult.PartialErrors | Select-Object -Last 1).ErrorMessage
+            }
+            Write-ExportLog -Message ("  Activity Explorer export status={0}: {1} records in {2} pages. Last error: {3}" -f $resultStatus, $exportResult.TotalRecords, $exportResult.PageCount, $partialErrorSummary) -Level Error
+            Write-ExportLog -Message "  Partial data saved to: $(Get-AEDataDir $script:ExportRunDirectory)" -Level Warning
+            Write-ExportLog -Message "  Re-run with -AEResume to continue from the last successful page" -Level Warning
+        }
+        elseif ($exportResult.TotalRecords -eq 0) {
             Write-ExportLog -Message "  No activity records returned" -Level Warning
         }
         else {
