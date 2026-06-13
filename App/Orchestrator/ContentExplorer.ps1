@@ -2827,7 +2827,11 @@ function Invoke-ContentExplorerExport {
                     PageSize      = ($NextTask.PageSize -as [int])
                 }
             }
-            return (Send-WorkerTask -WorkerDir $Worker.WorkerDir -TaskData $taskData -ExportDir $Context.ExportDir)
+            $sent = Send-WorkerTask -WorkerDir $Worker.WorkerDir -TaskData $taskData -ExportDir $Context.ExportDir
+            if ($sent) {
+                $Context.DispatchTimes[$Worker.PID] = Get-Date
+            }
+            return $sent
         }
 
         # --- CE Callback: OnShowDashboard ---
