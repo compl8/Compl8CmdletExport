@@ -126,12 +126,19 @@ function Export-ActivityExplorerWithProgress {
         Write-ProgressEntry -Path $ProgressLogPath -Message $msg
     }
 
-    # Initial query with future-dates retry
+    # Initial query with future-dates retry and transient-error retry.
+    # Two independent counters: $futureDateRetries tracks end-time reductions;
+    # $initialTransientRetries tracks throttle/server/network blips.  They are
+    # intentionally separate so a future-date error never burns transient budget
+    # and vice versa.  Auth errors still rethrow immediately regardless of either
+    # counter.  The outer while condition ($null -eq $result) keeps both bounded.
     $result = $null
     $futureDateRetries = 0
     $maxFutureDateRetries = 3
+    $initialTransientRetries = 0
+    $maxInitialTransientRetries = 3
 
-    while ($null -eq $result -and $futureDateRetries -le $maxFutureDateRetries) {
+    while ($null -eq $result) {
         try {
             $result = Export-ActivityExplorerData @exportParams
         }
@@ -150,33 +157,49 @@ function Export-ActivityExplorerWithProgress {
                 Write-ProgressEntry -Path $ProgressLogPath -Message $msg
 
                 Add-PartialError -Tracker $Tracker -PageNumber 0 -ErrorMessage $errorMsg -ErrorType "FutureDateRetry"
+                continue
             }
-            else {
-                # Check for auth error
-                $initialErrorInfo = Get-HttpErrorExplanation -ErrorMessage $errorMsg -ErrorRecord $_
-                if ($initialErrorInfo.Category -eq "AuthError") {
-                    Write-ExportLog -Message "  AUTH ERROR - throwing for caller to handle" -Level Error
-                    throw
-                }
 
-                # Non-recoverable error on initial query
-                $msg = "  Initial query failed: {0}" -f $errorMsg
-                Write-ExportLog -Message $msg -Level Error
+            # Check for auth error before any other handling
+            $initialErrorInfo = Get-HttpErrorExplanation -ErrorMessage $errorMsg -ErrorRecord $_
+            if ($initialErrorInfo.Category -eq "AuthError") {
+                Write-ExportLog -Message "  AUTH ERROR - throwing for caller to handle" -Level Error
+                throw
+            }
+
+            # Transient error (server/network/throttle) - retry with backoff,
+            # same policy as the page loop: attempt 1->60s, 2->120s, 3->120s.
+            if ($initialErrorInfo.IsTransient -and $initialTransientRetries -lt $maxInitialTransientRetries) {
+                $initialTransientRetries++
+                $delay = Get-RetryDelay -AttemptNumber $initialTransientRetries -MaxRetries $maxInitialTransientRetries `
+                    -IsTransient $true -ScaleByAttempt
+                $statusStr = if ($initialErrorInfo.StatusCode) { "HTTP $($initialErrorInfo.StatusCode)" } else { $initialErrorInfo.Category }
+                $msg = "  Initial query TRANSIENT {0} (retry {1}/{2}) - waiting {3}s: {4}" -f $statusStr, $initialTransientRetries, $maxInitialTransientRetries, $delay, $errorMsg
+                Write-ExportLog -Message $msg -Level Warning
                 Write-ProgressEntry -Path $ProgressLogPath -Message $msg
-                Add-PartialError -Tracker $Tracker -PageNumber 0 -ErrorMessage $errorMsg -ErrorType "InitialQueryFailed"
+                Add-PartialError -Tracker $Tracker -PageNumber 0 -ErrorMessage $errorMsg -ErrorType "InitialQueryTransientRetry"
+                Start-Sleep -Seconds $delay
+                continue
+            }
 
-                $Tracker['Status'] = "Failed"
-                $Tracker['PartialFailure'] = $true
-                Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
+            # Non-recoverable error on initial query (non-transient, or transient
+            # budget exhausted, or future-date budget exhausted)
+            $msg = "  Initial query failed: {0}" -f $errorMsg
+            Write-ExportLog -Message $msg -Level Error
+            Write-ProgressEntry -Path $ProgressLogPath -Message $msg
+            Add-PartialError -Tracker $Tracker -PageNumber 0 -ErrorMessage $errorMsg -ErrorType "InitialQueryFailed"
 
-                return @{
-                    TotalRecords   = $totalRecords
-                    PageCount      = $pageNumber
-                    ResumedFrom    = $resumedFrom
-                    Status         = "Failed"
-                    PartialFailure = $true
-                    PartialErrors  = $Tracker.PartialErrors
-                }
+            $Tracker['Status'] = "Failed"
+            $Tracker['PartialFailure'] = $true
+            Save-ActivityExplorerRunTracker -Tracker $Tracker -TrackerPath $TrackerPath
+
+            return @{
+                TotalRecords   = $totalRecords
+                PageCount      = $pageNumber
+                ResumedFrom    = $resumedFrom
+                Status         = "Failed"
+                PartialFailure = $true
+                PartialErrors  = $Tracker.PartialErrors
             }
         }
     }
