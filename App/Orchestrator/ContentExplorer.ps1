@@ -2059,6 +2059,7 @@ function Invoke-ContentExplorerExport {
     $script:UseExistingAggregates = $false
     $script:ExistingAggregatePath = $null
     $script:SharedExportDirectory = $script:ExportRunDirectory
+    $exportDir = $script:SharedExportDirectory
 
     # ... [unchanged: aggregate caching check] ...
     # Check for recent aggregate CSVs to reuse (no more "join existing export" -- that concept
@@ -3429,8 +3430,6 @@ function Invoke-ContentExplorerExport {
     #endregion
 
     #region -- Phase 8: Summary --
-
-    $exportDir = $script:SharedExportDirectory
 
     # Summary stats
     Write-ExportLog -Message "`n--- Content Explorer Summary ---" -Level Info
