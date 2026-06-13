@@ -1,4 +1,4 @@
-﻿#Requires -Version 7.0
+﻿#Requires -Version 7.4
 <#
 .SYNOPSIS
     Compl8 Cmdlet Export Tool
