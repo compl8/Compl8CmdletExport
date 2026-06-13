@@ -302,6 +302,7 @@ function Show-ExportMenu {
             }
             "6" {
                 # Resume Previous AE Export - scan for ExportType.txt = "ActivityExplorer" + incomplete phase
+                # OR finished (AECompleted) but with days that did not fully complete.
                 $baseOutputDir = if ($OutputDirectory) { $OutputDirectory } else { Join-Path $scriptRoot "Output" }
                 $aeResumableDirs = @()
                 if (Test-Path $baseOutputDir) {
@@ -314,22 +315,26 @@ function Show-ExportMenu {
                         if ((Test-Path $typePath) -and (Test-Path $phasePath)) {
                             $exportType = ([System.IO.File]::ReadAllText($typePath)).Trim()
                             $phase = ([System.IO.File]::ReadAllText($phasePath)).Trim()
-                            if ($exportType -eq "ActivityExplorer" -and $phase -notin @("AECompleted")) {
+                            if ($exportType -eq "ActivityExplorer") {
                                 $taskPath = Join-Path $coordDir "AEDayTasks.csv"
                                 $taskCount = 0
-                                $pendingCount = 0
+                                $incompleteCount = 0
                                 if (Test-Path $taskPath) {
                                     $tasks = @(Import-Csv -Path $taskPath -Encoding UTF8)
                                     $taskCount = $tasks.Count
-                                    $pendingCount = @($tasks | Where-Object { $_.Status -in @("Pending","Error","InProgress") }).Count
+                                    $incompleteCount = @($tasks | Where-Object { $_.Status -ne "Completed" }).Count
                                 }
-                                $aeResumableDirs += [PSCustomObject]@{
-                                    ExportDir    = $folder.FullName
-                                    DirName      = $folder.Name
-                                    Phase        = $phase
-                                    TaskCount    = $taskCount
-                                    PendingCount = $pendingCount
-                                    LastWrite    = $folder.LastWriteTime
+                                # Offer resume when the run was interrupted (phase not AECompleted) OR when
+                                # it finished but at least one day did not reach Completed status (errored/partial).
+                                if (($phase -ne "AECompleted") -or ($incompleteCount -gt 0)) {
+                                    $aeResumableDirs += [PSCustomObject]@{
+                                        ExportDir      = $folder.FullName
+                                        DirName        = $folder.Name
+                                        Phase          = $phase
+                                        TaskCount      = $taskCount
+                                        IncompleteCount = $incompleteCount
+                                        LastWrite      = $folder.LastWriteTime
+                                    }
                                 }
                             }
                         }
@@ -352,7 +357,7 @@ function Show-ExportMenu {
                                    else { "{0}d ago" -f [math]::Round($elapsed.TotalDays, 1) }
 
                         Write-Host ("  [{0}] {1}" -f ($i+1), $rd.DirName) -ForegroundColor White
-                        Write-Host ("      Phase: {0} | {1}/{2} tasks remaining | Last activity: {3}" -f $rd.Phase, $rd.PendingCount, $rd.TaskCount, $agoText) -ForegroundColor Gray
+                        Write-Host ("      Phase: {0} | {1}/{2} tasks remaining | Last activity: {3}" -f $rd.Phase, $rd.IncompleteCount, $rd.TaskCount, $agoText) -ForegroundColor Gray
                     }
                     Write-Host ""
                     $resumeInput = Read-Host ("  Select export to resume [1-{0}, N for new export]" -f $aeResumableDirs.Count)
