@@ -520,8 +520,9 @@ function Invoke-AEMultiExport {
         # Scan ae-done-*.txt
         Get-ChildItem -Path $completionsDir -Filter "ae-done-*.txt" -ErrorAction SilentlyContinue |
             ForEach-Object {
+                $signalFile = $_
                 try {
-                    $data = ConvertFrom-SignedEnvelopeJson -Json (Get-Content -Raw -Path $_.FullName) -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("AE completion file {0}" -f $_.Name)
+                    $data = ConvertFrom-SignedEnvelopeJson -Json (Get-Content -Raw -Path $signalFile.FullName) -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("AE completion file {0}" -f $signalFile.Name)
                     if ($null -ne $data) {
                         $completed += @{
                             Day         = $data.Day
@@ -530,15 +531,20 @@ function Invoke-AEMultiExport {
                             Message     = "Day $($data.Day) completed: $([int]$data.RecordCount) records, $([int]$data.PageCount) pages"
                         }
                     }
-                    Rename-Item -Path $_.FullName -NewName ($_.Name + ".done") -Force -ErrorAction SilentlyContinue
-                } catch { Write-Verbose "Failed to parse AE completion file: $($_.Exception.Message)" }
+                    Rename-Item -Path $signalFile.FullName -NewName ($signalFile.Name + ".done") -Force -ErrorAction SilentlyContinue
+                } catch {
+                    Write-Verbose "Failed to parse AE completion file: $($_.Exception.Message) - quarantined"
+                    try { [System.IO.File]::Move($signalFile.FullName, ($signalFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $signalFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
+                }
             }
 
         # Scan error-ae-*.txt
         Get-ChildItem -Path $completionsDir -Filter "error-ae-*.txt" -ErrorAction SilentlyContinue |
             ForEach-Object {
+                $signalFile = $_
                 try {
-                    $data = ConvertFrom-SignedEnvelopeJson -Json (Get-Content -Raw -Path $_.FullName) -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("AE error file {0}" -f $_.Name)
+                    $data = ConvertFrom-SignedEnvelopeJson -Json (Get-Content -Raw -Path $signalFile.FullName) -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("AE error file {0}" -f $signalFile.Name)
                     if ($null -ne $data) {
                         $errors += @{
                             Day          = $data.Day
@@ -546,8 +552,12 @@ function Invoke-AEMultiExport {
                             Message      = "Day $($data.Day): $($data.ErrorMessage)"
                         }
                     }
-                    Rename-Item -Path $_.FullName -NewName ($_.Name + ".done") -Force -ErrorAction SilentlyContinue
-                } catch { Write-Verbose "Failed to parse AE error file: $($_.Exception.Message)" }
+                    Rename-Item -Path $signalFile.FullName -NewName ($signalFile.Name + ".done") -Force -ErrorAction SilentlyContinue
+                } catch {
+                    Write-Verbose "Failed to parse AE error file: $($_.Exception.Message) - quarantined"
+                    try { [System.IO.File]::Move($signalFile.FullName, ($signalFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $signalFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
+                }
             }
 
         return @{ CompletedTasks = $completed; ErrorTasks = $errors }
