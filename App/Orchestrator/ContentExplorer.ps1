@@ -82,6 +82,7 @@
     $aggregateData = $null
 
     $tasksExported = 0
+    $cmdletNotFoundCount = 0
     $lastWorkerActivity = Get-Date
     $workerInactivityLimit = New-TimeSpan -Minutes $script:CEWorkerInactivityMinutes
 
