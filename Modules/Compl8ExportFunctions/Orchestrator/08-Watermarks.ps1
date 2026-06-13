@@ -68,11 +68,20 @@ function Write-Watermarks {
     $path = Get-WatermarkPath -ScriptRoot $ScriptRoot -TenantPrefix $TenantPrefix
     $existing = Read-Watermarks -ScriptRoot $ScriptRoot -TenantPrefix $TenantPrefix
     $nowIso = (Get-Date).ToString("o")
+    # Merge incoming Tasks into the existing task map so that a scoped run (which
+    # only passes watermarks for the tasks it touched) does not wipe the watermark
+    # entries for tasks it did not process.  Incoming keys overwrite; absent keys
+    # are preserved from the prior file.
+    $mergedTasks = @{}
+    if ($existing.Tasks) {
+        foreach ($k in $existing.Tasks.Keys) { $mergedTasks[$k] = $existing.Tasks[$k] }
+    }
+    foreach ($k in $Tasks.Keys) { $mergedTasks[$k] = $Tasks[$k] }
     $payload = @{
         TenantPrefix  = $TenantPrefix
         LastRunAt     = $nowIso
         LastFullRunAt = if ($WasFullRun) { $nowIso } else { $existing.LastFullRunAt }
-        Tasks         = $Tasks
+        Tasks         = $mergedTasks
     }
     $tmpPath = $path + ".tmp.$PID"
     try {
