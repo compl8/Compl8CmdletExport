@@ -1038,8 +1038,9 @@ function Invoke-ContentExplorerResume {
                                 $doneContent = [System.IO.File]::ReadAllText($doneFile.FullName)
                                 $doneData = ConvertFrom-SignedEnvelopeJson -Json $doneContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail completion file {0}" -f $doneFile.Name)
                                 if ($null -eq $doneData) {
-                                    Write-ExportLog -Message ("  Warning: Empty/null detail done file {0}" -f $doneFile.Name) -Level Warning -LogOnly
-                                    Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
+                                    Write-ExportLog -Message ("  Warning: Empty/null detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
+                                    try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
+                                    catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                                     continue
                                 }
                                 $doneLocation = if ($doneData.Location) { $doneData.Location } else { "" }
@@ -1054,7 +1055,9 @@ function Invoke-ContentExplorerResume {
                                 Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
                             }
                             catch {
-                                Write-ExportLog -Message ("  Warning: Could not parse detail done file {0}" -f $doneFile.Name) -Level Warning -LogOnly
+                                Write-ExportLog -Message ("  Warning: Could not parse detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
+                                try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
+                                catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                             }
                         }
 
@@ -1063,8 +1066,9 @@ function Invoke-ContentExplorerResume {
                                 $errContent = [System.IO.File]::ReadAllText($errFile.FullName)
                                 $errData = ConvertFrom-SignedEnvelopeJson -Json $errContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail error file {0}" -f $errFile.Name)
                                 if ($null -eq $errData) {
-                                    Write-ExportLog -Message ("  Warning: Empty/null detail error file {0}" -f $errFile.Name) -Level Warning -LogOnly
-                                    Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
+                                    Write-ExportLog -Message ("  Warning: Empty/null detail error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                                    try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                                    catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                                     continue
                                 }
                                 $errLocation = if ($errData.Location) { $errData.Location } else { "" }
@@ -1079,7 +1083,9 @@ function Invoke-ContentExplorerResume {
                                 Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
                             }
                             catch {
-                                Write-ExportLog -Message ("  Warning: Could not parse error file {0}" -f $errFile.Name) -Level Warning -LogOnly
+                                Write-ExportLog -Message ("  Warning: Could not parse error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                                try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                                catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                             }
                         }
 
@@ -1760,8 +1766,9 @@ function Invoke-ContentExplorerFromTasksCsv {
                     $doneContent = [System.IO.File]::ReadAllText($doneFile.FullName)
                     $doneData = ConvertFrom-SignedEnvelopeJson -Json $doneContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail completion file {0}" -f $doneFile.Name)
                     if ($null -eq $doneData) {
-                        Write-ExportLog -Message ("  Warning: Empty/null detail done file {0}" -f $doneFile.Name) -Level Warning -LogOnly
-                        Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
+                        Write-ExportLog -Message ("  Warning: Empty/null detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
+                        try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
+                        catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                         continue
                     }
                     $doneLocation = if ($doneData.Location) { $doneData.Location } else { "" }
@@ -1776,7 +1783,9 @@ function Invoke-ContentExplorerFromTasksCsv {
                     Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
                 }
                 catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse detail done file {0}" -f $doneFile.Name) -Level Warning -LogOnly
+                    Write-ExportLog -Message ("  Warning: Could not parse detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
+                    try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                 }
             }
 
@@ -1785,8 +1794,9 @@ function Invoke-ContentExplorerFromTasksCsv {
                     $errContent = [System.IO.File]::ReadAllText($errFile.FullName)
                     $errData = ConvertFrom-SignedEnvelopeJson -Json $errContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail error file {0}" -f $errFile.Name)
                     if ($null -eq $errData) {
-                        Write-ExportLog -Message ("  Warning: Empty/null detail error file {0}" -f $errFile.Name) -Level Warning -LogOnly
-                        Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
+                        Write-ExportLog -Message ("  Warning: Empty/null detail error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                        try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                        catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                         continue
                     }
                     $errLocation = if ($errData.Location) { $errData.Location } else { "" }
@@ -1801,7 +1811,9 @@ function Invoke-ContentExplorerFromTasksCsv {
                     Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
                 }
                 catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse error file {0}" -f $errFile.Name) -Level Warning -LogOnly
+                    Write-ExportLog -Message ("  Warning: Could not parse error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                    try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                 }
             }
 
@@ -2582,7 +2594,9 @@ function Invoke-ContentExplorerExport {
                         Rename-Item -Path $errFile.FullName -NewName ($errFile.Name -replace '\.txt$', '.done') -Force -ErrorAction SilentlyContinue
                     }
                     catch {
-                        Write-ExportLog -Message ("  Warning: Could not parse aggregate error file {0}" -f $errFile.Name) -Level Warning -LogOnly
+                        Write-ExportLog -Message ("  Warning: Could not parse aggregate error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                        try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                        catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                     }
                 }
             }
@@ -2608,7 +2622,9 @@ function Invoke-ContentExplorerExport {
                     Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
                 }
                 catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse detail done file {0}" -f $doneFile.Name) -Level Warning -LogOnly
+                    Write-ExportLog -Message ("  Warning: Could not parse detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
+                    try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                 }
             }
 
@@ -2633,7 +2649,9 @@ function Invoke-ContentExplorerExport {
                     Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
                 }
                 catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse detail error file {0}" -f $errFile.Name) -Level Warning -LogOnly
+                    Write-ExportLog -Message ("  Warning: Could not parse detail error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
+                    try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
+                    catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
                 }
             }
 
