@@ -1016,118 +1016,24 @@ function Invoke-ContentExplorerResume {
                     }
 
                     # --- Shared CE Detail Callback: OnScanCompletions ---
+                    # Thin wrapper over Read-CEDetailSignals (module). Shared verbatim
+                    # with Invoke-ContentExplorerFromTasksCsv.
                     $ceDetailOnScan = {
                         param($ExportDir, $WorkerDirs, $Context)
-                        $completed = @()
-                        $errors = @()
-                        $completionsDir = Get-CompletionsDir $ExportDir
-                        $signingKey = Get-ExportRunSigningKey -ExportDir $ExportDir
-
-                        # Scan central Completions/ directory
-                        $doneSignalFiles = @(Get-ChildItem -Path $completionsDir -Filter "detail-done-*.txt" -File -ErrorAction SilentlyContinue)
-                        $errorSignalFiles = @(Get-ChildItem -Path $completionsDir -Filter "error-detail-*.txt" -File -ErrorAction SilentlyContinue)
-
-                        # Also scan worker dirs (backward compat)
-                        foreach ($wDir in $WorkerDirs) {
-                            $doneSignalFiles += @(Get-ChildItem -Path $wDir -Filter "detail-done-*.txt" -File -ErrorAction SilentlyContinue)
-                            $doneSignalFiles += @(Get-ChildItem -Path $wDir -Filter "done-detail-*.txt" -File -ErrorAction SilentlyContinue)
-                            $errorSignalFiles += @(Get-ChildItem -Path $wDir -Filter "error-detail-*.txt" -File -ErrorAction SilentlyContinue)
-                        }
-
-                        foreach ($doneFile in $doneSignalFiles) {
-                            try {
-                                $doneContent = [System.IO.File]::ReadAllText($doneFile.FullName)
-                                $doneData = ConvertFrom-SignedEnvelopeJson -Json $doneContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail completion file {0}" -f $doneFile.Name)
-                                if ($null -eq $doneData) {
-                                    Write-ExportLog -Message ("  Warning: Empty/null detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
-                                    try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
-                                    catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                                    continue
-                                }
-                                $doneLocation = if ($doneData.Location) { $doneData.Location } else { "" }
-                                $completed += @{
-                                    TagType     = $doneData.TagType
-                                    TagName     = $doneData.TagName
-                                    Workload    = $doneData.Workload
-                                    Location    = $doneLocation
-                                    RecordCount = $doneData.RecordCount
-                                    Message     = "{0}/{1}{2} -> {3} records" -f $doneData.TagName, $doneData.Workload, $(if ($doneLocation) { "/$doneLocation" } else { "" }), $doneData.RecordCount
-                                }
-                                Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
-                            }
-                            catch {
-                                Write-ExportLog -Message ("  Warning: Could not parse detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
-                                try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
-                                catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                            }
-                        }
-
-                        foreach ($errFile in $errorSignalFiles) {
-                            try {
-                                $errContent = [System.IO.File]::ReadAllText($errFile.FullName)
-                                $errData = ConvertFrom-SignedEnvelopeJson -Json $errContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail error file {0}" -f $errFile.Name)
-                                if ($null -eq $errData) {
-                                    Write-ExportLog -Message ("  Warning: Empty/null detail error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
-                                    try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
-                                    catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                                    continue
-                                }
-                                $errLocation = if ($errData.Location) { $errData.Location } else { "" }
-                                $errors += @{
-                                    TagType      = $errData.TagType
-                                    TagName      = $errData.TagName
-                                    Workload     = $errData.Workload
-                                    Location     = $errLocation
-                                    ErrorMessage = $errData.Error
-                                    Message      = "{0}/{1}{2}: {3}" -f $errData.TagName, $errData.Workload, $(if ($errLocation) { "/$errLocation" } else { "" }), $errData.Error
-                                }
-                                Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
-                            }
-                            catch {
-                                Write-ExportLog -Message ("  Warning: Could not parse error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
-                                try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
-                                catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                            }
-                        }
-
-                        return @{ CompletedTasks = $completed; ErrorTasks = $errors }
+                        return (Read-CEDetailSignals -ExportDir $ExportDir -WorkerDirs $WorkerDirs)
                     }
 
                     # --- Shared CE Detail Callback: OnMatchTask ---
+                    # Thin wrapper over Find-CEDetailTaskMatch (module).
                     $ceDetailOnMatch = {
                         param($Data, $Tasks, $Context)
-                        $loc = if ($Data.Location) { $Data.Location } else { "" }
-                        $match = $Tasks | Where-Object {
-                            $_.TagType -eq $Data.TagType -and
-                            $_.TagName -eq $Data.TagName -and
-                            $_.Workload -eq $Data.Workload -and
-                            $(if ($_.Location) { $_.Location } else { "" }) -eq $loc -and
-                            $_.Status -eq "InProgress"
-                        } | Select-Object -First 1
-                        if (-not $match -and -not $loc) {
-                            $match = $Tasks | Where-Object {
-                                $_.TagType -eq $Data.TagType -and
-                                $_.TagName -eq $Data.TagName -and
-                                $_.Workload -eq $Data.Workload -and
-                                $_.Status -eq "InProgress"
-                            } | Select-Object -First 1
-                        }
-                        return $match
+                        return (Find-CEDetailTaskMatch -Data $Data -Tasks $Tasks)
                     }
 
                     # --- CE Resume Callback: OnDispatchTask ---
                     $ceResumeOnDispatch = {
                         param($Worker, $NextTask, $Context)
-                        $taskData = @{
-                            Phase         = "Detail"
-                            TagType       = $NextTask.TagType
-                            TagName       = $NextTask.TagName
-                            Workload      = $NextTask.Workload
-                            Location      = if ($NextTask.Location) { $NextTask.Location } else { "" }
-                            LocationType  = if ($NextTask.LocationType) { $NextTask.LocationType } else { "" }
-                            ExpectedCount = ($NextTask.ExpectedCount -as [int])
-                            PageSize      = ($NextTask.PageSize -as [int])
-                        }
+                        $taskData = New-CEDetailDispatchPayload -NextTask $NextTask
                         $sent = Send-WorkerTask -WorkerDir $Worker.WorkerDir -TaskData $taskData -ExportDir $Context.ExportDir
                         if ($sent) {
                             $Context.DispatchTimes[$Worker.PID] = Get-Date
@@ -1745,117 +1651,24 @@ function Invoke-ContentExplorerFromTasksCsv {
         }
 
         # --- Shared CE Detail Callback: OnScanCompletions ---
-        # (Same signal file scanning pattern as resume — defined here for standalone use)
+        # Thin wrapper over Read-CEDetailSignals (module). Shared verbatim with
+        # Invoke-ContentExplorerResume.
         $ceDetailOnScan = {
             param($ExportDir, $WorkerDirs, $Context)
-            $completed = @()
-            $errors = @()
-            $completionsDir = Get-CompletionsDir $ExportDir
-            $signingKey = Get-ExportRunSigningKey -ExportDir $ExportDir
-
-            $doneSignalFiles = @(Get-ChildItem -Path $completionsDir -Filter "detail-done-*.txt" -File -ErrorAction SilentlyContinue)
-            $errorSignalFiles = @(Get-ChildItem -Path $completionsDir -Filter "error-detail-*.txt" -File -ErrorAction SilentlyContinue)
-
-            foreach ($wDir in $WorkerDirs) {
-                $doneSignalFiles += @(Get-ChildItem -Path $wDir -Filter "detail-done-*.txt" -File -ErrorAction SilentlyContinue)
-                $doneSignalFiles += @(Get-ChildItem -Path $wDir -Filter "done-detail-*.txt" -File -ErrorAction SilentlyContinue)
-                $errorSignalFiles += @(Get-ChildItem -Path $wDir -Filter "error-detail-*.txt" -File -ErrorAction SilentlyContinue)
-            }
-
-            foreach ($doneFile in $doneSignalFiles) {
-                try {
-                    $doneContent = [System.IO.File]::ReadAllText($doneFile.FullName)
-                    $doneData = ConvertFrom-SignedEnvelopeJson -Json $doneContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail completion file {0}" -f $doneFile.Name)
-                    if ($null -eq $doneData) {
-                        Write-ExportLog -Message ("  Warning: Empty/null detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
-                        try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
-                        catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                        continue
-                    }
-                    $doneLocation = if ($doneData.Location) { $doneData.Location } else { "" }
-                    $completed += @{
-                        TagType     = $doneData.TagType
-                        TagName     = $doneData.TagName
-                        Workload    = $doneData.Workload
-                        Location    = $doneLocation
-                        RecordCount = $doneData.RecordCount
-                        Message     = "{0}/{1}{2} -> {3} records" -f $doneData.TagName, $doneData.Workload, $(if ($doneLocation) { "/$doneLocation" } else { "" }), $doneData.RecordCount
-                    }
-                    Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue
-                }
-                catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse detail done file {0} - quarantined" -f $doneFile.Name) -Level Warning -LogOnly
-                    try { [System.IO.File]::Move($doneFile.FullName, ($doneFile.FullName + '.invalid'), $true) }
-                    catch { try { Remove-Item -Path $doneFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                }
-            }
-
-            foreach ($errFile in $errorSignalFiles) {
-                try {
-                    $errContent = [System.IO.File]::ReadAllText($errFile.FullName)
-                    $errData = ConvertFrom-SignedEnvelopeJson -Json $errContent -SigningKey $signingKey -RequireSignature:([bool]$signingKey) -Context ("detail error file {0}" -f $errFile.Name)
-                    if ($null -eq $errData) {
-                        Write-ExportLog -Message ("  Warning: Empty/null detail error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
-                        try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
-                        catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                        continue
-                    }
-                    $errLocation = if ($errData.Location) { $errData.Location } else { "" }
-                    $errors += @{
-                        TagType      = $errData.TagType
-                        TagName      = $errData.TagName
-                        Workload     = $errData.Workload
-                        Location     = $errLocation
-                        ErrorMessage = $errData.Error
-                        Message      = "{0}/{1}{2}: {3}" -f $errData.TagName, $errData.Workload, $(if ($errLocation) { "/$errLocation" } else { "" }), $errData.Error
-                    }
-                    Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue
-                }
-                catch {
-                    Write-ExportLog -Message ("  Warning: Could not parse error file {0} - quarantined" -f $errFile.Name) -Level Warning -LogOnly
-                    try { [System.IO.File]::Move($errFile.FullName, ($errFile.FullName + '.invalid'), $true) }
-                    catch { try { Remove-Item -Path $errFile.FullName -Force -ErrorAction SilentlyContinue } catch {} }
-                }
-            }
-
-            return @{ CompletedTasks = $completed; ErrorTasks = $errors }
+            return (Read-CEDetailSignals -ExportDir $ExportDir -WorkerDirs $WorkerDirs)
         }
 
         # --- Shared CE Detail Callback: OnMatchTask ---
+        # Thin wrapper over Find-CEDetailTaskMatch (module).
         $ceDetailOnMatch = {
             param($Data, $Tasks, $Context)
-            $loc = if ($Data.Location) { $Data.Location } else { "" }
-            $match = $Tasks | Where-Object {
-                $_.TagType -eq $Data.TagType -and
-                $_.TagName -eq $Data.TagName -and
-                $_.Workload -eq $Data.Workload -and
-                $(if ($_.Location) { $_.Location } else { "" }) -eq $loc -and
-                $_.Status -eq "InProgress"
-            } | Select-Object -First 1
-            if (-not $match -and -not $loc) {
-                $match = $Tasks | Where-Object {
-                    $_.TagType -eq $Data.TagType -and
-                    $_.TagName -eq $Data.TagName -and
-                    $_.Workload -eq $Data.Workload -and
-                    $_.Status -eq "InProgress"
-                } | Select-Object -First 1
-            }
-            return $match
+            return (Find-CEDetailTaskMatch -Data $Data -Tasks $Tasks)
         }
 
         # --- CE TasksCsv Callback: OnDispatchTask ---
         $csvOnDispatch = {
             param($Worker, $NextTask, $Context)
-            $taskData = @{
-                Phase         = "Detail"
-                TagType       = $NextTask.TagType
-                TagName       = $NextTask.TagName
-                Workload      = $NextTask.Workload
-                Location      = if ($NextTask.Location) { $NextTask.Location } else { "" }
-                LocationType  = if ($NextTask.LocationType) { $NextTask.LocationType } else { "" }
-                ExpectedCount = ($NextTask.ExpectedCount -as [int])
-                PageSize      = ($NextTask.PageSize -as [int])
-            }
+            $taskData = New-CEDetailDispatchPayload -NextTask $NextTask
             return (Send-WorkerTask -WorkerDir $Worker.WorkerDir -TaskData $taskData -ExportDir $Context.ExportDir)
         }
 
@@ -2816,16 +2629,7 @@ function Invoke-ContentExplorerExport {
                 }
             }
             else {
-                $taskData = @{
-                    Phase         = "Detail"
-                    TagType       = $NextTask.TagType
-                    TagName       = $NextTask.TagName
-                    Workload      = $NextTask.Workload
-                    Location      = if ($NextTask.Location) { $NextTask.Location } else { "" }
-                    LocationType  = if ($NextTask.LocationType) { $NextTask.LocationType } else { "" }
-                    ExpectedCount = ($NextTask.ExpectedCount -as [int])
-                    PageSize      = ($NextTask.PageSize -as [int])
-                }
+                $taskData = New-CEDetailDispatchPayload -NextTask $NextTask
             }
             $sent = Send-WorkerTask -WorkerDir $Worker.WorkerDir -TaskData $taskData -ExportDir $Context.ExportDir
             if ($sent) {

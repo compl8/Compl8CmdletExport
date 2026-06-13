@@ -59,6 +59,7 @@ $sectionFiles = @(
     'UI\02-Dashboards.ps1'
     'Orchestrator\07-Dispatch.ps1'
     'Orchestrator\08-Watermarks.ps1'
+    'Orchestrator\09-ContentExplorer.DispatchCallbacks.ps1'
 )
 
 foreach ($section in $sectionFiles) {
@@ -252,6 +253,11 @@ Export-ModuleMember -Function @(
     # Dispatch Loop Engine
     'Invoke-DispatchLoop',
     'Select-LargestPendingTask',
+
+    # Content Explorer Dispatch Callback Helpers
+    'Read-CEDetailSignals',
+    'Find-CEDetailTaskMatch',
+    'New-CEDetailDispatchPayload',
 
     # DLP
     'Export-DlpPolicies',
