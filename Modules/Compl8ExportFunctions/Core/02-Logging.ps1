@@ -90,12 +90,15 @@ function Write-ExportLog {
         Add-Content -Path $script:LogFile -Value $logEntry
     }
 
-    # Track errors and warnings
+    # Track errors and warnings (capped to most-recent N entries; oldest dropped when exceeded)
+    $cap = if ($script:ExportStatsMaxEntries) { $script:ExportStatsMaxEntries } else { 500 }
     if ($Level -eq "Error") {
         [void]$script:ExportStats.Errors.Add(@{ Timestamp = $timestamp; Message = $Message })
+        while ($script:ExportStats.Errors.Count -gt $cap) { $script:ExportStats.Errors.RemoveAt(0) }
     }
     elseif ($Level -eq "Warning") {
         [void]$script:ExportStats.Warnings.Add(@{ Timestamp = $timestamp; Message = $Message })
+        while ($script:ExportStats.Warnings.Count -gt $cap) { $script:ExportStats.Warnings.RemoveAt(0) }
     }
 }
 
