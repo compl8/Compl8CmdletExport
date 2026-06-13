@@ -41,8 +41,9 @@ function Test-WorkerAlive {
         $lastSignOfLife = [datetime]::MinValue
 
         try {
-            $ctTime = [System.IO.File]::GetLastWriteTime($currentTaskPath)
+            $null = [System.IO.File]::GetAttributes($currentTaskPath)   # throws if file absent
             $hasCurrentTask = $true
+            $ctTime = [System.IO.File]::GetLastWriteTime($currentTaskPath)
             if ($ctTime.Year -gt 1601 -and $ctTime -gt $lastSignOfLife) { $lastSignOfLife = $ctTime }
         }
         catch [System.IO.FileNotFoundException], [System.IO.DirectoryNotFoundException] {
