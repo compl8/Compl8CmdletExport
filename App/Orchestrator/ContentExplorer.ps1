@@ -806,8 +806,16 @@ function Invoke-ContentExplorerResume {
                             $allAggregates += $aggResult[1..$metadata.RecordsReturned]
                         }
                         if ($metadata.MorePagesAvailable -eq $true -or $metadata.MorePagesAvailable -eq "True") {
-                            $pageCookie = $metadata.PageCookie
-                        } else { break }
+                            $newAggCookie = $metadata.PageCookie
+                            if ([string]::IsNullOrEmpty($newAggCookie)) {
+                                throw "MorePagesAvailable=true but PageCookie is null/empty - cannot advance aggregate cursor"
+                            }
+                            if ($newAggCookie -eq $pageCookie) {
+                                throw "API returned same PageCookie as previous aggregate page - cursor stuck"
+                            }
+                            $pageCookie = $newAggCookie
+                        }
+                        else { break }
                     } while ($true)
 
                     # Write aggregate results to central CSV
