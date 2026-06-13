@@ -37,6 +37,10 @@ function Invoke-ActivityExplorerWorker {
     Write-ExportLog -Message "AE Worker PID $PID started (file-drop), output folder: $workerDir" -Level Info
     Write-ProgressEntry -Path $progressLogPath -Message "AE Worker PID $PID started"
 
+    # Restore JsonlOutput from saved manifest so page files use the same extension as the original run
+    $savedSettings = Get-ExportSettings -ExportRunDirectory $exportDir
+    if ($savedSettings -and $savedSettings.JsonlOutput -eq $true) { $env:COMPL8_JSONL_OUTPUT = "1" }
+
     # Load Activity Explorer filters (prefer saved manifest for consistency)
     $aeConfigPath = Join-Path $scriptRoot "ConfigFiles\ActivityExplorerSelector.json"
     $filters = Resolve-AEFilters -ExportRunDirectory $exportDir -ConfigPath $aeConfigPath
@@ -319,6 +323,10 @@ function Invoke-AEMultiExport {
         Write-AETaskCsv -Path $aeTaskCsvPath -Tasks $dayTasks
         Write-ExportPhase -ExportDir $exportDir -Phase "AEExport"
 
+        # Restore JsonlOutput from saved manifest so page files use the same extension as the original run
+        $savedSettings = Get-ExportSettings -ExportRunDirectory $exportDir
+        if ($savedSettings -and $savedSettings.JsonlOutput -eq $true) { $env:COMPL8_JSONL_OUTPUT = "1" }
+
         # Single-terminal resume: process tasks sequentially without spawning workers
         if ($ResumeWorkerCount -lt 2) {
             Write-ExportLog -Message "Single-terminal resume mode" -Level Info
@@ -479,6 +487,7 @@ function Invoke-AEMultiExport {
             PastDays       = $PastDays
             PageSize       = $PageSize
             SelectorConfig = $selectorConfig
+            JsonlOutput    = ($env:COMPL8_JSONL_OUTPUT -eq "1")
         }
 
         # SIT reference snapshot: GUID->name map (flat list + rule packages) written to the
@@ -757,6 +766,9 @@ function Invoke-ActivityExplorerExport {
     if ($AEResume) {
         # On resume, prefer saved manifest for filter consistency
         $filters = Resolve-AEFilters -ExportRunDirectory $script:ExportRunDirectory -ConfigPath $configPath -LogDetails
+        # Restore JsonlOutput from saved manifest so page files use the same extension as the original run
+        $savedSettings = Get-ExportSettings -ExportRunDirectory $script:ExportRunDirectory
+        if ($savedSettings -and $savedSettings.JsonlOutput -eq $true) { $env:COMPL8_JSONL_OUTPUT = "1" }
     }
     else {
         # Read config once for both filter loading and manifest save
@@ -768,6 +780,7 @@ function Invoke-ActivityExplorerExport {
             PastDays       = $PastDays
             PageSize       = $PageSize
             SelectorConfig = $selectorConfig
+            JsonlOutput    = ($env:COMPL8_JSONL_OUTPUT -eq "1")
         }
     }
 
