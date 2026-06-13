@@ -50,7 +50,9 @@ function Read-AETaskCsv {
         return @(Import-Csv -Path $Path -Encoding UTF8)
     }
     catch {
-        return @()
+        $errMsg = "Task CSV exists but could not be read (corrupt or locked): {0} - {1}" -f $Path, $_.Exception.Message
+        Write-ExportLog -Message $errMsg -Level Error
+        throw $errMsg
     }
 }
 
@@ -90,7 +92,9 @@ function Read-TaskCsv {
         return @(Import-Csv -Path $Path -Encoding UTF8)
     }
     catch {
-        return @()
+        $errMsg = "Task CSV exists but could not be read (corrupt or locked): {0} - {1}" -f $Path, $_.Exception.Message
+        Write-ExportLog -Message $errMsg -Level Error
+        throw $errMsg
     }
 }
 
