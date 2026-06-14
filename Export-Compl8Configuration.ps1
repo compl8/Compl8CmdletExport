@@ -490,7 +490,11 @@ $scriptPartRoot = Join-Path $PSScriptRoot "App"
 $scriptPartFiles = @(
     'Host\Menu.ps1'
     'Providers\Exports.Core.ps1'
-    'Orchestrator\ContentExplorer.ps1'
+    'Orchestrator\ContentExplorer.Worker.ps1'
+    'Orchestrator\ContentExplorer.Resume.ps1'
+    'Orchestrator\ContentExplorer.Retry.ps1'
+    'Orchestrator\ContentExplorer.TasksCsv.ps1'
+    'Orchestrator\ContentExplorer.Export.ps1'
     'Orchestrator\ActivityExplorer.ps1'
     'Providers\Exports.Other.ps1'
     'MainExecution.ps1'

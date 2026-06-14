@@ -202,7 +202,7 @@ def test_select_largest_pending_task_prioritizes_aggregates_then_largest() -> No
 
 
 def test_content_explorer_export_assigns_large_all_sit_settings() -> None:
-    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.ps1").read_text(encoding="utf-8")
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
     assert "$largeAllSITDetailThreshold = $ceSettings.LargeAllSITDetailThreshold" in source
     assert "$largeAllSITFallbackCandidates = @($ceSettings.LargeAllSITWorkloadFallbackWorkloads)" in source
 
