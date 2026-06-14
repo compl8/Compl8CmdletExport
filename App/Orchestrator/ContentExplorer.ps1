@@ -1073,20 +1073,10 @@ function Invoke-ContentExplorerResume {
                     $classifierDir = Get-CEClassifierDir $ExportDir $task.TagType $task.TagName
 
                     $telemetry = New-ContentExplorerTelemetry -TagType $task.TagType -TagName $task.TagName -Workload $task.Workload
-                    $exportParams = @{
-                        Task                 = $task
-                        PageSize             = $cePageSize
-                        ProgressLogPath      = $progressLogPath
-                        Telemetry            = $telemetry
-                        TelemetryDatabasePath = $telemetryDbPath
-                        AdaptivePageSize     = $true
-                        OutputDirectory      = $classifierDir
-                    }
-                    if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
-                        $exportParams["SiteUrl"] = $task.Location
-                    } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
-                        $exportParams["UserPrincipalName"] = $task.Location
-                    }
+                    # Single-terminal detail splat (resume): page size = $cePageSize, with telemetry.
+                    $exportParams = Build-CEDetailExportParams -Task $task -PageSize $cePageSize `
+                        -ProgressLogPath $progressLogPath -TelemetryDatabasePath $telemetryDbPath `
+                        -OutputDirectory $classifierDir -Telemetry $telemetry
 
                     try {
                         Export-ContentExplorerWithProgress @exportParams | Out-Null
@@ -1256,19 +1246,10 @@ function Invoke-ContentExplorerRetry {
         $classifierDir = Get-CEClassifierDir $ExportDir $task.TagType $task.TagName
 
         $taskPageSize = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } else { $cePageSize }
-        $exportParams = @{
-            Task                  = $task
-            PageSize              = $taskPageSize
-            ProgressLogPath       = $progressLogPath
-            AdaptivePageSize      = $true
-            TelemetryDatabasePath = $telemetryDbPath
-            OutputDirectory       = $classifierDir
-        }
-        if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
-            $exportParams["SiteUrl"] = $task.Location
-        } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
-            $exportParams["UserPrincipalName"] = $task.Location
-        }
+        # Single-terminal detail splat (retry): per-task page size, no telemetry object.
+        $exportParams = Build-CEDetailExportParams -Task $task -PageSize $taskPageSize `
+            -ProgressLogPath $progressLogPath -TelemetryDatabasePath $telemetryDbPath `
+            -OutputDirectory $classifierDir
 
         try {
             Export-ContentExplorerWithProgress @exportParams | Out-Null
@@ -1651,20 +1632,11 @@ function Invoke-ContentExplorerFromTasksCsv {
             $classifierDir = Get-CEClassifierDir $exportDir $task.TagType $task.TagName
 
             $telemetry = New-ContentExplorerTelemetry -TagType $task.TagType -TagName $task.TagName -Workload $task.Workload
-            $exportParams = @{
-                Task                  = $task
-                PageSize              = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } else { $cePageSize }
-                ProgressLogPath       = $progressLogPath
-                Telemetry             = $telemetry
-                TelemetryDatabasePath = $telemetryDbPath
-                AdaptivePageSize      = $true
-                OutputDirectory       = $classifierDir
-            }
-            if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
-                $exportParams["SiteUrl"] = $task.Location
-            } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
-                $exportParams["UserPrincipalName"] = $task.Location
-            }
+            # Single-terminal detail splat (tasks-CSV): per-task page size (same expression as before), with telemetry.
+            $taskPageSize = if ($task.PageSize -and ($task.PageSize -as [int]) -gt 0) { ($task.PageSize -as [int]) } else { $cePageSize }
+            $exportParams = Build-CEDetailExportParams -Task $task -PageSize $taskPageSize `
+                -ProgressLogPath $progressLogPath -TelemetryDatabasePath $telemetryDbPath `
+                -OutputDirectory $classifierDir -Telemetry $telemetry
 
             try {
                 Export-ContentExplorerWithProgress @exportParams | Out-Null
@@ -3020,19 +2992,10 @@ function Invoke-ContentExplorerExport {
             # Output to Data/ContentExplorer/TagType/TagName/
             $classifierDir = Get-CEClassifierDir $exportDir $task.TagType $task.TagName
 
-            $exportParams = @{
-                Task                  = $task
-                PageSize              = $taskPageSize
-                ProgressLogPath       = $progressLogPath
-                AdaptivePageSize      = $true
-                TelemetryDatabasePath = $telemetryDbPath
-                OutputDirectory       = $classifierDir
-            }
-            if ($task.LocationType -eq "SiteUrl" -and $task.Location) {
-                $exportParams["SiteUrl"] = $task.Location
-            } elseif ($task.LocationType -eq "UPN" -and $task.Location) {
-                $exportParams["UserPrincipalName"] = $task.Location
-            }
+            # Single-terminal detail splat (fresh): no telemetry object (matches prior inline build).
+            $exportParams = Build-CEDetailExportParams -Task $task -PageSize $taskPageSize `
+                -ProgressLogPath $progressLogPath -TelemetryDatabasePath $telemetryDbPath `
+                -OutputDirectory $classifierDir
 
             $exportFailed = $false
             try {

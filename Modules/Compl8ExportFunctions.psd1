@@ -45,6 +45,7 @@ RequiredModules = @(
 FunctionsToExport = @(
     'Add-ExportCount',
     'Add-PartialError',
+    'Build-CEDetailExportParams',
     'Complete-WorkerTask',
     'Connect-Compl8Compliance',
     'ConvertFrom-SignedEnvelopeJson',
