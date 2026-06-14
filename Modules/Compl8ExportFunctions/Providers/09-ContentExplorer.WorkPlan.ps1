@@ -50,60 +50,22 @@ function New-ContentExplorerWorkPlan {
         ErrorTasks           = @()
     }
 
-    $maxRetries = 3
-
     foreach ($tagName in $TagNames) {
         foreach ($workload in $Workloads) {
             Write-ExportLog -Message ("    Aggregate: " + $tagName + " / " + $workload) -Level Info
 
-            $allAggregates = [System.Collections.ArrayList]::new()
-            $pageCookie = $null
+            $allAggregates = @()
             $aggError = $null
             $aggSuccess = $false
 
             try {
-                # Paginated aggregate query loop
-                do {
-                    $aggParams = @{
-                        TagType     = $TagType
-                        TagName     = $tagName
-                        Workload    = $workload
-                        PageSize    = 5000
-                        Aggregate   = $true
-                        ErrorAction = 'Stop'
-                    }
-                    if ($pageCookie) { $aggParams['PageCookie'] = $pageCookie }
-
-                    $aggResult = Invoke-RetryWithBackoff -ScriptBlock {
-                        Export-ContentExplorerData @aggParams
-                    } -MaxRetries $maxRetries -Context ("Aggregate: " + $tagName + "/" + $workload)
-
-                    # Process aggregate page results
-                    if ($null -eq $aggResult -or $aggResult.Count -eq 0) { break }
-
-                    $metadata = $aggResult[0]
-                    if ($metadata.RecordsReturned -gt 0) {
-                        $pageRecords = $aggResult[1..$metadata.RecordsReturned]
-                        foreach ($rec in $pageRecords) {
-                            [void]$allAggregates.Add($rec)
-                        }
-                    }
-
-                    # Check for more pages
-                    if ($metadata.MorePagesAvailable -eq $true -or $metadata.MorePagesAvailable -eq "True") {
-                        $newAggCookie = $metadata.PageCookie
-                        if ([string]::IsNullOrEmpty($newAggCookie)) {
-                            throw "MorePagesAvailable=true but PageCookie is null/empty - cannot advance aggregate cursor"
-                        }
-                        if ($newAggCookie -eq $pageCookie) {
-                            throw "API returned same PageCookie as previous aggregate page - cursor stuck"
-                        }
-                        $pageCookie = $newAggCookie
-                    }
-                    else {
-                        break
-                    }
-                } while ($true)
+                # Shared aggregate pagination loop (BackoffHelper strategy:
+                # Invoke-RetryWithBackoff -MaxRetries 3, Context "Aggregate: <name>/<workload>").
+                # Cookie null/empty + same-cookie guards live inside the function.
+                $allAggregates = @(Invoke-CEAggregatePaging `
+                    -TagType $TagType -TagName $tagName -Workload $workload `
+                    -PageSize 5000 -RetryMode 'BackoffHelper' `
+                    -BackoffContext ("Aggregate: " + $tagName + "/" + $workload))
 
                 $aggSuccess = $true
             }

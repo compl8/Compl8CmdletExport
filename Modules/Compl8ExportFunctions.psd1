@@ -112,6 +112,7 @@ FunctionsToExport = @(
     'Import-AggregateDataFromCsv',
     'Initialize-ExportDirectories',
     'Initialize-ExportLog',
+    'Invoke-CEAggregatePaging',
     'Invoke-DispatchLoop',
     'Invoke-RetryWithBackoff',
     'Invoke-WithAuthRecovery',

@@ -60,6 +60,7 @@ $sectionFiles = @(
     'Orchestrator\07-Dispatch.ps1'
     'Orchestrator\08-Watermarks.ps1'
     'Orchestrator\09-ContentExplorer.DispatchCallbacks.ps1'
+    'Orchestrator\10-ContentExplorer.AggregatePaging.ps1'
 )
 
 foreach ($section in $sectionFiles) {
@@ -258,6 +259,9 @@ Export-ModuleMember -Function @(
     'Read-CEDetailSignals',
     'Find-CEDetailTaskMatch',
     'New-CEDetailDispatchPayload',
+
+    # Content Explorer Aggregate Pagination (shared loop)
+    'Invoke-CEAggregatePaging',
 
     # DLP
     'Export-DlpPolicies',

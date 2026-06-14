@@ -148,130 +148,18 @@
             $aggLocations = @()
             $totalCount = 0
             $aggError = $null
-            $maxAggRetries = 3
-            $aggFinalAttemptDelay = 120
 
             try {
-                $allAggregates = @()
-                $pageCookie = $null
-                $aggPageNum = 0
-
-                do {
-                    $aggParams = @{
-                        TagType     = $taskTagType
-                        TagName     = $taskTagName
-                        Workload    = $taskWorkload
-                        PageSize    = 5000
-                        Aggregate   = $true
-                        ErrorAction = 'Stop'
-                    }
-                    if ($pageCookie) { $aggParams['PageCookie'] = $pageCookie }
-
-                    $pageSuccess = $false
-                    $pageRetry = 0
-
-                    while (-not $pageSuccess -and $pageRetry -le $maxAggRetries) {
-                        try {
-                            $aggResult = Export-ContentExplorerData @aggParams
-                            $pageSuccess = $true
-                        }
-                        catch {
-                            $lastPageError = $_
-                            $pageRetry++
-                            $errorInfo = Get-HttpErrorExplanation -ErrorMessage $_.Exception.Message -ErrorRecord $_
-                            $statusStr = if ($errorInfo.StatusCode) { "HTTP $($errorInfo.StatusCode)" } else { $errorInfo.Category }
-
-                            # Connection lost - cmdlet not available (session dropped or never established)
-                            if ($_.Exception -is [System.Management.Automation.CommandNotFoundException]) {
-                                Write-ExportLog -Message "    CONNECTION LOST: S&C cmdlet not available - attempting reconnection..." -Level Warning
-                                try {
-                                    Disconnect-Compl8Compliance
-                                    if ($script:AuthParams -and $script:AuthParams.Count -gt 0) {
-                                        $reAuthResult = Connect-Compl8Compliance @script:AuthParams
-                                        if ($reAuthResult) {
-                                            Write-ExportLog -Message "    Reconnection successful - retrying" -Level Success
-                                            $pageRetry--
-                                            continue
-                                        }
-                                    }
-                                }
-                                catch {
-                                    Write-ExportLog -Message ("    Reconnection failed: {0}" -f $_.Exception.Message) -Level Error
-                                }
-                                # Cannot recover - throw to outer catch (bad session tracking will exit the worker)
-                                throw $lastPageError
-                            }
-
-                            # Auth recovery
-                            if ($errorInfo.Category -eq "AuthError") {
-                                Write-ExportLog -Message "    AUTH EXPIRED during aggregate - attempting recovery..." -Level Warning
-                                try {
-                                    Disconnect-Compl8Compliance
-                                    if ($script:AuthParams -and $script:AuthParams.Count -gt 0) {
-                                        $reAuthResult = Connect-Compl8Compliance @script:AuthParams
-                                        if ($reAuthResult) {
-                                            Write-ExportLog -Message "    Re-authentication successful - retrying" -Level Success
-                                            $pageRetry--
-                                            continue
-                                        }
-                                    }
-                                }
-                                catch {
-                                    Write-ExportLog -Message ("    Re-authentication failed: {0}" -f $_.Exception.Message) -Level Error
-                                }
-                                throw $lastPageError
-                            }
-
-                            # Log the error
-                            if ($script:ErrorLogPath) {
-                                Write-ExportErrorLog -ErrorLogPath $script:ErrorLogPath -Context "Worker Aggregate (Page Retry)" -TaskKey $taskKey -ErrorRecord $_ -AdditionalData @{ RetryCount = $pageRetry; MaxRetries = $maxAggRetries; Page = $aggPageNum }
-                            }
-                            if ($script:WorkerErrorLogPath) {
-                                Write-ExportErrorLog -ErrorLogPath $script:WorkerErrorLogPath -Context "Worker Aggregate (Page Retry)" -TaskKey $taskKey -ErrorRecord $_ -AdditionalData @{ RetryCount = $pageRetry; MaxRetries = $maxAggRetries; Page = $aggPageNum }
-                            }
-
-                            if ($errorInfo.IsTransient -and $pageRetry -le $maxAggRetries) {
-                                if ($pageRetry -eq $maxAggRetries) {
-                                    $msg = "    Aggregate TRANSIENT ERROR [{0}] (attempt {1}/{2}) - final attempt in {3}s" -f $statusStr, $pageRetry, $maxAggRetries, $aggFinalAttemptDelay
-                                    Write-ExportLog -Message $msg -Level Warning
-                                    Start-Sleep -Seconds $aggFinalAttemptDelay
-                                }
-                                else {
-                                    $retryDelay = 60 * $pageRetry
-                                    $msg = "    Aggregate TRANSIENT ERROR [{0}] (attempt {1}/{2}) - waiting {3}s" -f $statusStr, $pageRetry, $maxAggRetries, $retryDelay
-                                    Write-ExportLog -Message $msg -Level Warning
-                                    Start-Sleep -Seconds $retryDelay
-                                }
-                            }
-                            else {
-                                $msg = "    Aggregate FAILED [{0}] after {1} attempts" -f $statusStr, $pageRetry
-                                Write-ExportLog -Message $msg -Level Error
-                                throw
-                            }
-                        }
-                    }
-
-                    $aggPageNum++
-
-                    if ($null -eq $aggResult -or $aggResult.Count -eq 0) { break }
-
-                    $metadata = $aggResult[0]
-                    if ($metadata.RecordsReturned -gt 0) {
-                        $allAggregates += $aggResult[1..$metadata.RecordsReturned]
-                    }
-
-                    if ($metadata.MorePagesAvailable -eq $true -or $metadata.MorePagesAvailable -eq "True") {
-                        $newAggCookie = $metadata.PageCookie
-                        if ([string]::IsNullOrEmpty($newAggCookie)) {
-                            throw "MorePagesAvailable=true but PageCookie is null/empty - cannot advance aggregate cursor"
-                        }
-                        if ($newAggCookie -eq $pageCookie) {
-                            throw "API returned same PageCookie as previous aggregate page - cursor stuck"
-                        }
-                        $pageCookie = $newAggCookie
-                    }
-                    else { break }
-                } while ($true)
+                # Shared aggregate pagination loop (worker reconnect-in-place strategy).
+                # $script:AuthParams / $script:ErrorLogPath / $script:WorkerErrorLogPath
+                # live in the App/orchestrator script scope, NOT the module scope, so
+                # they MUST be passed explicitly — a module function cannot see them.
+                $allAggregates = @(Invoke-CEAggregatePaging `
+                    -TagType $taskTagType -TagName $taskTagName -Workload $taskWorkload `
+                    -PageSize 5000 -RetryMode 'WorkerReconnect' `
+                    -AuthParams $script:AuthParams -WriteWorkerErrorLog `
+                    -ErrorLogPath $script:ErrorLogPath -WorkerErrorLogPath $script:WorkerErrorLogPath `
+                    -TaskKey $taskKey)
 
                 $aggSuccess = $true
                 $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
@@ -785,38 +673,13 @@ function Invoke-ContentExplorerResume {
                 Write-ExportLog -Message ("  Aggregate: {0}" -f $taskKey) -Level Info
 
                 try {
-                    $allAggregates = @()
-                    $pageCookie = $null
-                    do {
-                        $aggParams = @{
-                            TagType     = $aggTask.TagType
-                            TagName     = $aggTask.TagName
-                            Workload    = $aggTask.Workload
-                            PageSize    = 5000
-                            Aggregate   = $true
-                            ErrorAction = 'Stop'
-                        }
-                        if ($pageCookie) { $aggParams['PageCookie'] = $pageCookie }
-
-                        $aggResult = Export-ContentExplorerData @aggParams
-                        if ($null -eq $aggResult -or $aggResult.Count -eq 0) { break }
-
-                        $metadata = $aggResult[0]
-                        if ($metadata.RecordsReturned -gt 0) {
-                            $allAggregates += $aggResult[1..$metadata.RecordsReturned]
-                        }
-                        if ($metadata.MorePagesAvailable -eq $true -or $metadata.MorePagesAvailable -eq "True") {
-                            $newAggCookie = $metadata.PageCookie
-                            if ([string]::IsNullOrEmpty($newAggCookie)) {
-                                throw "MorePagesAvailable=true but PageCookie is null/empty - cannot advance aggregate cursor"
-                            }
-                            if ($newAggCookie -eq $pageCookie) {
-                                throw "API returned same PageCookie as previous aggregate page - cursor stuck"
-                            }
-                            $pageCookie = $newAggCookie
-                        }
-                        else { break }
-                    } while ($true)
+                    # Shared aggregate pagination loop (resume strategy: single call,
+                    # no per-page retry — errors propagate to the catch below, exactly
+                    # as the prior inline loop did). Cookie null/empty + same-cookie
+                    # guards are preserved inside Invoke-CEAggregatePaging.
+                    $allAggregates = @(Invoke-CEAggregatePaging `
+                        -TagType $aggTask.TagType -TagName $aggTask.TagName -Workload $aggTask.Workload `
+                        -PageSize 5000 -RetryMode 'None')
 
                     # Write aggregate results to central CSV
                     $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
