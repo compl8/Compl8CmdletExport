@@ -919,26 +919,37 @@ function Invoke-ContentExplorerExport {
             $completedDetailItemsWithProgress = $completedDetailItems + $inProgressItemTotal
 
             # Session keepalive: run lightweight command every 10 minutes
-            if (((Get-Date) - $Context.LastKeepalive) -gt $Context.KeepaliveInterval) {
+            if (-not $Context.KeepaliveDisabled -and ((Get-Date) - $Context.LastKeepalive) -gt $Context.KeepaliveInterval) {
                 try {
                     Get-Label -ResultSize 1 -WarningAction SilentlyContinue -ErrorAction Stop | Out-Null
                     $Context.LastKeepalive = Get-Date
                 }
                 catch {
+                    # Always reset the timer first — prevents re-firing on every ~2s loop
+                    # iteration regardless of which branch below we take.
+                    $Context.LastKeepalive = Get-Date
                     Write-ExportLog -Message ("  Session keepalive failed: {0}" -f $_.Exception.Message) -Level Warning -LogOnly
-                    try {
-                        Disconnect-Compl8Compliance -LogOnly
-                        if ($Context.AuthParams -and $Context.AuthParams.Count -gt 0) {
+                    if ($Context.AuthParams -and $Context.AuthParams.Count -gt 0) {
+                        # Cert-auth: attempt silent reconnect; retry on the next interval.
+                        try {
+                            Disconnect-Compl8Compliance -LogOnly
                             # Splat the hashtable by named keys. @($Context.AuthParams)
                             # wraps it in a one-element array and splats positionally,
                             # so cert-auth params were effectively dropped.
                             $keepaliveAuthParams = $Context.AuthParams
                             Connect-Compl8Compliance @keepaliveAuthParams -LogOnly
-                            $Context.LastKeepalive = Get-Date
+                        } catch {
+                            Write-ExportLog -Message ("  Session reconnection failed (non-fatal): {0}" -f $_.Exception.Message) -Level Warning -LogOnly
                         }
-                    } catch {
-                        Write-ExportLog -Message ("  Session reconnection failed (non-fatal): {0}" -f $_.Exception.Message) -Level Warning -LogOnly
-                        $Context.LastKeepalive = Get-Date
+                    } else {
+                        # Interactive auth: cannot reconnect silently inside the orchestrator.
+                        # Disable keepalive for the rest of this run — the orchestrator does not
+                        # need its own session during file-drop dispatch (workers hold their own
+                        # sessions), so this is safe.  Log once and stop attempting.
+                        $Context.KeepaliveDisabled = $true
+                        Write-ExportLog -Message ("  Orchestrator session keepalive disabled after failure " +
+                            "(interactive auth cannot silently reconnect); " +
+                            "multi-terminal coordination continues via file-drop.") -Level Warning -LogOnly
                     }
                 }
             }
@@ -1071,6 +1082,7 @@ function Invoke-ContentExplorerExport {
             DispatchTimes         = @{}
             LastKeepalive         = $lastSessionKeepalive
             KeepaliveInterval     = $keepaliveInterval
+            KeepaliveDisabled     = $false
             AuthParams            = $script:AuthParams
             UnifiedTasks          = $unifiedTasks
             WorkerProcessesRef    = [ref]$workerProcesses
