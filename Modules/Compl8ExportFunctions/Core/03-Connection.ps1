@@ -185,5 +185,205 @@ function Disconnect-Compl8Compliance {
     }
 }
 
+
+function Test-AuthConfig {
+    <#
+    .SYNOPSIS
+        Validates AuthConfig.json shape and, when a thumbprint is given, confirms the cert
+        exists in the certificate store and has not expired (within a configurable buffer).
+
+    .DESCRIPTION
+        Designed to be called before attempting a connection in unattended mode so that a
+        misconfigured cert fails fast with a structured result rather than an opaque
+        Connect-IPPSSession error.
+
+        Validation order:
+          1. Config file exists and parses → else ConfigError
+          2. UseCertificateAuth = "True" with AppId, Organization, and CertificateThumbprint
+             all non-empty → else ConfigError (UPN / interactive config is not valid for
+             unattended use; caller must configure cert auth)
+          3. Cert found via -GetCertificate scriptblock → else AuthFailed
+          4. Cert NotAfter > (now + Buffer) → else AuthFailed ("expired or expiring")
+
+        Returns a [pscustomobject] with:
+          IsValid    [bool]    — $true only when all checks pass
+          Status     [string]  — '' | 'ConfigError' | 'AuthFailed'
+          AuthType   [string]  — 'Certificate' | 'Interactive' | 'UPN'
+          Thumbprint [string]  — thumbprint from config (or '' if absent)
+          NotAfter   [datetime] or $null — cert expiry from the store
+          Errors     [string[]] — human-readable failure reasons (empty on success)
+
+    .PARAMETER ConfigPath
+        Absolute path to AuthConfig.json.
+
+    .PARAMETER Buffer
+        How long before actual expiry a cert is considered "expiring" (default 1 day).
+
+    .PARAMETER GetCertificate
+        Scriptblock that accepts a thumbprint string and returns an object with a NotAfter
+        property, or $null when not found.  Default: searches Cert:\CurrentUser\My then
+        Cert:\LocalMachine\My.  Override in tests to avoid needing a real certificate store.
+
+    .OUTPUTS
+        [pscustomobject] — see Description for field list.
+
+    .EXAMPLE
+        # Real call in production:
+        $check = Test-AuthConfig -ConfigPath (Join-Path $scriptRoot 'ConfigFiles\AuthConfig.json')
+        if (-not $check.IsValid) { Write-Error "Auth pre-flight failed: $($check.Errors -join '; ')" }
+
+    .EXAMPLE
+        # In-process test with an injected fake cert:
+        $fakeCert = [pscustomobject]@{ NotAfter = (Get-Date).AddDays(30) }
+        $check = Test-AuthConfig -ConfigPath $tmpJson -GetCertificate { param($tp) $fakeCert }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$ConfigPath,
+
+        [timespan]$Buffer = [timespan]::FromDays(1),
+
+        [scriptblock]$GetCertificate = {
+            param([string]$Thumbprint)
+            $cert = Get-ChildItem -Path 'Cert:\CurrentUser\My' -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Thumbprint -eq $Thumbprint } |
+                    Select-Object -First 1
+            if ($cert) { return $cert }
+            Get-ChildItem -Path 'Cert:\LocalMachine\My' -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Thumbprint -eq $Thumbprint } |
+                    Select-Object -First 1
+        }
+    )
+
+    $errors    = [System.Collections.Generic.List[string]]::new()
+    $thumbprint = ''
+    $notAfter  = $null
+    $authType  = 'Interactive'
+
+    # ── 1. Config file present and parseable ──────────────────────────────────
+    if (-not (Test-Path $ConfigPath)) {
+        $errors.Add("AuthConfig.json not found at: $ConfigPath")
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'ConfigError'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    $authConfig = $null
+    try {
+        $authConfig = Get-Content -Raw -Path $ConfigPath -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $errors.Add("AuthConfig.json could not be parsed: $($_.Exception.Message)")
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'ConfigError'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    # ── 2. Certificate auth fields present ───────────────────────────────────
+    $useCert = $authConfig.UseCertificateAuth -eq 'True'
+    if ($authConfig.PSObject.Properties['UserPrincipalName'] -and -not [string]::IsNullOrWhiteSpace($authConfig.UserPrincipalName)) {
+        $authType = 'UPN'
+    }
+    if ($useCert) {
+        $authType = 'Certificate'
+    }
+
+    if (-not $useCert) {
+        $errors.Add("AuthConfig.json does not enable certificate auth (UseCertificateAuth != 'True'). Unattended mode requires cert auth.")
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'ConfigError'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    $missingFields = @()
+    if ([string]::IsNullOrWhiteSpace($authConfig.AppId))                   { $missingFields += 'AppId' }
+    if ([string]::IsNullOrWhiteSpace($authConfig.Organization))            { $missingFields += 'Organization' }
+    if ([string]::IsNullOrWhiteSpace($authConfig.CertificateThumbprint))   { $missingFields += 'CertificateThumbprint' }
+
+    if ($missingFields.Count -gt 0) {
+        $errors.Add("AuthConfig.json is missing required cert-auth field(s): $($missingFields -join ', ')")
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'ConfigError'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    # Trim so a copy-paste leading/trailing space in AuthConfig.json doesn't turn a
+    # present cert into a confusing AuthFailed (store lookup is exact on thumbprint).
+    $thumbprint = $authConfig.CertificateThumbprint.Trim()
+
+    # ── 3. Cert exists in store ───────────────────────────────────────────────
+    $cert = $null
+    $certLookupFailed = $false
+    try {
+        $cert = & $GetCertificate $thumbprint
+    }
+    catch {
+        $errors.Add("GetCertificate scriptblock threw: $($_.Exception.Message)")
+        $certLookupFailed = $true
+    }
+
+    if (-not $cert) {
+        # Only add the "not found" message when the lookup actually returned null;
+        # if it threw, the catch already recorded the real cause (avoid double error).
+        if (-not $certLookupFailed) {
+            $errors.Add("Certificate with thumbprint '$thumbprint' not found in Cert:\CurrentUser\My or Cert:\LocalMachine\My")
+        }
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'AuthFailed'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    $notAfter = $cert.NotAfter
+
+    # ── 4. Cert not expired (with buffer) ────────────────────────────────────
+    $deadline = (Get-Date).Add($Buffer)
+    if ($notAfter -le $deadline) {
+        $errors.Add("Certificate '$thumbprint' has expired or will expire within $($Buffer.TotalHours)h (NotAfter: $($notAfter.ToString('u'))). Renew before running unattended.")
+        return [pscustomobject]@{
+            IsValid    = $false
+            Status     = 'AuthFailed'
+            AuthType   = $authType
+            Thumbprint = $thumbprint
+            NotAfter   = $notAfter
+            Errors     = $errors.ToArray()
+        }
+    }
+
+    return [pscustomobject]@{
+        IsValid    = $true
+        Status     = ''
+        AuthType   = $authType
+        Thumbprint = $thumbprint
+        NotAfter   = $notAfter
+        Errors     = @()
+    }
+}
+
 #endregion
 

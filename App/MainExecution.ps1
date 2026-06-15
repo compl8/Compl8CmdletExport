@@ -1,5 +1,85 @@
 ﻿#region Main Execution
 
+function Invoke-UnattendedAuthPreflight {
+    <#
+    .SYNOPSIS
+        Unattended-only AuthConfig pre-flight. No-op in interactive mode.
+    .DESCRIPTION
+        When $script:Unattended is set, validates ConfigFiles\AuthConfig.json via
+        Test-AuthConfig BEFORE any Connect-Compl8Compliance attempt. On failure it logs
+        each error, optionally writes a RunSummary, and exits with the mapped exit code
+        (ConfigError = 4, AuthFailed = 3) — never silently falling back to interactive.
+        Interactive runs return immediately so Build-AuthParameters' silent fallback stays.
+    .PARAMETER ExportDir
+        Directory to write RunSummary.json into (only when -WriteSummary). Defaults to the
+        current run directory.
+    .PARAMETER Mode
+        Mode label recorded in the RunSummary (e.g. FullExport, ContentExplorerResume).
+    .PARAMETER WriteSummary
+        Write a RunSummary.json on failure. Omit for worker mode — a worker does not own the
+        run's RunSummary; the spawning orchestrator already pre-flighted and owns the summary.
+    #>
+    param(
+        [string]$ExportDir = $script:ExportRunDirectory,
+        [string]$Mode = $script:SelectedMode,
+        [switch]$WriteSummary
+    )
+
+    if (-not $script:Unattended) { return }
+
+    $authCheck = Test-AuthConfig -ConfigPath (Join-Path $scriptRoot 'ConfigFiles\AuthConfig.json')
+    if (-not $authCheck.IsValid) {
+        foreach ($e in $authCheck.Errors) {
+            Write-ExportLog -Message "Unattended auth pre-flight failed: $e" -Level Error
+        }
+        if ($WriteSummary -and $ExportDir -and (Test-Path $ExportDir)) {
+            Write-RunSummary -ExportDir $ExportDir -Result @{
+                Mode   = $Mode
+                Status = $authCheck.Status
+                Errors = @($authCheck.Errors)
+            }
+        }
+        exit (Get-ExportExitCode -Status $authCheck.Status)
+    }
+    Write-ExportLog -Message ("Unattended auth pre-flight OK (thumbprint {0}, expires {1:u})" -f $authCheck.Thumbprint, $authCheck.NotAfter) -Level Info
+}
+
+function Get-RunFinalStatus {
+    <#
+    .SYNOPSIS
+        Computes final Completed/Partial status for a sub-mode run (Resume/Retry/TasksCsv).
+    .DESCRIPTION
+        Mirrors the main-path logic (lines 1010-1026) so sub-mode exits share the same
+        status-determination rules: Partial if errors > 0, remaining tasks > 0, or the
+        remaining-task check itself failed; Completed otherwise.
+    .PARAMETER ExportDir
+        Path to the export run directory.
+    .OUTPUTS
+        Hashtable with keys: Status (string), Remaining (int), Stats (ExportStatistics).
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$ExportDir
+    )
+
+    $stats = Get-ExportStatistics
+    $remaining = 0
+    $checkFailed = $false
+
+    if ($ExportDir -and (Test-Path $ExportDir)) {
+        try {
+            $remaining = Write-RemainingTasksCsv -ExportDir $ExportDir
+        }
+        catch {
+            $checkFailed = $true
+            Write-ExportLog -Message ("Could not determine remaining-task count ({0}); reporting status as Partial." -f $_.Exception.Message) -Level Warning
+        }
+    }
+
+    $status = if ($stats.ErrorCount -gt 0 -or $remaining -gt 0 -or $checkFailed) { 'Partial' } else { 'Completed' }
+    return @{ Status = $status; Remaining = $remaining; Stats = $stats }
+}
+
 # Worker mode: skip menu, confirmation, and go straight to work
 if ($WorkerExportDir) {
     if (-not (Test-Path $WorkerExportDir)) {
@@ -24,13 +104,17 @@ if ($WorkerExportDir) {
     # Check prerequisites
     if (-not (Test-ExportPrerequisites)) { exit 1 }
 
+    # Unattended auth pre-flight (no RunSummary — a worker doesn't own the run's summary;
+    # the spawning orchestrator already pre-flighted and owns it).
+    Invoke-UnattendedAuthPreflight
+
     # Authenticate
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
     $script:IsWorkerMode = $true
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     # Run appropriate worker based on export type
@@ -64,12 +148,17 @@ if ($CEResumeDir) {
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
 
+    Invoke-UnattendedAuthPreflight -ExportDir $CEResumeDir -Mode 'ContentExplorerResume' -WriteSummary
+
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and (Test-Path $CEResumeDir)) {
+            Write-RunSummary -ExportDir $CEResumeDir -Result @{ Mode = 'ContentExplorerResume'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -78,7 +167,9 @@ if ($CEResumeDir) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $resumeFinal = Get-RunFinalStatus -ExportDir $CEResumeDir
+    Write-RunSummary -ExportDir $CEResumeDir -Result @{ Mode = 'ContentExplorerResume'; Status = $resumeFinal.Status; RemainingTasks = $resumeFinal.Remaining; Errors = @($resumeFinal.Stats.Errors) }
+    exit (Get-ExportExitCode -Status $resumeFinal.Status)
 }
 
 # Retry mode: skip menu, authenticate, and retry discrepant tasks
@@ -96,12 +187,17 @@ if ($CERetryDir) {
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
 
+    Invoke-UnattendedAuthPreflight -ExportDir $CERetryDir -Mode 'ContentExplorerRetry' -WriteSummary
+
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and (Test-Path $CERetryDir)) {
+            Write-RunSummary -ExportDir $CERetryDir -Result @{ Mode = 'ContentExplorerRetry'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -110,7 +206,9 @@ if ($CERetryDir) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $retryFinal = Get-RunFinalStatus -ExportDir $CERetryDir
+    Write-RunSummary -ExportDir $CERetryDir -Result @{ Mode = 'ContentExplorerRetry'; Status = $retryFinal.Status; RemainingTasks = $retryFinal.Remaining; Errors = @($retryFinal.Stats.Errors) }
+    exit (Get-ExportExitCode -Status $retryFinal.Status)
 }
 
 # Task CSV mode: skip menu, authenticate, and run from task CSV
@@ -129,12 +227,17 @@ if ($CETasksCsv) {
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
 
+    Invoke-UnattendedAuthPreflight -Mode 'ContentExplorerTasksCsv' -WriteSummary
+
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and $script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = 'ContentExplorerTasksCsv'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -143,7 +246,11 @@ if ($CETasksCsv) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $tasksCsvFinal = Get-RunFinalStatus -ExportDir $script:ExportRunDirectory
+    if ($script:ExportRunDirectory) {
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = 'ContentExplorerTasksCsv'; Status = $tasksCsvFinal.Status; RemainingTasks = $tasksCsvFinal.Remaining; Errors = @($tasksCsvFinal.Stats.Errors) }
+    }
+    exit (Get-ExportExitCode -Status $tasksCsvFinal.Status)
 }
 
 # Check if we should show the interactive menu
@@ -158,6 +265,19 @@ $script:MenuNoActivity = $false
 $script:MenuNoContent = $false
 
 if ($showMenu) {
+    # Fallback H: unattended mode with no recognised export mode → fail fast.
+    if ($script:Unattended) {
+        Write-ExportLog -Message "Unattended mode requires an explicit export mode (-FullExport, -DlpOnly, -ContentExplorer, etc.). No mode was provided; cannot show interactive menu." -Level Error
+        if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+                Mode   = 'None'
+                Status = 'ConfigError'
+                Errors = @("No export mode specified for unattended run.")
+            }
+        }
+        exit (Get-ExportExitCode -Status 'ConfigError')
+    }
+
     $menuResult = Show-ExportMenu
 
     if ($menuResult.Quit) {
@@ -516,10 +636,14 @@ switch ($script:SelectedMode) {
 Write-Host ""
 
 # Confirmation prompt (defaults to Yes on Enter)
-$confirmation = Read-Host "Proceed with export? [Y]/N"
-if ($confirmation -match '^[Nn]') {
-    Write-Host "Export cancelled by user." -ForegroundColor Yellow
-    exit 0
+if (-not $script:Unattended) {
+    $confirmation = Read-Host "Proceed with export? [Y]/N"
+    if ($confirmation -match '^[Nn]') {
+        Write-Host "Export cancelled by user." -ForegroundColor Yellow
+        exit 0
+    }
+} else {
+    Write-ExportLog -Message "Unattended: proceeding without confirmation (prompt A skipped)." -Level Info
 }
 
 Write-Host ""
@@ -591,9 +715,9 @@ function Confirm-ConnectedTenant {
         Proceed, Relabel (rename the run dir), Re-authenticate (different account), or
         Abort.
 
-        Non-interactive (input redirected / no console): logs the label + domain and
-        proceeds without prompting - forward-compat with a future -Unattended switch and
-        the cert-auth silent flow.
+        Non-interactive (input redirected / no console) or -Unattended
+        ($script:Unattended): logs the label + domain and proceeds without prompting -
+        keeps scheduled / cert-auth silent runs from hanging at this guard.
     .PARAMETER ConnectParams
         The splatted connect parameters (from Build-AuthParameters), reused for the
         Re-authenticate path.
@@ -640,9 +764,12 @@ function Confirm-ConnectedTenant {
             Write-Host "  (domain unchanged - if you intended a different account, you may need to sign out of the cached account in the browser)" -ForegroundColor Yellow
         }
 
-        # --- 3. Non-interactive guard ---
-        if ([Console]::IsInputRedirected) {
-            Write-ExportLog -Message ("Tenant confirmation skipped (non-interactive): label='{0}', connected domain='{1}'. Proceeding." -f $label, $domainDisplay) -Level Info
+        # --- 3. Non-interactive / unattended guard ---
+        # -Unattended must skip this prompt even on an interactive console (a scheduled
+        # task can launch with IsInputRedirected = $false), otherwise it would hang here.
+        if ([Console]::IsInputRedirected -or $script:Unattended) {
+            $skipReason = if ($script:Unattended) { "unattended/non-interactive" } else { "non-interactive" }
+            Write-ExportLog -Message ("Tenant confirmation skipped ({0}): label='{1}', connected domain='{2}'. Proceeding." -f $skipReason, $label, $domainDisplay) -Level Info
             return $true
         }
 
@@ -748,6 +875,10 @@ try {
         Write-ExportLog -Message "`nSkipping config validation (resume mode - project already exists)" -Level Info
     }
 
+    # Auth pre-flight (unattended only) — validate AuthConfig before attempting a connect.
+    # Interactive mode keeps Build-AuthParameters' silent fallback behavior.
+    Invoke-UnattendedAuthPreflight -WriteSummary
+
     # Connect to Security & Compliance PowerShell
     Write-ExportLog -Message "`nConnecting to Security & Compliance PowerShell..." -Level Info
     $connectParams = Build-AuthParameters
@@ -756,7 +887,10 @@ try {
 
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-ExportLog -Message "Failed to connect. Exiting." -Level Error
-        exit 1
+        if ($script:Unattended -and $script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = $exportMode; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     # Post-connect tenant confirmation (interactive only; non-interactive proceeds).
@@ -919,10 +1053,85 @@ try {
             }
         }
     }
+
+    # ── Compute final status and write RunSummary.json ─────────────────────
+    # Status determination:
+    #   Partial  — errors were logged, or remaining tasks > 0 (Detail phase incomplete)
+    #   Completed — no errors, no remaining tasks
+    # Exit code: 0 for Completed, 2 for Partial (so interactive users are not
+    # surprised on a clean run, and schedulers can distinguish partial vs. clean).
+    $finalStats          = Get-ExportStatistics
+    $remainingTasksCount  = 0
+    $remainingCheckFailed = $false
+    if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+        try {
+            $remainingTasksCount = Write-RemainingTasksCsv -ExportDir $script:ExportRunDirectory
+        }
+        catch {
+            # Can't trust the remaining-task count — never report a false Completed.
+            # Force Partial so the exit code (2) reflects the uncertainty.
+            $remainingCheckFailed = $true
+            Write-ExportLog -Message ("Could not determine remaining-task count ({0}); reporting status as Partial." -f $_.Exception.Message) -Level Warning
+        }
+    }
+
+    $finalStatus = if ($finalStats.ErrorCount -gt 0 -or $remainingTasksCount -gt 0 -or $remainingCheckFailed) {
+        'Partial'
+    } else {
+        'Completed'
+    }
+
+    # Build sections array from ExportStats.ItemsExported categories.
+    $finalSections = @(
+        $finalStats.ItemsExported.Keys | ForEach-Object {
+            @{
+                Name        = $_
+                Status      = 'Completed'
+                RecordCount = [int]$finalStats.ItemsExported[$_]
+                ErrorCount  = 0
+            }
+        }
+    )
+
+    if ($script:ExportRunDirectory) {
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+            Mode           = $exportMode
+            Status         = $finalStatus
+            StartedUtc     = if ($finalStats.StartTime) { $finalStats.StartTime } else { [datetime]::UtcNow }
+            Sections       = $finalSections
+            RemainingTasks = $remainingTasksCount
+            Errors         = @($finalStats.Errors)
+        }
+    }
+
+    exit (Get-ExportExitCode -Status $finalStatus)
 }
 catch {
     Write-ExportLog -Message "Fatal error: $($_.Exception.Message)" -Level Error
     Write-ExportLog -Message $_.ScriptStackTrace -Level Error
+    # Write a machine-readable RunSummary before exiting — non-fatal if it fails.
+    if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+        $fatalStats = Get-ExportStatistics
+        # Report whatever completed before the crash, same shape as the happy path.
+        $fatalSections = @(
+            $fatalStats.ItemsExported.Keys | ForEach-Object {
+                @{
+                    Name        = $_
+                    Status      = 'Completed'
+                    RecordCount = [int]$fatalStats.ItemsExported[$_]
+                    ErrorCount  = 0
+                }
+            }
+        )
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+            Mode           = if ($exportMode) { $exportMode } else { $script:SelectedMode }
+            Status         = 'Failed'
+            StartedUtc     = if ($fatalStats.StartTime) { $fatalStats.StartTime } else { [datetime]::UtcNow }
+            Sections       = $fatalSections
+            RemainingTasks = 0
+            Errors         = @($fatalStats.Errors)
+        }
+    }
     exit 1
 }
 finally {

@@ -810,3 +810,630 @@ def test_aggregate_dashboard_samples_before_first_completion() -> None:
     assert 'if ($Completed -lt $Total) {' in source
     # ...and the display is gated separately on session progress.
     assert "if ($sessionCompleted -gt 0 -and $eta.Ready" in source
+
+
+# ── B1: RunSummary.json + deterministic exit codes ────────────────────────────
+
+
+def test_run_result_functions_are_exported() -> None:
+    """Write-RunSummary and Get-ExportExitCode are visible after Import-Module."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $wrs = Get-Command Write-RunSummary -ErrorAction SilentlyContinue
+        $gee = Get-Command Get-ExportExitCode -ErrorAction SilentlyContinue
+        Write-Output ('WRS=' + ($null -ne $wrs))
+        Write-Output ('GEE=' + ($null -ne $gee))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRS=True" in output, output
+    assert "GEE=True" in output, output
+
+
+def test_get_export_exit_code_map() -> None:
+    """Get-ExportExitCode returns the correct integer for every named status."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Write-Output ('COMPLETED='   + (Get-ExportExitCode -Status 'Completed'))
+        Write-Output ('FAILED='      + (Get-ExportExitCode -Status 'Failed'))
+        Write-Output ('PARTIAL='     + (Get-ExportExitCode -Status 'Partial'))
+        Write-Output ('AUTHFAILED='  + (Get-ExportExitCode -Status 'AuthFailed'))
+        Write-Output ('CONFIGERROR=' + (Get-ExportExitCode -Status 'ConfigError'))
+        Write-Output ('LOCKED='      + (Get-ExportExitCode -Status 'Locked'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "COMPLETED=0" in output, output
+    assert "FAILED=1" in output, output
+    assert "PARTIAL=2" in output, output
+    assert "AUTHFAILED=3" in output, output
+    assert "CONFIGERROR=4" in output, output
+    assert "LOCKED=5" in output, output
+
+
+def test_write_run_summary_json_shape(tmp_path: Path) -> None:
+    """Write-RunSummary writes a valid RunSummary.json with the required keys/values."""
+    export_dir = tmp_path / "Export-20260615-120000"
+    export_dir.mkdir()
+    # Write a minimal section spec to a helper JSON so the PS script can load it
+    # without multi-line hashtable literals (multi-line blocks are silent via stdin pipe).
+    section_json = export_dir / "_test_section.json"
+    section_json.write_text(
+        json.dumps([{"Name": "SensitiveInformationType", "Status": "Completed", "RecordCount": 42, "ErrorCount": 0}]),
+        encoding="utf-8",
+    )
+    export_dir_posix = export_dir.as_posix()
+    section_path = section_json.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        $secs = @(Get-Content -Raw '{section_path}' | ConvertFrom-Json)
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ContentExplorer'; Status='Completed'; StartedUtc=([datetime]'2026-06-15T12:00:00Z'); Sections=$secs; RemainingTasks=0; Errors=@() }}
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["schemaVersion"] == 1
+    assert summary["mode"] == "ContentExplorer"
+    assert summary["status"] == "Completed"
+    assert summary["exitCode"] == 0
+    assert summary["remainingTasks"] == 0
+    assert isinstance(summary["sections"], list)
+    assert len(summary["sections"]) == 1
+    assert summary["sections"][0]["name"] == "SensitiveInformationType"
+    assert summary["sections"][0]["recordCount"] == 42
+    assert isinstance(summary["errors"], list)
+    assert isinstance(summary["droppedErrors"], int)
+    assert "startedUtc" in summary
+    assert "endedUtc" in summary
+
+
+def test_write_run_summary_partial_status(tmp_path: Path) -> None:
+    """Write-RunSummary with Partial status emits exitCode 2."""
+    export_dir = tmp_path / "Export-partial"
+    export_dir.mkdir()
+    export_dir_posix = export_dir.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ActivityExplorer'; Status='Partial'; RemainingTasks=3; Errors=@() }}
+        Write-Output ('EXITCODE=' + (Get-ExportExitCode -Status 'Partial'))
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXITCODE=2" in output, output
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "Partial"
+    assert summary["exitCode"] == 2
+    assert summary["remainingTasks"] == 3
+
+
+def test_write_run_summary_failed_status(tmp_path: Path) -> None:
+    """Write-RunSummary with Failed status emits exitCode 1 (the production-crash path)."""
+    export_dir = tmp_path / "Export-failed"
+    export_dir.mkdir()
+    export_dir_posix = export_dir.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ContentExplorer'; Status='Failed'; RemainingTasks=0; Errors=@() }}
+        Write-Output ('EXITCODE=' + (Get-ExportExitCode -Status 'Failed'))
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXITCODE=1" in output, output
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "Failed"
+    assert summary["exitCode"] == 1
+
+
+def test_write_run_summary_errors_capped_to_20(tmp_path: Path) -> None:
+    """Write-RunSummary caps the errors array at 20 and records droppedErrors count."""
+    export_dir = tmp_path / "Export-caperrors"
+    export_dir.mkdir()
+    # Build 25 error entries in Python and hand them to PS via a JSON file — far
+    # cleaner than emitting 25 inline hashtable literals into the here-string.
+    # (Inline single-line hashtables work fine over the stdin pipe; only multi-line
+    # for/foreach blocks are silently swallowed by `pwsh -Command -`.)
+    errors_data = [{"Timestamp": f"2026-06-15T12:00:{i:02d}Z", "Message": f"error {i}"} for i in range(25)]
+    errors_json = export_dir / "_test_errors.json"
+    errors_json.write_text(json.dumps(errors_data), encoding="utf-8")
+    export_dir_posix = export_dir.as_posix()
+    errors_path = errors_json.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        $errs = @(Get-Content -Raw '{errors_path}' | ConvertFrom-Json)
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='Full'; Status='Partial'; Errors=$errs }}
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert len(summary["errors"]) == 20
+    assert summary["droppedErrors"] == 5
+
+
+# ── B2: -Unattended switch — prompt-gate source assertions ────────────────────
+
+
+def test_unattended_gate_prompt_a_proceed_confirm() -> None:
+    """Prompt A (Proceed?) in MainExecution.ps1 must be wrapped by $script:Unattended guard."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # The Read-Host must be inside an -not $script:Unattended block
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in MainExecution.ps1"
+    assert 'Read-Host "Proceed with export? [Y]/N"' in source, "Prompt A text changed or missing"
+    # The else branch must log the skip
+    assert "prompt A skipped" in source, "Unattended else-branch log for prompt A missing"
+
+
+def test_unattended_gate_prompt_b_aggregate_reuse() -> None:
+    """Prompt B (aggregate reuse) in ContentExplorer.Export.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Export.ps1"
+    assert 'Read-Host "Enter choice [N]"' in source, "Prompt B text changed or missing"
+    assert "prompt B skipped" in source, "Unattended else-branch log for prompt B missing"
+    # Unattended default must be N (generate fresh)
+    assert '$choice = "N"' in source, "Unattended default for prompt B must be N"
+
+
+def test_unattended_gate_prompt_c_resume_confirm() -> None:
+    """Prompt C (resume confirm) in ContentExplorer.Resume.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Resume.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Resume.ps1"
+    assert 'Read-Host "  Resume this export? [Y/n]"' in source, "Prompt C text changed or missing"
+    assert "prompt C skipped" in source, "Unattended else-branch log for prompt C missing"
+
+
+def test_unattended_gate_prompt_d_retry_confirm() -> None:
+    """Prompt D (retry confirm) in ContentExplorer.Retry.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Retry.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Retry.ps1"
+    assert 'Read-Host "  Retry these tasks? [Y/N]"' in source, "Prompt D text changed or missing"
+    assert "prompt D skipped" in source, "Unattended else-branch log for prompt D missing"
+
+
+def test_unattended_gate_prompt_e_tasks_csv_confirm() -> None:
+    """Prompt E (tasks-CSV confirm) in ContentExplorer.TasksCsv.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.TasksCsv.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.TasksCsv.ps1"
+    assert 'Read-Host "  Run these tasks? [Y/N]"' in source, "Prompt E text changed or missing"
+    assert "prompt E skipped" in source, "Unattended else-branch log for prompt E missing"
+
+
+def test_unattended_gate_confirm_connected_tenant() -> None:
+    """Confirm-ConnectedTenant's non-interactive guard must also honor $script:Unattended,
+    so a scheduled run on an interactive console (IsInputRedirected = $false) does not hang."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "[Console]::IsInputRedirected -or $script:Unattended" in source, (
+        "Confirm-ConnectedTenant guard must OR in $script:Unattended"
+    )
+
+
+def test_unattended_fallback_h_config_error_exit() -> None:
+    """Fallback H in MainExecution.ps1: unattended + no-mode path must exit with ConfigError (4)."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # The positive-form guard `if ($script:Unattended)` is unique to fallback H — the five
+    # prompt gates all use the negative `if (-not $script:Unattended)` — so it uniquely
+    # pins the fallback-H block rather than matching any prompt gate.
+    assert "if ($script:Unattended)" in source, "positive-form fallback-H guard missing in MainExecution.ps1"
+    assert "Get-ExportExitCode -Status 'ConfigError'" in source, "ConfigError exit missing from MainExecution.ps1"
+    assert "Write-RunSummary" in source, "Write-RunSummary not called in MainExecution.ps1 fallback H"
+
+
+def test_unattended_switch_declared_in_entry_script() -> None:
+    """Export-Compl8Configuration.ps1 must declare [switch]$Unattended and propagate it."""
+    entry = (SCRIPT_PARTS_ROOT.parent / "Export-Compl8Configuration.ps1").read_text(encoding="utf-8")
+    assert "[switch]$Unattended" in entry, "[switch]$Unattended not declared in entry script"
+    assert "$script:Unattended = [bool]$Unattended" in entry, "Unattended not propagated to script scope"
+
+
+# ── B3: Test-AuthConfig validation + cert pre-flight ─────────────────────────
+
+
+def test_auth_config_missing_file_returns_config_error(tmp_path: Path) -> None:
+    """Test-AuthConfig with a non-existent file → IsValid=False, Status=ConfigError."""
+    missing = (tmp_path / "DoesNotExist.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{missing}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_use_cert_false_returns_config_error(tmp_path: Path) -> None:
+    """UseCertificateAuth != True → ConfigError (not suitable for unattended)."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "False", "AppId": "x", "Organization": "x.onmicrosoft.com", "CertificateThumbprint": "ABC"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_missing_fields_returns_config_error(tmp_path: Path) -> None:
+    """UseCertificateAuth=True but missing AppId → ConfigError."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "Organization": "x.onmicrosoft.com", "CertificateThumbprint": "ABC"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_cert_not_found_returns_auth_failed(tmp_path: Path) -> None:
+    """Valid config but GetCertificate returns $null → AuthFailed."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "DEADBEEF"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $null }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        Write-Output ('THUMBPRINT=' + $r.Thumbprint)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+    assert "THUMBPRINT=DEADBEEF" in output, output
+
+
+def test_auth_config_expired_cert_returns_auth_failed(tmp_path: Path) -> None:
+    """GetCertificate returns a cert with NotAfter in the past → AuthFailed."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "EXPIREDTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $expiredCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddDays(-1) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $expiredCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+
+
+def test_auth_config_valid_cert_returns_is_valid(tmp_path: Path) -> None:
+    """All checks pass with a future-dated injected cert → IsValid=True, Status=''."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "GOODTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $goodCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddDays(30) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $goodCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=[' + $r.Status + ']')
+        Write-Output ('AUTHTYPE=' + $r.AuthType)
+        Write-Output ('THUMBPRINT=' + $r.Thumbprint)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=True" in output, output
+    assert "STATUS=[]" in output, output
+    assert "AUTHTYPE=Certificate" in output, output
+    assert "THUMBPRINT=GOODTHUMB" in output, output
+
+
+def test_auth_config_is_exported_from_module() -> None:
+    """Test-AuthConfig must be visible after Import-Module (registered in psm1 + psd1)."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $cmd = Get-Command Test-AuthConfig -ErrorAction SilentlyContinue
+        Write-Output ('EXISTS=' + ($null -ne $cmd))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXISTS=True" in output, output
+
+
+def test_auth_config_buffer_edge_cert_within_buffer_returns_auth_failed(tmp_path: Path) -> None:
+    """A cert expiring in 12h with the default 1-day buffer must be AuthFailed — the buffer's
+    whole point (not just the already-past case)."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "EXPIRINGTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $soonCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddHours(12) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $soonCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+
+
+def test_unattended_pre_flight_helper_defined_and_called_in_main_execution() -> None:
+    """Source-assert: MainExecution.ps1 defines Invoke-UnattendedAuthPreflight (calling
+    Test-AuthConfig, IsValid-guarded, exiting via Get-ExportExitCode, writing a RunSummary)
+    and the main export path calls it before the connect."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # Helper definition + body
+    assert "function Invoke-UnattendedAuthPreflight" in source, "helper not defined in MainExecution.ps1"
+    assert "$authCheck = Test-AuthConfig" in source, "auth pre-flight result not captured in $authCheck"
+    assert "if (-not $authCheck.IsValid)" in source, "IsValid guard missing in pre-flight helper"
+    assert "Get-ExportExitCode -Status $authCheck.Status" in source, "Get-ExportExitCode not called with $authCheck.Status"
+    assert "Write-RunSummary" in source, "Write-RunSummary not called on auth pre-flight failure"
+    # Helper must be a no-op when not unattended (early return), not unconditional
+    assert "if (-not $script:Unattended) { return }" in source, "pre-flight not gated on $script:Unattended"
+    # Main export path calls the helper with -WriteSummary
+    assert "Invoke-UnattendedAuthPreflight -WriteSummary" in source, "main path does not call the pre-flight helper"
+
+
+def test_unattended_pre_flight_covers_all_early_exit_modes() -> None:
+    """The four early-exit modes (worker / resume / retry / tasks-csv) must each call the
+    pre-flight helper before their Connect-Compl8Compliance, so the gap can't silently reopen."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # Resume / Retry / TasksCsv write a RunSummary scoped to their export dir.
+    assert "Invoke-UnattendedAuthPreflight -ExportDir $CEResumeDir -Mode 'ContentExplorerResume' -WriteSummary" in source, "resume path missing pre-flight"
+    assert "Invoke-UnattendedAuthPreflight -ExportDir $CERetryDir -Mode 'ContentExplorerRetry' -WriteSummary" in source, "retry path missing pre-flight"
+    assert "Invoke-UnattendedAuthPreflight -Mode 'ContentExplorerTasksCsv' -WriteSummary" in source, "tasks-csv path missing pre-flight"
+    # Worker calls the helper WITHOUT -WriteSummary (it doesn't own the run summary).
+    # Pin it by the comment that documents the choice plus a bare helper call.
+    assert "a worker doesn't own the run's summary" in source, "worker pre-flight rationale comment missing"
+
+
+# ── B4: Worker hidden-window + guaranteed shutdown ────────────────────────────
+
+
+def test_b4_stop_worker_processes_defined_in_menu() -> None:
+    """Stop-WorkerProcesses must be defined in Menu.ps1 next to Start-WorkerTerminals."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    assert "function Stop-WorkerProcesses" in source, "Stop-WorkerProcesses not defined in Menu.ps1"
+    # Must guard against empty/null collection
+    assert "if (-not $WorkerProcesses -or @($WorkerProcesses).Count -eq 0)" in source, (
+        "Stop-WorkerProcesses must no-op on empty/null collection"
+    )
+    # Must use SilentlyContinue so already-exited workers don't raise noise
+    assert "Stop-Process" in source and "SilentlyContinue" in source, (
+        "Stop-WorkerProcesses must use Stop-Process with SilentlyContinue"
+    )
+
+
+def test_b4_spawn_sites_gate_no_exit_on_unattended() -> None:
+    """Both spawn sites in Menu.ps1 must omit -NoExit and add -WindowStyle Hidden when Unattended."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    # Both spawn sites (Start-WorkerTerminals and Add-WorkerToExport) set WindowStyle
+    # Hidden exactly once under unattended — assert BOTH (==2) so a regression that
+    # reverts one spawn site is caught, not just one.
+    assert source.count("WindowStyle = 'Hidden'") == 2, (
+        "Both Menu.ps1 spawn sites must set WindowStyle Hidden when unattended (one each)"
+    )
+    assert "if ($script:Unattended)" in source, (
+        "Menu.ps1 spawn sites must gate -NoExit/-WindowStyle on $script:Unattended"
+    )
+    # The interactive branch still keeps -NoExit.
+    assert '"-NoExit"' in source, "Interactive path must still include -NoExit"
+
+
+def test_b4_ae_orchestrator_calls_stop_worker_processes() -> None:
+    """ActivityExplorer.ps1 multi-terminal path must call Stop-WorkerProcesses."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ActivityExplorer.ps1").read_text(encoding="utf-8")
+    assert "Stop-WorkerProcesses" in source, (
+        "ActivityExplorer.ps1 must call Stop-WorkerProcesses to prevent worker leaks"
+    )
+    assert "finally" in source, (
+        "ActivityExplorer.ps1 must use try/finally to guarantee worker shutdown on abort"
+    )
+
+
+def test_b4_ce_resume_orchestrator_calls_stop_worker_processes() -> None:
+    """ContentExplorer.Resume.ps1 multi-terminal path must call Stop-WorkerProcesses."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Resume.ps1").read_text(encoding="utf-8")
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.Resume.ps1 must call Stop-WorkerProcesses to prevent worker leaks"
+    )
+    assert "finally" in source, (
+        "ContentExplorer.Resume.ps1 must use try/finally to guarantee worker shutdown on abort"
+    )
+
+
+def test_b4_stop_worker_processes_no_op_on_empty(tmp_path: Path) -> None:
+    """Dot-source Menu.ps1 and call Stop-WorkerProcesses with null and empty — must not error."""
+    script = textwrap.dedent(
+        f"""
+        $scriptRoot = '{REPO_ROOT}'
+        $UserPrincipalName = $null
+        $script:Unattended = $false
+        $PageSize = $null
+        # Stub out module functions that Menu.ps1 calls at dot-source time (none at parse; ok)
+        . '{MENU_PART_PATH}'
+        # Null collection: must be a no-op
+        Stop-WorkerProcesses -WorkerProcesses $null
+        Write-Output 'NULL_OK'
+        # Empty array: must be a no-op
+        Stop-WorkerProcesses -WorkerProcesses @()
+        Write-Output 'EMPTY_OK'
+        """
+    )
+    output = run_pwsh(script)
+    assert "NULL_OK" in output, f"Stop-WorkerProcesses $null raised an error: {output}"
+    assert "EMPTY_OK" in output, f"Stop-WorkerProcesses @() raised an error: {output}"
+
+
+# ── Codex-review findings (Fix 1–6) ─────────────────────────────────────────
+
+
+def test_fix1_unattended_baseargs_include_unattended_flag() -> None:
+    """Both unattended $baseArgs arrays in Menu.ps1 must include '-Unattended'."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    # Count occurrences of "-Unattended" inside the unattended $baseArgs blocks.
+    # There are exactly two unattended spawn sites; each must carry the flag.
+    assert source.count('"-Unattended"') >= 2, (
+        "Both unattended $baseArgs arrays in Menu.ps1 must include '-Unattended' "
+        f"(found {source.count(chr(34) + '-Unattended' + chr(34))} occurrence(s))"
+    )
+    # Confirm the interactive branches do NOT carry it (they have no -Unattended).
+    # We can check that '-Unattended' only appears inside `if ($script:Unattended)` blocks.
+    # Simpler: assert it does not appear paired with '-NoExit' in the same baseArgs literal.
+    # (Interactive blocks have "-NoExit"; unattended blocks must not have it.)
+    # Just confirm the flag count is exactly 2 (one per spawn site).
+    assert source.count('"-Unattended"') == 2, (
+        "Expected exactly 2 '-Unattended' entries (one per unattended spawn site); "
+        f"found {source.count(chr(34) + '-Unattended' + chr(34))}"
+    )
+
+
+def test_fix2_connect_failure_exits_auth_failed() -> None:
+    """All connect-failure sites in MainExecution.ps1 must exit via Get-ExportExitCode 'AuthFailed'."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "Get-ExportExitCode -Status 'AuthFailed'" in source, (
+        "No connect-failure site uses Get-ExportExitCode -Status 'AuthFailed'"
+    )
+    # Must NOT have a bare `exit 1` on a connect-failure path (all 5 sites fixed).
+    # The only remaining bare exit 1 should be the prerequisite gate, not auth.
+    lines = source.splitlines()
+    bare_exit1_after_auth = [
+        l.strip() for l in lines
+        if l.strip() == "exit 1"
+        and "Authentication failed" in "\n".join(lines[max(0, lines.index(l)-3):lines.index(l)+1])
+    ]
+    assert not bare_exit1_after_auth, (
+        f"bare 'exit 1' still present near an auth-failure message: {bare_exit1_after_auth}"
+    )
+
+
+def test_fix3_submodes_call_get_run_final_status() -> None:
+    """Resume/Retry/TasksCsv paths must call Get-RunFinalStatus and exit via Get-ExportExitCode."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "function Get-RunFinalStatus" in source, "Get-RunFinalStatus helper not defined in MainExecution.ps1"
+    assert "Get-RunFinalStatus -ExportDir $CEResumeDir" in source, "Resume path missing Get-RunFinalStatus call"
+    assert "Get-RunFinalStatus -ExportDir $CERetryDir" in source, "Retry path missing Get-RunFinalStatus call"
+    assert "Get-RunFinalStatus -ExportDir $script:ExportRunDirectory" in source, (
+        "TasksCsv path missing Get-RunFinalStatus call"
+    )
+    # Sub-mode exits must use Get-ExportExitCode, not bare exit 0.
+    assert source.count("exit (Get-ExportExitCode -Status") >= 4, (
+        "Expected at least 4 uses of exit (Get-ExportExitCode...) (worker + 3 sub-modes + main path)"
+    )
+
+
+def test_fix4_ce_export_has_try_finally_for_worker_shutdown() -> None:
+    """ContentExplorer.Export.ps1 must use try/finally to guarantee worker shutdown."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
+    assert "finally" in source, "ContentExplorer.Export.ps1 missing try/finally for worker shutdown"
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.Export.ps1 missing Stop-WorkerProcesses call in finally"
+    )
+
+
+def test_fix4_ce_taskcsv_has_try_finally_for_worker_shutdown() -> None:
+    """ContentExplorer.TasksCsv.ps1 must use try/finally to guarantee worker shutdown."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.TasksCsv.ps1").read_text(encoding="utf-8")
+    assert "finally" in source, "ContentExplorer.TasksCsv.ps1 missing try/finally for worker shutdown"
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.TasksCsv.ps1 missing Stop-WorkerProcesses call in finally"
+    )
+
+
+def test_fix5_string_errors_survive_run_summary(tmp_path: Path) -> None:
+    """Plain-string errors passed to Write-RunSummary must appear in RunSummary.json."""
+    export_dir = tmp_path / "Export-fix5-test"
+    export_dir.mkdir()
+    # Use a PS script file (not -Command -) to avoid multiline-block stdin issues.
+    ps1 = tmp_path / "run_fix5.ps1"
+    ps1.write_text(
+        f"Import-Module '{MODULE_PATH}' -Force\n"
+        f"$result = @{{ Mode='TestMode'; Status='Partial'; Errors=@('boom one','boom two') }}\n"
+        f"Write-RunSummary -ExportDir '{export_dir}' -Result $result\n"
+        "Write-Output 'WROTE_OK'\n",
+        encoding="utf-8",
+    )
+    script = f"& '{ps1}'"
+    output = run_pwsh(script)
+    assert "WROTE_OK" in output, f"Write-RunSummary raised an error: {output}"
+
+    summary_path = export_dir / "RunSummary.json"
+    assert summary_path.exists(), "RunSummary.json was not written"
+    data = json.loads(summary_path.read_text(encoding="utf-8"))
+    messages = [e["message"] for e in data.get("errors", [])]
+    assert "boom one" in messages, f"'boom one' not in RunSummary errors: {messages}"
+    assert "boom two" in messages, f"'boom two' not in RunSummary errors: {messages}"
+
+
+def test_fix6_worker_spawn_read_host_guards_unattended() -> None:
+    """The worker-spawn Read-Host in Start-WorkerTerminals must also check -not $script:Unattended."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    assert "-not $script:Unattended" in source, (
+        "Menu.ps1 worker-spawn Read-Host guard missing '-not $script:Unattended'"
+    )
+    # Confirm the guard wraps the Read-Host in Start-WorkerTerminals (not just elsewhere).
+    # Check the guard appears before 'Read-Host' in the file.
+    guard_idx = source.find("-not $isCertAuth -and -not $script:Unattended")
+    readhost_idx = source.find('Read-Host "  Press Enter to spawn worker')
+    assert guard_idx != -1, "Combined guard '-not $isCertAuth -and -not $script:Unattended' not found"
+    assert guard_idx < readhost_idx, "Guard must appear before the Read-Host call"

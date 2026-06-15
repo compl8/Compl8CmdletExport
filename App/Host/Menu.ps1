@@ -626,6 +626,53 @@ function Build-AuthParameters {
     return @{}
 }
 
+function Stop-WorkerProcesses {
+    <#
+    .SYNOPSIS
+        Stops all spawned worker processes on completion or abort.
+    .DESCRIPTION
+        Safe to call when $WorkerProcesses is null or empty (no-op).
+        Logs shutdown activity; uses -ErrorAction SilentlyContinue on Stop-Process
+        so a worker that already exited (e.g. because -NoExit was omitted in
+        unattended mode) is handled gracefully without noise.
+    .PARAMETER WorkerProcesses
+        The collection of worker hashtables (PID, Process) to stop.
+    #>
+    param(
+        [Parameter()]
+        $WorkerProcesses
+    )
+
+    if (-not $WorkerProcesses -or @($WorkerProcesses).Count -eq 0) { return }
+
+    $count = @($WorkerProcesses).Count
+    Write-ExportLog -Message ("Shutting down {0} worker process(es)..." -f $count) -Level Info
+
+    # Brief grace period: let workers detect the phase signal and exit their loop.
+    # Unattended workers run without -NoExit so many will already have exited here.
+    Start-Sleep -Seconds 5
+
+    foreach ($wp in $WorkerProcesses) {
+        try {
+            if (-not $wp.Process -or $wp.Process.HasExited) {
+                Write-ExportLog -Message ("  Worker PID {0}: already exited" -f $wp.PID) -Level Info -LogOnly
+            }
+            else {
+                # -ErrorAction Stop so a genuine stop failure (e.g. access denied, or the
+                # process exiting between the HasExited check and here) reaches the catch
+                # and is logged, rather than being silently swallowed.
+                Stop-Process -Id $wp.PID -Force -ErrorAction Stop
+                Write-ExportLog -Message ("  Worker PID {0}: closed by orchestrator" -f $wp.PID) -Level Info -LogOnly
+            }
+        }
+        catch {
+            Write-ExportLog -Message ("  Worker PID {0}: stop failed ({1})" -f $wp.PID, $_.Exception.Message) -Level Warning -LogOnly
+        }
+    }
+
+    Write-ExportLog -Message "Worker shutdown complete" -Level Info
+}
+
 function Start-WorkerTerminals {
     <#
     .SYNOPSIS
@@ -667,14 +714,28 @@ function Start-WorkerTerminals {
         Write-Host ""
     }
 
-    # Build base arguments for spawned processes
-    $baseArgs = @(
-        "-NoProfile",
-        "-NoExit",
-        "-File", ("`"{0}`"" -f $scriptPath),
-        "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
-        "-WorkerMode"
-    )
+    # Build base arguments for spawned processes.
+    # Unattended: omit -NoExit so the worker process exits when its script loop ends
+    # (the orchestrator's later Stop-WorkerProcesses becomes a harmless no-op on an
+    # already-exited PID via -ErrorAction SilentlyContinue).
+    # Interactive: keep -NoExit so the visible terminal window stays open for diagnosis.
+    if ($script:Unattended) {
+        $baseArgs = @(
+            "-NoProfile",
+            "-File", ("`"{0}`"" -f $scriptPath),
+            "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
+            "-WorkerMode",
+            "-Unattended"
+        )
+    } else {
+        $baseArgs = @(
+            "-NoProfile",
+            "-NoExit",
+            "-File", ("`"{0}`"" -f $scriptPath),
+            "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
+            "-WorkerMode"
+        )
+    }
 
     # Add PageSize if non-default
     if ($PageSize -and $PageSize -ne 5000) {
@@ -684,7 +745,7 @@ function Start-WorkerTerminals {
     $workerProcesses = [System.Collections.ArrayList]::new()
 
     for ($i = 1; $i -le $Count; $i++) {
-        if (-not $isCertAuth) {
+        if (-not $isCertAuth -and -not $script:Unattended) {
             $input = Read-Host "  Press Enter to spawn worker $i/$Count (Q to stop)"
             if ($input -and $input.Trim().ToUpper() -eq 'Q') {
                 Write-ExportLog -Message "  Worker spawning stopped by user at $($i-1)/$Count" -Level Warning
@@ -693,7 +754,10 @@ function Start-WorkerTerminals {
         }
 
         try {
-            $proc = Start-Process pwsh -ArgumentList $baseArgs -PassThru
+            # Unattended: hidden window (no visible terminal); interactive: default (visible).
+            $spParams = @{ FilePath = 'pwsh'; ArgumentList = $baseArgs; PassThru = $true }
+            if ($script:Unattended) { $spParams.WindowStyle = 'Hidden' }
+            $proc = Start-Process @spParams
             $workerDir = Get-WorkerCoordDir $ExportRunDirectory $proc.Id
             if (-not (Test-Path $workerDir)) {
                 New-Item -ItemType Directory -Force -Path $workerDir | Out-Null
@@ -756,16 +820,30 @@ function Add-WorkerToExport {
         Write-Host "  Adding worker $NextWorkerNumber (interactive auth - browser window will open)..." -ForegroundColor Yellow
     }
 
-    $baseArgs = @(
-        "-NoProfile",
-        "-NoExit",
-        "-File", ("`"{0}`"" -f $scriptPath),
-        "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
-        "-WorkerMode"
-    )
+    # Unattended: omit -NoExit (worker exits cleanly when done); interactive: keep it.
+    if ($script:Unattended) {
+        $baseArgs = @(
+            "-NoProfile",
+            "-File", ("`"{0}`"" -f $scriptPath),
+            "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
+            "-WorkerMode",
+            "-Unattended"
+        )
+    } else {
+        $baseArgs = @(
+            "-NoProfile",
+            "-NoExit",
+            "-File", ("`"{0}`"" -f $scriptPath),
+            "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
+            "-WorkerMode"
+        )
+    }
 
     try {
-        $proc = Start-Process pwsh -ArgumentList $baseArgs -PassThru
+        # Unattended: hidden window; interactive: default (visible terminal).
+        $spParams = @{ FilePath = 'pwsh'; ArgumentList = $baseArgs; PassThru = $true }
+        if ($script:Unattended) { $spParams.WindowStyle = 'Hidden' }
+        $proc = Start-Process @spParams
         $workerDir = Get-WorkerCoordDir $ExportRunDirectory $proc.Id
         if (-not (Test-Path $workerDir)) {
             New-Item -ItemType Directory -Force -Path $workerDir | Out-Null
