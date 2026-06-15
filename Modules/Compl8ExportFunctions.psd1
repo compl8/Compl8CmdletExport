@@ -98,6 +98,7 @@ FunctionsToExport = @(
     'Get-HttpErrorExplanation',
     'Get-LogsDir',
     'Get-PageErrorMessage',
+    'Get-ProgressEta',
     'Get-RetryBucketTasks',
     'Get-RetryDelay',
     'Get-RoundRobinDetailTaskOrder',

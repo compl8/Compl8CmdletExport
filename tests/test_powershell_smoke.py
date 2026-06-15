@@ -624,3 +624,131 @@ def test_build_auth_parameters_reads_root_level_auth_config(tmp_path: Path) -> N
     output = run_pwsh(script)
     assert "APPID=test-app-id" in output
     assert "ORG=contoso.onmicrosoft.com" in output
+
+
+def _parse_kv(output: str) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for line in output.splitlines():
+        line = line.strip()
+        if "=" in line:
+            key, value = line.split("=", 1)
+            result[key] = value
+    return result
+
+
+def test_progress_eta_tracks_recent_rate_after_speedup() -> None:
+    """A long slow ramp then a sustained fast burst: the windowed ETA must reflect
+    the recent (fast) rate, well above the lifetime cumulative average."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $state = @{{}}
+        $base = Get-Date '2026-01-01T00:00:00Z'
+        $completed = 0.0
+        $r = $null
+        # Slow: +1 unit every 5s for 600s (12 units/min). One-line loop: pwsh
+        # -Command - over stdin silently drops output for multi-line loop blocks.
+        for ($i = 1; $i -le 120; $i++) {{ $completed += 1; $r = Get-ProgressEta -State $state -Now $base.AddSeconds(5 * $i) -CompletedUnits $completed -RemainingUnits 1000 }}
+        Write-Output ('SLOW=' + [math]::Round($r.RatePerMinute, 1))
+        # Fast: +20 units every 5s for 240s (240 units/min); long enough to flush the 120s window
+        for ($i = 1; $i -le 48; $i++) {{ $completed += 20; $r = Get-ProgressEta -State $state -Now $base.AddSeconds(600 + 5 * $i) -CompletedUnits $completed -RemainingUnits 1000 }}
+        $elapsedMin = (600 + 240) / 60.0
+        Write-Output ('FAST=' + [math]::Round($r.RatePerMinute, 1))
+        Write-Output ('CUMULATIVE=' + [math]::Round($completed / $elapsedMin, 1))
+        Write-Output ('SOURCE=' + $r.Source)
+        Write-Output ('ETASEC=' + [math]::Round($r.EtaSeconds, 0))
+        """
+    )
+    vals = _parse_kv(run_pwsh(script))
+    assert vals["SOURCE"] == "window", vals
+    slow = float(vals["SLOW"])
+    fast = float(vals["FAST"])
+    cumulative = float(vals["CUMULATIVE"])
+    etasec = float(vals["ETASEC"])
+    assert slow < 30, vals                       # recent rate during the slow ramp
+    assert 220 <= fast <= 245, vals              # converged to the ~240/min recent burst
+    assert cumulative < 110, vals                # lifetime average still dragged by the slow start
+    assert fast > 2 * cumulative, vals           # recent rate dominates the average
+    assert 220 <= etasec <= 300, vals            # ETA ~250s from recent rate, not ~780s cumulative
+
+
+def test_progress_eta_reacts_to_slowdown() -> None:
+    """A fast burst then a sustained slowdown: the windowed ETA must drop toward the
+    recent (slow) rate, far below the lifetime average."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $state = @{{}}
+        $base = Get-Date '2026-01-01T00:00:00Z'
+        $completed = 0.0
+        $r = $null
+        for ($i = 1; $i -le 48; $i++) {{ $completed += 20; $r = Get-ProgressEta -State $state -Now $base.AddSeconds(5 * $i) -CompletedUnits $completed -RemainingUnits 5000 }}
+        Write-Output ('PEAK=' + [math]::Round($r.RatePerMinute, 1))
+        for ($i = 1; $i -le 48; $i++) {{ $completed += 1; $r = Get-ProgressEta -State $state -Now $base.AddSeconds(240 + 5 * $i) -CompletedUnits $completed -RemainingUnits 5000 }}
+        $elapsedMin = (240 + 240) / 60.0
+        Write-Output ('NOWRATE=' + [math]::Round($r.RatePerMinute, 1))
+        Write-Output ('CUMULATIVE=' + [math]::Round($completed / $elapsedMin, 1))
+        Write-Output ('SOURCE=' + $r.Source)
+        """
+    )
+    vals = _parse_kv(run_pwsh(script))
+    assert vals["SOURCE"] == "window", vals
+    peak = float(vals["PEAK"])
+    nowrate = float(vals["NOWRATE"])
+    cumulative = float(vals["CUMULATIVE"])
+    assert 220 <= peak <= 245, vals              # the earlier fast burst
+    assert nowrate < 30, vals                    # converged down to the ~12/min recent rate
+    assert nowrate < peak / 5, vals              # reacted to the slowdown
+    assert nowrate < 0.5 * cumulative, vals      # recent rate far below the lifetime average
+
+
+def test_progress_eta_warmup_then_window() -> None:
+    """First frame is not ready; a sub-MinSpan frame is cumulative; once enough
+    recent span accrues it switches to the windowed source."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $state = @{{}}
+        $base = Get-Date '2026-01-01T00:00:00Z'
+        $r1 = Get-ProgressEta -State $state -Now $base -CompletedUnits 0 -RemainingUnits 100
+        $r2 = Get-ProgressEta -State $state -Now $base.AddSeconds(5) -CompletedUnits 3 -RemainingUnits 100
+        $r3 = Get-ProgressEta -State $state -Now $base.AddSeconds(25) -CompletedUnits 12 -RemainingUnits 100
+        Write-Output ('R1_READY=' + $r1.Ready)
+        Write-Output ('R1_SOURCE=' + $r1.Source)
+        Write-Output ('R2_READY=' + $r2.Ready)
+        Write-Output ('R2_SOURCE=' + $r2.Source)
+        Write-Output ('R3_SOURCE=' + $r3.Source)
+        """
+    )
+    output = run_pwsh(script)
+    assert "R1_READY=False" in output, output
+    assert "R1_SOURCE=none" in output, output
+    assert "R2_READY=True" in output, output
+    assert "R2_SOURCE=cumulative" in output, output
+    assert "R3_SOURCE=window" in output, output
+
+
+def test_progress_eta_zero_remaining_is_done() -> None:
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $state = @{{}}
+        $base = Get-Date '2026-01-01T00:00:00Z'
+        $r = Get-ProgressEta -State $state -Now $base -CompletedUnits 100 -RemainingUnits 0
+        Write-Output ('READY=' + $r.Ready)
+        Write-Output ('ETASEC=' + $r.EtaSeconds)
+        """
+    )
+    output = run_pwsh(script)
+    assert "READY=True" in output, output
+    assert "ETASEC=0" in output, output
+
+
+def test_dashboard_eta_uses_windowed_estimator() -> None:
+    """The dashboards must route ETA through Get-ProgressEta; the old
+    cumulative-average ETA expressions must be gone."""
+    source = (MODULE_PARTS_ROOT / "UI" / "02-Dashboards.ps1").read_text(encoding="utf-8")
+    assert source.count("Get-ProgressEta -State") >= 3  # CE aggregate, CE detail, AE
+    assert "s/task avg" not in source                   # old aggregate cumulative label
+    assert "$pctPerSecond" not in source                # old AE cumulative-percent rate
+    assert "$blendThreshold" not in source              # old detail seed/measured blend

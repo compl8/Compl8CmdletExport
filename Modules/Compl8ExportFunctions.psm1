@@ -249,6 +249,7 @@ Export-ModuleMember -Function @(
     # Dashboard Functions
     'Reset-OrchestratorDashboard',
     'Reset-AEDashboard',
+    'Get-ProgressEta',
     'Show-OrchestratorDashboard',
     'Show-AEDashboard',
 
