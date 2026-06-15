@@ -38,6 +38,7 @@ $sectionFiles = @(
     'Core\08-ErrorHandling.ps1'
     'Core\09-AuthRecovery.ps1'
     'Core\10-Utility.ps1'
+    'Core\11-RunResult.ps1'
     'Providers\07-Tenant.ps1'
     'Providers\08-ContentExplorer.Aggregates.ps1'
     'Providers\09-ContentExplorer.WorkPlan.ps1'
@@ -125,6 +126,10 @@ Export-ModuleMember -Function @(
 
     # Utility
     'Format-TimeSpan',
+
+    # Run Result & Exit Codes
+    'Get-ExportExitCode',
+    'Write-RunSummary',
 
     # SIT and Tenant
     'Get-SITsToSkip',

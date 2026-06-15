@@ -624,3 +624,166 @@ def test_build_auth_parameters_reads_root_level_auth_config(tmp_path: Path) -> N
     output = run_pwsh(script)
     assert "APPID=test-app-id" in output
     assert "ORG=contoso.onmicrosoft.com" in output
+
+
+# ── B1: RunSummary.json + deterministic exit codes ────────────────────────────
+
+
+def test_run_result_functions_are_exported() -> None:
+    """Write-RunSummary and Get-ExportExitCode are visible after Import-Module."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $wrs = Get-Command Write-RunSummary -ErrorAction SilentlyContinue
+        $gee = Get-Command Get-ExportExitCode -ErrorAction SilentlyContinue
+        Write-Output ('WRS=' + ($null -ne $wrs))
+        Write-Output ('GEE=' + ($null -ne $gee))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRS=True" in output, output
+    assert "GEE=True" in output, output
+
+
+def test_get_export_exit_code_map() -> None:
+    """Get-ExportExitCode returns the correct integer for every named status."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Write-Output ('COMPLETED='   + (Get-ExportExitCode -Status 'Completed'))
+        Write-Output ('FAILED='      + (Get-ExportExitCode -Status 'Failed'))
+        Write-Output ('PARTIAL='     + (Get-ExportExitCode -Status 'Partial'))
+        Write-Output ('AUTHFAILED='  + (Get-ExportExitCode -Status 'AuthFailed'))
+        Write-Output ('CONFIGERROR=' + (Get-ExportExitCode -Status 'ConfigError'))
+        Write-Output ('LOCKED='      + (Get-ExportExitCode -Status 'Locked'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "COMPLETED=0" in output, output
+    assert "FAILED=1" in output, output
+    assert "PARTIAL=2" in output, output
+    assert "AUTHFAILED=3" in output, output
+    assert "CONFIGERROR=4" in output, output
+    assert "LOCKED=5" in output, output
+
+
+def test_write_run_summary_json_shape(tmp_path: Path) -> None:
+    """Write-RunSummary writes a valid RunSummary.json with the required keys/values."""
+    export_dir = tmp_path / "Export-20260615-120000"
+    export_dir.mkdir()
+    # Write a minimal section spec to a helper JSON so the PS script can load it
+    # without multi-line hashtable literals (multi-line blocks are silent via stdin pipe).
+    section_json = export_dir / "_test_section.json"
+    section_json.write_text(
+        json.dumps([{"Name": "SensitiveInformationType", "Status": "Completed", "RecordCount": 42, "ErrorCount": 0}]),
+        encoding="utf-8",
+    )
+    export_dir_posix = export_dir.as_posix()
+    section_path = section_json.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        $secs = @(Get-Content -Raw '{section_path}' | ConvertFrom-Json)
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ContentExplorer'; Status='Completed'; StartedUtc=([datetime]'2026-06-15T12:00:00Z'); Sections=$secs; RemainingTasks=0; Errors=@() }}
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["schemaVersion"] == 1
+    assert summary["mode"] == "ContentExplorer"
+    assert summary["status"] == "Completed"
+    assert summary["exitCode"] == 0
+    assert summary["remainingTasks"] == 0
+    assert isinstance(summary["sections"], list)
+    assert len(summary["sections"]) == 1
+    assert summary["sections"][0]["name"] == "SensitiveInformationType"
+    assert summary["sections"][0]["recordCount"] == 42
+    assert isinstance(summary["errors"], list)
+    assert isinstance(summary["droppedErrors"], int)
+    assert "startedUtc" in summary
+    assert "endedUtc" in summary
+
+
+def test_write_run_summary_partial_status(tmp_path: Path) -> None:
+    """Write-RunSummary with Partial status emits exitCode 2."""
+    export_dir = tmp_path / "Export-partial"
+    export_dir.mkdir()
+    export_dir_posix = export_dir.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ActivityExplorer'; Status='Partial'; RemainingTasks=3; Errors=@() }}
+        Write-Output ('EXITCODE=' + (Get-ExportExitCode -Status 'Partial'))
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXITCODE=2" in output, output
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "Partial"
+    assert summary["exitCode"] == 2
+    assert summary["remainingTasks"] == 3
+
+
+def test_write_run_summary_failed_status(tmp_path: Path) -> None:
+    """Write-RunSummary with Failed status emits exitCode 1 (the production-crash path)."""
+    export_dir = tmp_path / "Export-failed"
+    export_dir.mkdir()
+    export_dir_posix = export_dir.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='ContentExplorer'; Status='Failed'; RemainingTasks=0; Errors=@() }}
+        Write-Output ('EXITCODE=' + (Get-ExportExitCode -Status 'Failed'))
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXITCODE=1" in output, output
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert summary["status"] == "Failed"
+    assert summary["exitCode"] == 1
+
+
+def test_write_run_summary_errors_capped_to_20(tmp_path: Path) -> None:
+    """Write-RunSummary caps the errors array at 20 and records droppedErrors count."""
+    export_dir = tmp_path / "Export-caperrors"
+    export_dir.mkdir()
+    # Build 25 error entries in Python and hand them to PS via a JSON file — far
+    # cleaner than emitting 25 inline hashtable literals into the here-string.
+    # (Inline single-line hashtables work fine over the stdin pipe; only multi-line
+    # for/foreach blocks are silently swallowed by `pwsh -Command -`.)
+    errors_data = [{"Timestamp": f"2026-06-15T12:00:{i:02d}Z", "Message": f"error {i}"} for i in range(25)]
+    errors_json = export_dir / "_test_errors.json"
+    errors_json.write_text(json.dumps(errors_data), encoding="utf-8")
+    export_dir_posix = export_dir.as_posix()
+    errors_path = errors_json.as_posix()
+    summary_path = (export_dir / "RunSummary.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        Initialize-ExportLog -LogDirectory '{export_dir_posix}' -Prefix 'Test' | Out-Null
+        $errs = @(Get-Content -Raw '{errors_path}' | ConvertFrom-Json)
+        Write-RunSummary -ExportDir '{export_dir_posix}' -Result @{{ Mode='Full'; Status='Partial'; Errors=$errs }}
+        Write-Output ('WRITTEN=' + (Test-Path '{summary_path}'))
+        """
+    )
+    output = run_pwsh(script)
+    assert "WRITTEN=True" in output, output
+
+    summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
+    assert len(summary["errors"]) == 20
+    assert summary["droppedErrors"] == 5

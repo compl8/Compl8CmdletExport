@@ -919,10 +919,85 @@ try {
             }
         }
     }
+
+    # ── Compute final status and write RunSummary.json ─────────────────────
+    # Status determination:
+    #   Partial  — errors were logged, or remaining tasks > 0 (Detail phase incomplete)
+    #   Completed — no errors, no remaining tasks
+    # Exit code: 0 for Completed, 2 for Partial (so interactive users are not
+    # surprised on a clean run, and schedulers can distinguish partial vs. clean).
+    $finalStats          = Get-ExportStatistics
+    $remainingTasksCount  = 0
+    $remainingCheckFailed = $false
+    if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+        try {
+            $remainingTasksCount = Write-RemainingTasksCsv -ExportDir $script:ExportRunDirectory
+        }
+        catch {
+            # Can't trust the remaining-task count — never report a false Completed.
+            # Force Partial so the exit code (2) reflects the uncertainty.
+            $remainingCheckFailed = $true
+            Write-ExportLog -Message ("Could not determine remaining-task count ({0}); reporting status as Partial." -f $_.Exception.Message) -Level Warning
+        }
+    }
+
+    $finalStatus = if ($finalStats.ErrorCount -gt 0 -or $remainingTasksCount -gt 0 -or $remainingCheckFailed) {
+        'Partial'
+    } else {
+        'Completed'
+    }
+
+    # Build sections array from ExportStats.ItemsExported categories.
+    $finalSections = @(
+        $finalStats.ItemsExported.Keys | ForEach-Object {
+            @{
+                Name        = $_
+                Status      = 'Completed'
+                RecordCount = [int]$finalStats.ItemsExported[$_]
+                ErrorCount  = 0
+            }
+        }
+    )
+
+    if ($script:ExportRunDirectory) {
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+            Mode           = $exportMode
+            Status         = $finalStatus
+            StartedUtc     = if ($finalStats.StartTime) { $finalStats.StartTime } else { [datetime]::UtcNow }
+            Sections       = $finalSections
+            RemainingTasks = $remainingTasksCount
+            Errors         = @($finalStats.Errors)
+        }
+    }
+
+    exit (Get-ExportExitCode -Status $finalStatus)
 }
 catch {
     Write-ExportLog -Message "Fatal error: $($_.Exception.Message)" -Level Error
     Write-ExportLog -Message $_.ScriptStackTrace -Level Error
+    # Write a machine-readable RunSummary before exiting — non-fatal if it fails.
+    if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+        $fatalStats = Get-ExportStatistics
+        # Report whatever completed before the crash, same shape as the happy path.
+        $fatalSections = @(
+            $fatalStats.ItemsExported.Keys | ForEach-Object {
+                @{
+                    Name        = $_
+                    Status      = 'Completed'
+                    RecordCount = [int]$fatalStats.ItemsExported[$_]
+                    ErrorCount  = 0
+                }
+            }
+        )
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+            Mode           = if ($exportMode) { $exportMode } else { $script:SelectedMode }
+            Status         = 'Failed'
+            StartedUtc     = if ($fatalStats.StartTime) { $fatalStats.StartTime } else { [datetime]::UtcNow }
+            Sections       = $fatalSections
+            RemainingTasks = 0
+            Errors         = @($fatalStats.Errors)
+        }
+    }
     exit 1
 }
 finally {

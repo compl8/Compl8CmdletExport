@@ -92,6 +92,7 @@ FunctionsToExport = @(
     'Get-CoordinationDir',
     'Get-DeterministicNameHash',
     'Get-EnabledItems',
+    'Get-ExportExitCode',
     'Get-ExportRunSigningKey',
     'Get-ExportSettings',
     'Get-ExportStatistics',
@@ -171,6 +172,7 @@ FunctionsToExport = @(
     'Write-ProgressEntry',
     'Write-RemainingTasksCsv',
     'Write-RetryTasksCsv',
+    'Write-RunSummary',
     'Write-SectionHeader',
     'Write-TaskCsv',
     'Write-Watermarks'
