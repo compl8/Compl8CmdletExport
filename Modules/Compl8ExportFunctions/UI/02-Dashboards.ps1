@@ -128,6 +128,17 @@ function Get-ProgressEta {
         $rate = $State['Ewma']
         $source = 'window'
     }
+    elseif ($spanSec -ge $MinSpanSeconds -and $null -ne $State['Ewma']) {
+        # Confirmed stall: >= MinSpan of retained window with NO forward progress
+        # ($deltaUnits <= 0, having fallen through the window branch). Blend a zero
+        # rate into the EWMA so it decays toward the true (zero) throughput instead of
+        # freezing at the pre-stall value. Without this, the first sample after the
+        # stall blends against a stale, optimistic rate and the "last Nm" ETA briefly
+        # understates a throttle wave -- the exact case this estimator exists to track.
+        $State['Ewma'] = (1 - $EwmaAlpha) * $State['Ewma']
+        $rate = $State['Ewma']
+        $source = 'window'
+    }
     elseif ($spanSec -gt 0 -and $deltaUnits -gt 0) {
         # Warm-up: not enough recent span yet. Use a cumulative rate over the
         # retained samples and seed the EWMA so the window handoff is smooth.
@@ -232,11 +243,14 @@ function Show-OrchestratorDashboard {
     $winLabel = "last 2m"
 
     if ($Phase -eq "Aggregate") {
-        # Units = tasks. Remaining is task-count; rate from movement in $Completed.
-        if ($sessionCompleted -gt 0 -and $Completed -lt $Total) {
+        # Units = tasks. Sample every frame while the phase is incomplete -- even before
+        # the first completion -- so the baseline frame is seeded at phase start and the
+        # first completed task already has something to measure against. Keep the DISPLAY
+        # decision separate: only show an ETA once there is real session progress.
+        if ($Completed -lt $Total) {
             $eta = Get-ProgressEta -State $script:CeAggEtaState -Now $now `
                 -CompletedUnits ([double]$Completed) -RemainingUnits ([double]($Total - $Completed))
-            if ($eta.Ready -and $null -ne $eta.RatePerMinute) {
+            if ($sessionCompleted -gt 0 -and $eta.Ready -and $null -ne $eta.RatePerMinute) {
                 $src = if ($eta.Source -eq 'window') { $winLabel } else { 'avg' }
                 $etaText = "ETA: {0}  ({1:N1} tasks/min · {2})" -f (Format-TimeSpan -Seconds $eta.EtaSeconds), $eta.RatePerMinute, $src
             }

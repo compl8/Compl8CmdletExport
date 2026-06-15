@@ -767,3 +767,46 @@ def test_aggregate_dashboard_shows_per_phase_progress() -> None:
     # The old conflated agg+detail total (made the aggregate % crawl) must be gone.
     assert "$displayCompleted = $aggDone + $detDone" not in source
     assert "$displayTotal = $aggTotal + $detTotal" not in source
+
+
+def test_progress_eta_decays_ewma_during_stall() -> None:
+    """A fast burst, then a sustained stall (no progress) past the window, then a tiny
+    resume: the EWMA must decay during the stall so the first post-stall sample reflects
+    the (empty) trailing window, not the stale pre-stall throughput."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $state = @{{}}
+        $base = Get-Date '2026-01-01T00:00:00Z'
+        $c = 0.0
+        $r = $null
+        # Fast: +20 every 5s for 200s -> EWMA converges to ~240/min
+        for ($i = 1; $i -le 40; $i++) {{ $c += 20; $r = Get-ProgressEta -State $state -Now $base.AddSeconds(5 * $i) -CompletedUnits $c -RemainingUnits 100000 }}
+        Write-Output ('PEAK=' + [math]::Round($r.RatePerMinute, 1))
+        # Stall: no progress for 200s (frames keep arriving, $c unchanged)
+        for ($i = 1; $i -le 40; $i++) {{ $r = Get-ProgressEta -State $state -Now $base.AddSeconds(200 + 5 * $i) -CompletedUnits $c -RemainingUnits 100000 }}
+        Write-Output ('STALLRATE=' + [math]::Round($r.RatePerMinute, 3))
+        # Resume: +1 unit on the next frame
+        $c += 1
+        $r = Get-ProgressEta -State $state -Now $base.AddSeconds(405) -CompletedUnits $c -RemainingUnits 100000
+        Write-Output ('RESUMERATE=' + [math]::Round($r.RatePerMinute, 3))
+        """
+    )
+    vals = _parse_kv(run_pwsh(script))
+    peak = float(vals["PEAK"])
+    stall = float(vals["STALLRATE"])
+    resume = float(vals["RESUMERATE"])
+    assert 220 <= peak <= 245, vals                  # converged to the fast burst
+    assert stall < 5, vals                           # EWMA decayed toward zero during the stall
+    assert resume < 20, vals                         # post-stall sample is NOT the stale ~240 rate
+
+
+def test_aggregate_dashboard_samples_before_first_completion() -> None:
+    """The aggregate ETA must sample whenever the phase is incomplete (seeding the
+    baseline before the first completion), with the DISPLAY gated separately on real
+    session progress."""
+    source = (MODULE_PARTS_ROOT / "UI" / "02-Dashboards.ps1").read_text(encoding="utf-8")
+    # Sampling gate is on phase-incomplete, not on a prior completion...
+    assert 'if ($Completed -lt $Total) {' in source
+    # ...and the display is gated separately on session progress.
+    assert "if ($sessionCompleted -gt 0 -and $eta.Ready" in source
