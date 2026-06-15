@@ -117,7 +117,9 @@ function Save-AggregateMetadata {
         [hashtable]$TenantInfo
     )
 
-    $metadataPath = Join-Path (Get-CoordinationDir $ExportRunDirectory) "AggregateMetadata.json"
+    $coordDir = Get-CoordinationDir $ExportRunDirectory
+    if (-not (Test-Path $coordDir)) { New-Item -ItemType Directory -Force -Path $coordDir | Out-Null }
+    $metadataPath = Join-Path $coordDir "AggregateMetadata.json"
 
     $metadata = [ordered]@{
         TenantDomain = $TenantInfo.TenantDomain

@@ -65,11 +65,16 @@ function Invoke-ContentExplorerExport {
                 $script:UseExistingAggregates = $true
                 $script:ExistingAggregatePath = $selectedAggregate.Path
 
-                # Copy the aggregate file to current export directory for reference
-                Copy-Item -Path $selectedAggregate.Path -Destination (Join-Path (Get-CoordinationDir $script:ExportRunDirectory) "ContentExplorer-Aggregates.csv") -Force
+                # Copy the aggregate file to current export directory for reference.
+                # Ensure _Coordination exists first: on a fresh run nothing has created it yet
+                # at this point, so the Copy-Item destination dir would be missing (same class
+                # of bug as Save-AggregateMetadata).
+                $coordDir = Get-CoordinationDir $script:ExportRunDirectory
+                if (-not (Test-Path $coordDir)) { New-Item -ItemType Directory -Force -Path $coordDir | Out-Null }
+                Copy-Item -Path $selectedAggregate.Path -Destination (Join-Path $coordDir "ContentExplorer-Aggregates.csv") -Force
                 $sourceMetadata = Join-Path (Split-Path $selectedAggregate.Path) "AggregateMetadata.json"
                 if (Test-Path $sourceMetadata) {
-                    Copy-Item -Path $sourceMetadata -Destination (Join-Path (Get-CoordinationDir $script:ExportRunDirectory) "AggregateMetadata.json") -Force
+                    Copy-Item -Path $sourceMetadata -Destination (Join-Path $coordDir "AggregateMetadata.json") -Force
                 }
                 Write-ExportLog -Message ("Using existing aggregate data from: {0}" -f $selectedAggregate.FolderName) -Level Success
             }
