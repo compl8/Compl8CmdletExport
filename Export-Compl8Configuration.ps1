@@ -198,7 +198,8 @@ param(
 
     # Tenant prefix for the export directory (e.g. 'zava' -> Export-zava-20260514-...).
     # If omitted, resolved in this order: AuthConfig.json Organization (cert auth),
-    # then the last-used value from ConfigFiles/LastTenant.local.json.
+    # then the safe house default "aairii". The last-used tenant is deliberately NOT
+    # remembered, so a customer tenant name is never persisted as a silent default.
     [string]$TenantPrefix,
 
     # Write per-page output as JSONL (one record per line) instead of JSON arrays.
@@ -387,8 +388,8 @@ function Resolve-TenantPrefix {
         Priority:
         1. Explicit -TenantPrefix value
         2. AuthConfig.json Organization (cert auth)
-        3. Last-used value from ConfigFiles/LastTenant.local.json
-        Returns empty string if no source provides a value.
+        3. Safe house default "aairii" -- we deliberately do NOT remember/auto-reuse the
+           last tenant, so a customer name is never persisted as the default.
     #>
     param(
         [string]$ExplicitPrefix,
@@ -409,29 +410,14 @@ function Resolve-TenantPrefix {
         } catch { <# malformed config — ignore #> }
     }
 
-    $lastUsedPath = Join-Path $ScriptRoot "ConfigFiles" "LastTenant.local.json"
-    if (Test-Path $lastUsedPath) {
-        try {
-            $lastUsed = Get-Content -Path $lastUsedPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if (-not [string]::IsNullOrWhiteSpace($lastUsed.TenantPrefix)) {
-                $fromLast = ConvertTo-SafeTenantPrefix -Value $lastUsed.TenantPrefix
-                if ($fromLast) { return @{ Prefix = $fromLast; Source = "last run" } }
-            }
-        } catch { <# malformed — ignore #> }
-    }
-
-    return @{ Prefix = ""; Source = "none" }
+    # No explicit prefix and no cert Organization: fall back to a safe house default.
+    # We deliberately do NOT remember the last-used tenant -- persisting a customer name
+    # as the default is both a wrong-tenant-label risk and a potential leak vector.
+    return @{ Prefix = "aairii"; Source = "default" }
 }
 
-function Save-LastTenantPrefix {
-    param([string]$ScriptRoot, [string]$Prefix)
-    if ([string]::IsNullOrWhiteSpace($Prefix)) { return }
-    $lastUsedPath = Join-Path $ScriptRoot "ConfigFiles" "LastTenant.local.json"
-    try {
-        @{ TenantPrefix = $Prefix; UpdatedAt = (Get-Date).ToString("o") } |
-            ConvertTo-Json | Set-Content -Path $lastUsedPath -Encoding UTF8
-    } catch { <# best effort #> }
-}
+# (Save-LastTenantPrefix removed: the tenant prefix is no longer remembered or persisted
+#  between runs, so a customer tenant name can never become a silent default.)
 
 if ($WorkerExportDir) {
     # Worker mode: use the orchestrator's export directory, don't create a new one
@@ -449,9 +435,6 @@ if ($WorkerExportDir) {
     $script:ExportRunDirectory = Join-Path $OutputDirectory $dirName
     New-Item -ItemType Directory -Force -Path $script:ExportRunDirectory | Out-Null
     $script:ErrorLogPath = Join-Path (Get-LogsDir $script:ExportRunDirectory) "ExportProject-Errors.log"
-    if ($script:TenantPrefix) {
-        Save-LastTenantPrefix -ScriptRoot $scriptRoot -Prefix $script:TenantPrefix
-    }
 }
 
 function Resolve-UnifiedParquetOutputDir {
