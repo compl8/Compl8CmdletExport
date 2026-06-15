@@ -752,3 +752,18 @@ def test_dashboard_eta_uses_windowed_estimator() -> None:
     assert "s/task avg" not in source                   # old aggregate cumulative label
     assert "$pctPerSecond" not in source                # old AE cumulative-percent rate
     assert "$blendThreshold" not in source              # old detail seed/measured blend
+
+
+def test_aggregate_dashboard_shows_per_phase_progress() -> None:
+    """During the aggregate phase the orchestrator dashboard must report
+    aggregate-task completion (aggDone/aggTotal, a stable denominator), not the
+    conflated agg+detail total that balloons as detail tasks are generated."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
+    assert 'if ($displayPhase -eq "Aggregate") {' in source
+    assert "$displayCompleted = $aggDone\n" in source
+    assert "$displayTotal = $aggTotal\n" in source
+    assert "$displayCompleted = $detDone" in source
+    assert "$displayTotal = $detTotal" in source
+    # The old conflated agg+detail total (made the aggregate % crawl) must be gone.
+    assert "$displayCompleted = $aggDone + $detDone" not in source
+    assert "$displayTotal = $aggTotal + $detTotal" not in source

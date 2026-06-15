@@ -794,9 +794,23 @@ function Invoke-ContentExplorerExport {
             # Determine current phase for display
             $displayPhase = if ($aggDone -lt $aggTotal) { "Aggregate" } else { "Detail" }
 
-            # Build total progress (weighted: aggregate tasks are discovery, detail tasks are the real work)
-            $displayCompleted = $aggDone + $detDone
-            $displayTotal = $aggTotal + $detTotal
+            # Per-phase progress. The aggregate phase must report aggregate-task
+            # completion (aggDone/aggTotal): aggTotal is fixed at discovery (~tag
+            # names x workloads) so the bar climbs cleanly 0->100%. Folding in the
+            # detail counts here is wrong during aggregation -- detail tasks are
+            # still being *generated* as aggregates finish, so $detTotal balloons,
+            # the denominator outruns aggDone, and the percent crawls (it was
+            # effectively showing fraction-of-the-whole-job, dominated by
+            # not-yet-started detail work). Once aggregation completes, switch to
+            # detail-task completion (detDone/detTotal), which is then stable.
+            if ($displayPhase -eq "Aggregate") {
+                $displayCompleted = $aggDone
+                $displayTotal = $aggTotal
+            }
+            else {
+                $displayCompleted = $detDone
+                $displayTotal = $detTotal
+            }
 
             # Build worker status
             $workerStatusList = @()
