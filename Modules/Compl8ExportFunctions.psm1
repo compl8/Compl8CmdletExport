@@ -101,6 +101,7 @@ Export-ModuleMember -Function @(
 
     # Connection
     'Test-ExportPrerequisites',
+    'Test-AuthConfig',
     'Connect-Compl8Compliance',
     'Disconnect-Compl8Compliance',
 

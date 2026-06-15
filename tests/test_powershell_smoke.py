@@ -861,3 +861,201 @@ def test_unattended_switch_declared_in_entry_script() -> None:
     entry = (SCRIPT_PARTS_ROOT.parent / "Export-Compl8Configuration.ps1").read_text(encoding="utf-8")
     assert "[switch]$Unattended" in entry, "[switch]$Unattended not declared in entry script"
     assert "$script:Unattended = [bool]$Unattended" in entry, "Unattended not propagated to script scope"
+
+
+# ── B3: Test-AuthConfig validation + cert pre-flight ─────────────────────────
+
+
+def test_auth_config_missing_file_returns_config_error(tmp_path: Path) -> None:
+    """Test-AuthConfig with a non-existent file → IsValid=False, Status=ConfigError."""
+    missing = (tmp_path / "DoesNotExist.json").as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{missing}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_use_cert_false_returns_config_error(tmp_path: Path) -> None:
+    """UseCertificateAuth != True → ConfigError (not suitable for unattended)."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "False", "AppId": "x", "Organization": "x.onmicrosoft.com", "CertificateThumbprint": "ABC"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_missing_fields_returns_config_error(tmp_path: Path) -> None:
+    """UseCertificateAuth=True but missing AppId → ConfigError."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "Organization": "x.onmicrosoft.com", "CertificateThumbprint": "ABC"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}'
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=ConfigError" in output, output
+
+
+def test_auth_config_cert_not_found_returns_auth_failed(tmp_path: Path) -> None:
+    """Valid config but GetCertificate returns $null → AuthFailed."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "DEADBEEF"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $null }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        Write-Output ('THUMBPRINT=' + $r.Thumbprint)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+    assert "THUMBPRINT=DEADBEEF" in output, output
+
+
+def test_auth_config_expired_cert_returns_auth_failed(tmp_path: Path) -> None:
+    """GetCertificate returns a cert with NotAfter in the past → AuthFailed."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "EXPIREDTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $expiredCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddDays(-1) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $expiredCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+
+
+def test_auth_config_valid_cert_returns_is_valid(tmp_path: Path) -> None:
+    """All checks pass with a future-dated injected cert → IsValid=True, Status=''."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "GOODTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $goodCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddDays(30) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $goodCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=[' + $r.Status + ']')
+        Write-Output ('AUTHTYPE=' + $r.AuthType)
+        Write-Output ('THUMBPRINT=' + $r.Thumbprint)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=True" in output, output
+    assert "STATUS=[]" in output, output
+    assert "AUTHTYPE=Certificate" in output, output
+    assert "THUMBPRINT=GOODTHUMB" in output, output
+
+
+def test_auth_config_is_exported_from_module() -> None:
+    """Test-AuthConfig must be visible after Import-Module (registered in psm1 + psd1)."""
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $cmd = Get-Command Test-AuthConfig -ErrorAction SilentlyContinue
+        Write-Output ('EXISTS=' + ($null -ne $cmd))
+        """
+    )
+    output = run_pwsh(script)
+    assert "EXISTS=True" in output, output
+
+
+def test_auth_config_buffer_edge_cert_within_buffer_returns_auth_failed(tmp_path: Path) -> None:
+    """A cert expiring in 12h with the default 1-day buffer must be AuthFailed — the buffer's
+    whole point (not just the already-past case)."""
+    cfg = tmp_path / "AuthConfig.json"
+    cfg.write_text(
+        json.dumps({"UseCertificateAuth": "True", "AppId": "app-id", "Organization": "contoso.onmicrosoft.com", "CertificateThumbprint": "EXPIRINGTHUMB"}),
+        encoding="utf-8",
+    )
+    cfg_posix = cfg.as_posix()
+    script = textwrap.dedent(
+        f"""
+        Import-Module '{MODULE_PATH}' -Force
+        $soonCert = [pscustomobject]@{{ NotAfter = (Get-Date).AddHours(12) }}
+        $r = Test-AuthConfig -ConfigPath '{cfg_posix}' -GetCertificate {{ param($tp) $soonCert }}
+        Write-Output ('ISVALID=' + $r.IsValid)
+        Write-Output ('STATUS=' + $r.Status)
+        """
+    )
+    output = run_pwsh(script)
+    assert "ISVALID=False" in output, output
+    assert "STATUS=AuthFailed" in output, output
+
+
+def test_unattended_pre_flight_helper_defined_and_called_in_main_execution() -> None:
+    """Source-assert: MainExecution.ps1 defines Invoke-UnattendedAuthPreflight (calling
+    Test-AuthConfig, IsValid-guarded, exiting via Get-ExportExitCode, writing a RunSummary)
+    and the main export path calls it before the connect."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # Helper definition + body
+    assert "function Invoke-UnattendedAuthPreflight" in source, "helper not defined in MainExecution.ps1"
+    assert "$authCheck = Test-AuthConfig" in source, "auth pre-flight result not captured in $authCheck"
+    assert "if (-not $authCheck.IsValid)" in source, "IsValid guard missing in pre-flight helper"
+    assert "Get-ExportExitCode -Status $authCheck.Status" in source, "Get-ExportExitCode not called with $authCheck.Status"
+    assert "Write-RunSummary" in source, "Write-RunSummary not called on auth pre-flight failure"
+    # Helper must be a no-op when not unattended (early return), not unconditional
+    assert "if (-not $script:Unattended) { return }" in source, "pre-flight not gated on $script:Unattended"
+    # Main export path calls the helper with -WriteSummary
+    assert "Invoke-UnattendedAuthPreflight -WriteSummary" in source, "main path does not call the pre-flight helper"
+
+
+def test_unattended_pre_flight_covers_all_early_exit_modes() -> None:
+    """The four early-exit modes (worker / resume / retry / tasks-csv) must each call the
+    pre-flight helper before their Connect-Compl8Compliance, so the gap can't silently reopen."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # Resume / Retry / TasksCsv write a RunSummary scoped to their export dir.
+    assert "Invoke-UnattendedAuthPreflight -ExportDir $CEResumeDir -Mode 'ContentExplorerResume' -WriteSummary" in source, "resume path missing pre-flight"
+    assert "Invoke-UnattendedAuthPreflight -ExportDir $CERetryDir -Mode 'ContentExplorerRetry' -WriteSummary" in source, "retry path missing pre-flight"
+    assert "Invoke-UnattendedAuthPreflight -Mode 'ContentExplorerTasksCsv' -WriteSummary" in source, "tasks-csv path missing pre-flight"
+    # Worker calls the helper WITHOUT -WriteSummary (it doesn't own the run summary).
+    # Pin it by the comment that documents the choice plus a bare helper call.
+    assert "a worker doesn't own the run's summary" in source, "worker pre-flight rationale comment missing"

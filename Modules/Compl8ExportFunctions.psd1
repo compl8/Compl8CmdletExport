@@ -41,7 +41,7 @@ RequiredModules = @(
     }
 )
 
-# Functions to export from this module — derived from the live Import-Module enumeration (126 functions)
+# Functions to export from this module — keep in sync with the psm1 Export-ModuleMember list.
 FunctionsToExport = @(
     'Add-ExportCount',
     'Add-PartialError',
@@ -149,6 +149,7 @@ FunctionsToExport = @(
     'Show-AEDashboard',
     'Show-OrchestratorDashboard',
     'Show-RetryBucketSummary',
+    'Test-AuthConfig',
     'Test-ExportConfiguration',
     'Test-ExportPrerequisites',
     'Test-PageHasContent',

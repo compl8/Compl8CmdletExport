@@ -1,5 +1,49 @@
 ﻿#region Main Execution
 
+function Invoke-UnattendedAuthPreflight {
+    <#
+    .SYNOPSIS
+        Unattended-only AuthConfig pre-flight. No-op in interactive mode.
+    .DESCRIPTION
+        When $script:Unattended is set, validates ConfigFiles\AuthConfig.json via
+        Test-AuthConfig BEFORE any Connect-Compl8Compliance attempt. On failure it logs
+        each error, optionally writes a RunSummary, and exits with the mapped exit code
+        (ConfigError = 4, AuthFailed = 3) — never silently falling back to interactive.
+        Interactive runs return immediately so Build-AuthParameters' silent fallback stays.
+    .PARAMETER ExportDir
+        Directory to write RunSummary.json into (only when -WriteSummary). Defaults to the
+        current run directory.
+    .PARAMETER Mode
+        Mode label recorded in the RunSummary (e.g. FullExport, ContentExplorerResume).
+    .PARAMETER WriteSummary
+        Write a RunSummary.json on failure. Omit for worker mode — a worker does not own the
+        run's RunSummary; the spawning orchestrator already pre-flighted and owns the summary.
+    #>
+    param(
+        [string]$ExportDir = $script:ExportRunDirectory,
+        [string]$Mode = $script:SelectedMode,
+        [switch]$WriteSummary
+    )
+
+    if (-not $script:Unattended) { return }
+
+    $authCheck = Test-AuthConfig -ConfigPath (Join-Path $scriptRoot 'ConfigFiles\AuthConfig.json')
+    if (-not $authCheck.IsValid) {
+        foreach ($e in $authCheck.Errors) {
+            Write-ExportLog -Message "Unattended auth pre-flight failed: $e" -Level Error
+        }
+        if ($WriteSummary -and $ExportDir -and (Test-Path $ExportDir)) {
+            Write-RunSummary -ExportDir $ExportDir -Result @{
+                Mode   = $Mode
+                Status = $authCheck.Status
+                Errors = @($authCheck.Errors)
+            }
+        }
+        exit (Get-ExportExitCode -Status $authCheck.Status)
+    }
+    Write-ExportLog -Message ("Unattended auth pre-flight OK (thumbprint {0}, expires {1:u})" -f $authCheck.Thumbprint, $authCheck.NotAfter) -Level Info
+}
+
 # Worker mode: skip menu, confirmation, and go straight to work
 if ($WorkerExportDir) {
     if (-not (Test-Path $WorkerExportDir)) {
@@ -23,6 +67,10 @@ if ($WorkerExportDir) {
 
     # Check prerequisites
     if (-not (Test-ExportPrerequisites)) { exit 1 }
+
+    # Unattended auth pre-flight (no RunSummary — a worker doesn't own the run's summary;
+    # the spawning orchestrator already pre-flighted and owns it).
+    Invoke-UnattendedAuthPreflight
 
     # Authenticate
     $connectParams = Build-AuthParameters
@@ -64,6 +112,8 @@ if ($CEResumeDir) {
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
 
+    Invoke-UnattendedAuthPreflight -ExportDir $CEResumeDir -Mode 'ContentExplorerResume' -WriteSummary
+
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
     $script:IsWorkerMode = $false
@@ -95,6 +145,8 @@ if ($CERetryDir) {
     }
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
+
+    Invoke-UnattendedAuthPreflight -ExportDir $CERetryDir -Mode 'ContentExplorerRetry' -WriteSummary
 
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
@@ -128,6 +180,8 @@ if ($CETasksCsv) {
     }
 
     if (-not (Test-ExportPrerequisites)) { exit 1 }
+
+    Invoke-UnattendedAuthPreflight -Mode 'ContentExplorerTasksCsv' -WriteSummary
 
     $connectParams = Build-AuthParameters
     $script:AuthParams = $connectParams.Clone()
@@ -767,6 +821,10 @@ try {
     } else {
         Write-ExportLog -Message "`nSkipping config validation (resume mode - project already exists)" -Level Info
     }
+
+    # Auth pre-flight (unattended only) — validate AuthConfig before attempting a connect.
+    # Interactive mode keeps Build-AuthParameters' silent fallback behavior.
+    Invoke-UnattendedAuthPreflight -WriteSummary
 
     # Connect to Security & Compliance PowerShell
     Write-ExportLog -Message "`nConnecting to Security & Compliance PowerShell..." -Level Info
