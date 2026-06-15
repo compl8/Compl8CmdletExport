@@ -184,8 +184,14 @@ function Write-RunSummary {
         $dropped    = [Math]::Max(0, $rawErrors.Count - $maxErrors)
         $cappedErrors = @(
             ($rawErrors | Select-Object -Last $maxErrors) | ForEach-Object {
-                $ts  = if ($_ -is [hashtable]) { $_.Timestamp } elseif ($_ -is [System.Collections.IDictionary]) { $_['Timestamp'] } else { $_.Timestamp }
-                $msg = if ($_ -is [hashtable]) { $_.Message   } elseif ($_ -is [System.Collections.IDictionary]) { $_['Message']   } else { $_.Message   }
+                $ts  = if ($_ -is [string])                           { ''            } `
+                       elseif ($_ -is [hashtable])                    { $_.Timestamp  } `
+                       elseif ($_ -is [System.Collections.IDictionary]) { $_['Timestamp'] } `
+                       else                                            { $_.Timestamp  }
+                $msg = if ($_ -is [string])                           { $_            } `
+                       elseif ($_ -is [hashtable])                    { $_.Message    } `
+                       elseif ($_ -is [System.Collections.IDictionary]) { $_['Message']  } `
+                       else                                            { $_.Message    }
                 [ordered]@{
                     timestamp = [string]($ts  ?? '')
                     message   = [string]($msg ?? '')

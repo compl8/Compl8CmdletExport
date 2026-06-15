@@ -44,6 +44,42 @@ function Invoke-UnattendedAuthPreflight {
     Write-ExportLog -Message ("Unattended auth pre-flight OK (thumbprint {0}, expires {1:u})" -f $authCheck.Thumbprint, $authCheck.NotAfter) -Level Info
 }
 
+function Get-RunFinalStatus {
+    <#
+    .SYNOPSIS
+        Computes final Completed/Partial status for a sub-mode run (Resume/Retry/TasksCsv).
+    .DESCRIPTION
+        Mirrors the main-path logic (lines 1010-1026) so sub-mode exits share the same
+        status-determination rules: Partial if errors > 0, remaining tasks > 0, or the
+        remaining-task check itself failed; Completed otherwise.
+    .PARAMETER ExportDir
+        Path to the export run directory.
+    .OUTPUTS
+        Hashtable with keys: Status (string), Remaining (int), Stats (ExportStatistics).
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$ExportDir
+    )
+
+    $stats = Get-ExportStatistics
+    $remaining = 0
+    $checkFailed = $false
+
+    if ($ExportDir -and (Test-Path $ExportDir)) {
+        try {
+            $remaining = Write-RemainingTasksCsv -ExportDir $ExportDir
+        }
+        catch {
+            $checkFailed = $true
+            Write-ExportLog -Message ("Could not determine remaining-task count ({0}); reporting status as Partial." -f $_.Exception.Message) -Level Warning
+        }
+    }
+
+    $status = if ($stats.ErrorCount -gt 0 -or $remaining -gt 0 -or $checkFailed) { 'Partial' } else { 'Completed' }
+    return @{ Status = $status; Remaining = $remaining; Stats = $stats }
+}
+
 # Worker mode: skip menu, confirmation, and go straight to work
 if ($WorkerExportDir) {
     if (-not (Test-Path $WorkerExportDir)) {
@@ -78,7 +114,7 @@ if ($WorkerExportDir) {
     $script:IsWorkerMode = $true
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     # Run appropriate worker based on export type
@@ -119,7 +155,10 @@ if ($CEResumeDir) {
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and (Test-Path $CEResumeDir)) {
+            Write-RunSummary -ExportDir $CEResumeDir -Result @{ Mode = 'ContentExplorerResume'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -128,7 +167,9 @@ if ($CEResumeDir) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $resumeFinal = Get-RunFinalStatus -ExportDir $CEResumeDir
+    Write-RunSummary -ExportDir $CEResumeDir -Result @{ Mode = 'ContentExplorerResume'; Status = $resumeFinal.Status; RemainingTasks = $resumeFinal.Remaining; Errors = @($resumeFinal.Stats.Errors) }
+    exit (Get-ExportExitCode -Status $resumeFinal.Status)
 }
 
 # Retry mode: skip menu, authenticate, and retry discrepant tasks
@@ -153,7 +194,10 @@ if ($CERetryDir) {
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and (Test-Path $CERetryDir)) {
+            Write-RunSummary -ExportDir $CERetryDir -Result @{ Mode = 'ContentExplorerRetry'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -162,7 +206,9 @@ if ($CERetryDir) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $retryFinal = Get-RunFinalStatus -ExportDir $CERetryDir
+    Write-RunSummary -ExportDir $CERetryDir -Result @{ Mode = 'ContentExplorerRetry'; Status = $retryFinal.Status; RemainingTasks = $retryFinal.Remaining; Errors = @($retryFinal.Stats.Errors) }
+    exit (Get-ExportExitCode -Status $retryFinal.Status)
 }
 
 # Task CSV mode: skip menu, authenticate, and run from task CSV
@@ -188,7 +234,10 @@ if ($CETasksCsv) {
     $script:IsWorkerMode = $false
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-Host "`n  ERROR: Authentication failed" -ForegroundColor Red
-        exit 1
+        if ($script:Unattended -and $script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = 'ContentExplorerTasksCsv'; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     try {
@@ -197,7 +246,11 @@ if ($CETasksCsv) {
     finally {
         Disconnect-Compl8Compliance
     }
-    exit 0
+    $tasksCsvFinal = Get-RunFinalStatus -ExportDir $script:ExportRunDirectory
+    if ($script:ExportRunDirectory) {
+        Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = 'ContentExplorerTasksCsv'; Status = $tasksCsvFinal.Status; RemainingTasks = $tasksCsvFinal.Remaining; Errors = @($tasksCsvFinal.Stats.Errors) }
+    }
+    exit (Get-ExportExitCode -Status $tasksCsvFinal.Status)
 }
 
 # Check if we should show the interactive menu
@@ -834,7 +887,10 @@ try {
 
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-ExportLog -Message "Failed to connect. Exiting." -Level Error
-        exit 1
+        if ($script:Unattended -and $script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{ Mode = $exportMode; Status = 'AuthFailed'; Errors = @('Connect-Compl8Compliance failed after auth pre-flight') }
+        }
+        exit (Get-ExportExitCode -Status 'AuthFailed')
     }
 
     # Post-connect tenant confirmation (interactive only; non-interactive proceeds).

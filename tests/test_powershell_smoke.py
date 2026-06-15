@@ -1137,3 +1137,117 @@ def test_b4_stop_worker_processes_no_op_on_empty(tmp_path: Path) -> None:
     output = run_pwsh(script)
     assert "NULL_OK" in output, f"Stop-WorkerProcesses $null raised an error: {output}"
     assert "EMPTY_OK" in output, f"Stop-WorkerProcesses @() raised an error: {output}"
+
+
+# ── Codex-review findings (Fix 1–6) ─────────────────────────────────────────
+
+
+def test_fix1_unattended_baseargs_include_unattended_flag() -> None:
+    """Both unattended $baseArgs arrays in Menu.ps1 must include '-Unattended'."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    # Count occurrences of "-Unattended" inside the unattended $baseArgs blocks.
+    # There are exactly two unattended spawn sites; each must carry the flag.
+    assert source.count('"-Unattended"') >= 2, (
+        "Both unattended $baseArgs arrays in Menu.ps1 must include '-Unattended' "
+        f"(found {source.count(chr(34) + '-Unattended' + chr(34))} occurrence(s))"
+    )
+    # Confirm the interactive branches do NOT carry it (they have no -Unattended).
+    # We can check that '-Unattended' only appears inside `if ($script:Unattended)` blocks.
+    # Simpler: assert it does not appear paired with '-NoExit' in the same baseArgs literal.
+    # (Interactive blocks have "-NoExit"; unattended blocks must not have it.)
+    # Just confirm the flag count is exactly 2 (one per spawn site).
+    assert source.count('"-Unattended"') == 2, (
+        "Expected exactly 2 '-Unattended' entries (one per unattended spawn site); "
+        f"found {source.count(chr(34) + '-Unattended' + chr(34))}"
+    )
+
+
+def test_fix2_connect_failure_exits_auth_failed() -> None:
+    """All connect-failure sites in MainExecution.ps1 must exit via Get-ExportExitCode 'AuthFailed'."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "Get-ExportExitCode -Status 'AuthFailed'" in source, (
+        "No connect-failure site uses Get-ExportExitCode -Status 'AuthFailed'"
+    )
+    # Must NOT have a bare `exit 1` on a connect-failure path (all 5 sites fixed).
+    # The only remaining bare exit 1 should be the prerequisite gate, not auth.
+    lines = source.splitlines()
+    bare_exit1_after_auth = [
+        l.strip() for l in lines
+        if l.strip() == "exit 1"
+        and "Authentication failed" in "\n".join(lines[max(0, lines.index(l)-3):lines.index(l)+1])
+    ]
+    assert not bare_exit1_after_auth, (
+        f"bare 'exit 1' still present near an auth-failure message: {bare_exit1_after_auth}"
+    )
+
+
+def test_fix3_submodes_call_get_run_final_status() -> None:
+    """Resume/Retry/TasksCsv paths must call Get-RunFinalStatus and exit via Get-ExportExitCode."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "function Get-RunFinalStatus" in source, "Get-RunFinalStatus helper not defined in MainExecution.ps1"
+    assert "Get-RunFinalStatus -ExportDir $CEResumeDir" in source, "Resume path missing Get-RunFinalStatus call"
+    assert "Get-RunFinalStatus -ExportDir $CERetryDir" in source, "Retry path missing Get-RunFinalStatus call"
+    assert "Get-RunFinalStatus -ExportDir $script:ExportRunDirectory" in source, (
+        "TasksCsv path missing Get-RunFinalStatus call"
+    )
+    # Sub-mode exits must use Get-ExportExitCode, not bare exit 0.
+    assert source.count("exit (Get-ExportExitCode -Status") >= 4, (
+        "Expected at least 4 uses of exit (Get-ExportExitCode...) (worker + 3 sub-modes + main path)"
+    )
+
+
+def test_fix4_ce_export_has_try_finally_for_worker_shutdown() -> None:
+    """ContentExplorer.Export.ps1 must use try/finally to guarantee worker shutdown."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
+    assert "finally" in source, "ContentExplorer.Export.ps1 missing try/finally for worker shutdown"
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.Export.ps1 missing Stop-WorkerProcesses call in finally"
+    )
+
+
+def test_fix4_ce_taskcsv_has_try_finally_for_worker_shutdown() -> None:
+    """ContentExplorer.TasksCsv.ps1 must use try/finally to guarantee worker shutdown."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.TasksCsv.ps1").read_text(encoding="utf-8")
+    assert "finally" in source, "ContentExplorer.TasksCsv.ps1 missing try/finally for worker shutdown"
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.TasksCsv.ps1 missing Stop-WorkerProcesses call in finally"
+    )
+
+
+def test_fix5_string_errors_survive_run_summary(tmp_path: Path) -> None:
+    """Plain-string errors passed to Write-RunSummary must appear in RunSummary.json."""
+    export_dir = tmp_path / "Export-fix5-test"
+    export_dir.mkdir()
+    # Use a PS script file (not -Command -) to avoid multiline-block stdin issues.
+    ps1 = tmp_path / "run_fix5.ps1"
+    ps1.write_text(
+        f"Import-Module '{MODULE_PATH}' -Force\n"
+        f"$result = @{{ Mode='TestMode'; Status='Partial'; Errors=@('boom one','boom two') }}\n"
+        f"Write-RunSummary -ExportDir '{export_dir}' -Result $result\n"
+        "Write-Output 'WROTE_OK'\n",
+        encoding="utf-8",
+    )
+    script = f"& '{ps1}'"
+    output = run_pwsh(script)
+    assert "WROTE_OK" in output, f"Write-RunSummary raised an error: {output}"
+
+    summary_path = export_dir / "RunSummary.json"
+    assert summary_path.exists(), "RunSummary.json was not written"
+    data = json.loads(summary_path.read_text(encoding="utf-8"))
+    messages = [e["message"] for e in data.get("errors", [])]
+    assert "boom one" in messages, f"'boom one' not in RunSummary errors: {messages}"
+    assert "boom two" in messages, f"'boom two' not in RunSummary errors: {messages}"
+
+
+def test_fix6_worker_spawn_read_host_guards_unattended() -> None:
+    """The worker-spawn Read-Host in Start-WorkerTerminals must also check -not $script:Unattended."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    assert "-not $script:Unattended" in source, (
+        "Menu.ps1 worker-spawn Read-Host guard missing '-not $script:Unattended'"
+    )
+    # Confirm the guard wraps the Read-Host in Start-WorkerTerminals (not just elsewhere).
+    # Check the guard appears before 'Read-Host' in the file.
+    guard_idx = source.find("-not $isCertAuth -and -not $script:Unattended")
+    readhost_idx = source.find('Read-Host "  Press Enter to spawn worker')
+    assert guard_idx != -1, "Combined guard '-not $isCertAuth -and -not $script:Unattended' not found"
+    assert guard_idx < readhost_idx, "Guard must appear before the Read-Host call"

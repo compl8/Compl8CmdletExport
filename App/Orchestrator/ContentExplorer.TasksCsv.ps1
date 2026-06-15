@@ -167,6 +167,9 @@ function Invoke-ContentExplorerFromTasksCsv {
             return
         }
 
+        # Guarantee worker shutdown on both normal completion and exception/abort.
+        try {
+
         # Dispatch via Invoke-DispatchLoop engine (reuses shared CE detail callbacks)
         $totalDetailItems = ($inputTasks | ForEach-Object { ($_.ExpectedCount -as [long]) } | Measure-Object -Sum).Sum
         if (-not $totalDetailItems) { $totalDetailItems = 0 }
@@ -282,21 +285,11 @@ function Invoke-ContentExplorerFromTasksCsv {
 
         # Save final task state
         Write-TaskCsv -Path $detailCsvPath -Tasks $inputTasks
-
-        # Shutdown workers
-        if ($workerProcesses.Count -gt 0) {
-            Write-ExportLog -Message ("Shutting down {0} worker(s)..." -f $workerProcesses.Count) -Level Info
-            Start-Sleep -Seconds 5
-            foreach ($wp in $workerProcesses) {
-                try {
-                    if (-not $wp.Process.HasExited) {
-                        Stop-Process -Id $wp.PID -Force -ErrorAction SilentlyContinue
-                    }
-                }
-                catch {
-                    Write-Verbose "Could not stop worker PID $($wp.PID): $($_.Exception.Message)"
-                }
-            }
+        }
+        finally {
+            # Guarantee worker shutdown on both normal completion and exception/abort.
+            # Stop-WorkerProcesses is a no-op when $workerProcesses is empty.
+            Stop-WorkerProcesses -WorkerProcesses $workerProcesses
         }
     }
     else {

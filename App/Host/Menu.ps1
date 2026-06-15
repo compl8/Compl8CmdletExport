@@ -724,7 +724,8 @@ function Start-WorkerTerminals {
             "-NoProfile",
             "-File", ("`"{0}`"" -f $scriptPath),
             "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
-            "-WorkerMode"
+            "-WorkerMode",
+            "-Unattended"
         )
     } else {
         $baseArgs = @(
@@ -744,7 +745,7 @@ function Start-WorkerTerminals {
     $workerProcesses = [System.Collections.ArrayList]::new()
 
     for ($i = 1; $i -le $Count; $i++) {
-        if (-not $isCertAuth) {
+        if (-not $isCertAuth -and -not $script:Unattended) {
             $input = Read-Host "  Press Enter to spawn worker $i/$Count (Q to stop)"
             if ($input -and $input.Trim().ToUpper() -eq 'Q') {
                 Write-ExportLog -Message "  Worker spawning stopped by user at $($i-1)/$Count" -Level Warning
@@ -825,7 +826,8 @@ function Add-WorkerToExport {
             "-NoProfile",
             "-File", ("`"{0}`"" -f $scriptPath),
             "-WorkerExportDir", ("`"{0}`"" -f $ExportRunDirectory),
-            "-WorkerMode"
+            "-WorkerMode",
+            "-Unattended"
         )
     } else {
         $baseArgs = @(

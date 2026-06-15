@@ -377,6 +377,11 @@ function Invoke-ContentExplorerExport {
 
     #endregion
 
+    # Guarantee worker shutdown even if an exception aborts the orchestrator after spawn.
+    # The try body runs the full dispatch + cleanup; finally calls Stop-WorkerProcesses
+    # (which is a no-op on an empty collection, so single-terminal paths are unaffected).
+    try {
+
     #region -- Phase 4: Worker folder setup --
     # In multi-terminal mode, the orchestrator does NOT create a worker folder --
     # it acts as coordinator only (no task processing).
@@ -1468,64 +1473,18 @@ function Invoke-ContentExplorerExport {
     $tracker.Status = "Completed"
     Save-ContentExplorerRunTracker -Tracker $tracker -TrackerPath $trackerPath
 
-    # Shut down worker processes
-    # Workers are spawned with -NoExit so their terminals stay open even after the export
-    # script finishes. The Completed phase signal tells workers to exit their main loop,
-    # but the pwsh process remains. We give a grace period, then close remaining terminals.
-    if ($workerProcesses.Count -gt 0) {
-        Write-ExportLog -Message ("Shutting down {0} worker process(es)..." -f $workerProcesses.Count) -Level Info
-
-        # Grace period: let workers detect the Completed phase and exit their main loop
-        $graceWaitMs = 15000  # 15 seconds
-        $cleanlyExited = 0
-        $closedByOrchestrator = 0
-        $alreadyExited = 0
-
-        # First pass: count already-exited workers and wait briefly for the rest
-        $stillRunning = @()
-        foreach ($worker in $workerProcesses) {
-            if (-not $worker.Process -or $worker.Process.HasExited) {
-                $alreadyExited++
-                Write-ExportLog -Message ("  Worker PID {0}: already exited" -f $worker.PID) -Level Info -LogOnly
-            }
-            else {
-                $stillRunning += $worker
-            }
-        }
-
-        if ($stillRunning.Count -gt 0) {
-            Write-ExportLog -Message ("  {0} worker(s) still running - waiting {1}s for graceful exit..." -f $stillRunning.Count, ($graceWaitMs / 1000)) -Level Info
-            Start-Sleep -Milliseconds $graceWaitMs
-
-            # Second pass: check who exited during grace period, close the rest
-            foreach ($worker in $stillRunning) {
-                if ($worker.Process.HasExited) {
-                    $cleanlyExited++
-                    Write-ExportLog -Message ("  Worker PID {0}: exited cleanly" -f $worker.PID) -Level Info -LogOnly
-                }
-                else {
-                    # Worker still running (likely due to -NoExit keeping terminal open)
-                    try {
-                        Stop-Process -Id $worker.PID -Force -ErrorAction Stop
-                        $closedByOrchestrator++
-                        Write-ExportLog -Message ("  Worker PID {0}: closed by orchestrator" -f $worker.PID) -Level Info -LogOnly
-                    }
-                    catch {
-                        Write-ExportLog -Message ("  Worker PID {0}: failed to close ({1})" -f $worker.PID, $_.Exception.Message) -Level Warning -LogOnly
-                    }
-                }
-            }
-        }
-
-        Write-ExportLog -Message ("Worker shutdown complete: {0} already exited, {1} exited cleanly, {2} closed by orchestrator" -f $alreadyExited, $cleanlyExited, $closedByOrchestrator) -Level Info
-    }
-
     # Write manifest and set final phase
     Write-CEManifest -ExportDir $script:SharedExportDirectory
     Write-ExportPhase -ExportDir $script:SharedExportDirectory -Phase "Completed"
     Write-ExportLog -Message "Export phase set to Completed" -Level Success
 
     #endregion
+    }
+    finally {
+        # Guarantee worker shutdown on both normal completion and exception/abort.
+        # Stop-WorkerProcesses is a no-op when $workerProcesses is empty (single-terminal).
+        Stop-WorkerProcesses -WorkerProcesses $workerProcesses
+    }
 }
 
 
