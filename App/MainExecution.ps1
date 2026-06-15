@@ -524,6 +524,184 @@ if ($confirmation -match '^[Nn]') {
 
 Write-Host ""
 
+function Rename-ExportRunDirectory {
+    <#
+    .SYNOPSIS
+        Renames the active export run directory to carry a new tenant-prefix label and
+        updates the script-scope path variables that depend on it.
+    .DESCRIPTION
+        Factored out of Confirm-ConnectedTenant so the rename logic can be unit-tested
+        without a live connection. The new directory name is
+        "Export-{NewLabel}-{$script:ExportTimestamp}". On success, updates
+        $script:ExportRunDirectory, $script:TenantPrefix, $script:LogFile and
+        $script:ErrorLogPath to point at the renamed directory.
+
+        The log is written via Add-Content (per-write open/close, no persistent handle),
+        so renaming the directory between writes is safe.
+    .OUTPUTS
+        $true if the directory was renamed and the script vars updated; $false on failure
+        (in which case the old directory and label are left untouched).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$NewLabel
+    )
+
+    $oldDir = $script:ExportRunDirectory
+    $parent = Split-Path $oldDir -Parent
+    $newName = "Export-{0}-{1}" -f $NewLabel, $script:ExportTimestamp
+    $newPath = Join-Path $parent $newName
+
+    if ($newPath -eq $oldDir) {
+        # Same label as current; nothing to rename, but treat as success.
+        return $true
+    }
+
+    try {
+        Rename-Item -Path $oldDir -NewName $newName -ErrorAction Stop
+    }
+    catch {
+        Write-Host ("  Could not rename export directory: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+        Write-Host "  Keeping the existing directory and label." -ForegroundColor Yellow
+        return $false
+    }
+
+    # Repoint all script-scope path vars at the renamed directory.
+    $logLeaf = if ($script:LogFile) { Split-Path $script:LogFile -Leaf } else { $null }
+    $script:ExportRunDirectory = $newPath
+    $script:TenantPrefix = $NewLabel
+    if ($logLeaf) {
+        $script:LogFile = Join-Path (Get-LogsDir $newPath) $logLeaf
+    }
+    $script:ErrorLogPath = Join-Path (Get-LogsDir $newPath) "ExportProject-Errors.log"
+
+    return $true
+}
+
+function Confirm-ConnectedTenant {
+    <#
+    .SYNOPSIS
+        Post-connect interactive guard: confirms the operator is on the intended tenant
+        before any export work begins.
+    .DESCRIPTION
+        WAM/MSAL caches credentials, so Connect-IPPSSession can silently reuse a cached
+        account - the export label (TenantPrefix) might say one tenant while the live
+        session is actually connected to another. This shows BOTH the label and the
+        actual connected domain (from Get-Compl8TenantInfo) and lets the operator
+        Proceed, Relabel (rename the run dir), Re-authenticate (different account), or
+        Abort.
+
+        Non-interactive (input redirected / no console): logs the label + domain and
+        proceeds without prompting - forward-compat with a future -Unattended switch and
+        the cert-auth silent flow.
+    .PARAMETER ConnectParams
+        The splatted connect parameters (from Build-AuthParameters), reused for the
+        Re-authenticate path.
+    .OUTPUTS
+        $true to proceed with the export; $false to abort.
+    #>
+    param(
+        [Parameter(Mandatory)][hashtable]$ConnectParams
+    )
+
+    $reAuthed = $false
+
+    while ($true) {
+        # --- 1. Determine the actual connected domain (never hard-fail) ---
+        $connectedDomain = $null
+        try {
+            $tenantInfo = Get-Compl8TenantInfo
+            if ($tenantInfo -and $tenantInfo.TenantDomain) {
+                $connectedDomain = [string]$tenantInfo.TenantDomain
+            }
+            elseif ($tenantInfo -and $tenantInfo.TenantId) {
+                $connectedDomain = "TenantId: " + [string]$tenantInfo.TenantId
+            }
+        }
+        catch {
+            $connectedDomain = $null
+        }
+        $domainDisplay = if ($connectedDomain) { $connectedDomain } else { "(could not determine - Get-Compl8TenantInfo failed)" }
+
+        $label = if ($script:TenantPrefix) { [string]$script:TenantPrefix } else { "(none)" }
+
+        # --- 2. Display ---
+        Write-Host ""
+        Write-Host "--- Tenant confirmation ---" -ForegroundColor Cyan
+        Write-Host ("  Export label (prefix): {0}" -f $label)
+        Write-Host ("  Connected domain:      {0}" -f $domainDisplay)
+
+        $labelLower = if ($script:TenantPrefix) { ([string]$script:TenantPrefix).ToLower() } else { "" }
+        $domainLower = if ($connectedDomain) { $connectedDomain.ToLower() } else { "" }
+        if ($labelLower -and ($domainLower -notlike "*$labelLower*")) {
+            Write-Host "  WARNING: Label does not obviously match the connected domain - if you're on cached credentials you may be signed into the wrong tenant." -ForegroundColor Yellow
+        }
+        if ($reAuthed -and $connectedDomain -and $connectedDomain -eq $script:LastConfirmedDomain) {
+            Write-Host "  (domain unchanged - if you intended a different account, you may need to sign out of the cached account in the browser)" -ForegroundColor Yellow
+        }
+
+        # --- 3. Non-interactive guard ---
+        if ([Console]::IsInputRedirected) {
+            Write-ExportLog -Message ("Tenant confirmation skipped (non-interactive): label='{0}', connected domain='{1}'. Proceeding." -f $label, $domainDisplay) -Level Info
+            return $true
+        }
+
+        # --- 4. Interactive prompt ---
+        Write-Host ""
+        Write-Host "  [Y] Proceed   [L] Relabel   [R] Re-authenticate (different account)   [N] Abort"
+        $choice = $null
+        try {
+            $choice = Read-Host "  Choice [Y]"
+        }
+        catch {
+            # No usable console after all - proceed rather than block.
+            Write-ExportLog -Message ("Tenant confirmation prompt unavailable (console read failed): label='{0}', connected domain='{1}'. Proceeding." -f $label, $domainDisplay) -Level Info
+            return $true
+        }
+
+        $choice = ([string]$choice).Trim()
+        $script:LastConfirmedDomain = $connectedDomain
+
+        if ($choice -eq '' -or $choice -match '^[Yy]$') {
+            Write-ExportLog -Message ("Tenant confirmed by operator: label='{0}', connected domain='{1}'." -f $label, $domainDisplay) -Level Info
+            return $true
+        }
+        elseif ($choice -match '^[Ll]$') {
+            # Relabel: sanitize the new label, rename the run dir, repoint vars, re-loop.
+            $rawLabel = $null
+            try { $rawLabel = Read-Host "  New label" } catch { $rawLabel = "" }
+            $newLabel = ConvertTo-SafeTenantPrefix -Value ([string]$rawLabel)
+            if (-not $newLabel) {
+                Write-Host "  Label sanitized to empty (allowed: a-z 0-9 _ -). Please try again." -ForegroundColor Yellow
+                continue
+            }
+            $oldDir = $script:ExportRunDirectory
+            if (Rename-ExportRunDirectory -NewLabel $newLabel) {
+                Write-ExportLog -Message ("Export relabeled '{0}' -> directory renamed: '{1}' -> '{2}'." -f $newLabel, $oldDir, $script:ExportRunDirectory) -Level Info
+            }
+            continue
+        }
+        elseif ($choice -match '^[Rr]$') {
+            # Re-authenticate as a (potentially) different account.
+            Write-Host "  Re-authenticating - disconnecting current session..." -ForegroundColor Cyan
+            try { Disconnect-Compl8Compliance } catch { }
+            if (-not (Connect-Compl8Compliance @ConnectParams)) {
+                Write-Host "  Re-authentication failed. You can try again or Abort." -ForegroundColor Yellow
+                continue
+            }
+            $reAuthed = $true
+            continue
+        }
+        elseif ($choice -match '^[Nn]$') {
+            return $false
+        }
+        else {
+            Write-Host "  Unrecognized choice. Enter Y, L, R, or N." -ForegroundColor Yellow
+            continue
+        }
+    }
+}
+
 # Now start the actual export process
 try {
     Write-ExportLog -Message "=================================================================================" -Level Info
@@ -579,6 +757,15 @@ try {
     if (-not (Connect-Compl8Compliance @connectParams)) {
         Write-ExportLog -Message "Failed to connect. Exiting." -Level Error
         exit 1
+    }
+
+    # Post-connect tenant confirmation (interactive only; non-interactive proceeds).
+    # WAM/MSAL can silently reuse a cached account, so confirm label vs. connected
+    # domain before any export work spawns workers / writes data.
+    if (-not (Confirm-ConnectedTenant -ConnectParams $connectParams)) {
+        Write-ExportLog -Message "Export cancelled at tenant confirmation." -Level Warning
+        Disconnect-Compl8Compliance
+        exit 0
     }
 
     # Determine export type and execute
