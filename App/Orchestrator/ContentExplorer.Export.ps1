@@ -52,11 +52,16 @@ function Invoke-ContentExplorerExport {
         }
 
         Write-Host ""
-        Write-Host "Would you like to reuse existing aggregate data? (Saves time on large tenants)" -ForegroundColor Cyan
-        Write-Host ("  [1-{0}] Use the aggregate file shown above" -f $displayCount)
-        Write-Host "  [N] Generate fresh aggregate data (slower but current)"
-        Write-Host ""
-        $choice = Read-Host "Enter choice [N]"
+        if (-not $script:Unattended) {
+            Write-Host "Would you like to reuse existing aggregate data? (Saves time on large tenants)" -ForegroundColor Cyan
+            Write-Host ("  [1-{0}] Use the aggregate file shown above" -f $displayCount)
+            Write-Host "  [N] Generate fresh aggregate data (slower but current)"
+            Write-Host ""
+            $choice = Read-Host "Enter choice [N]"
+        } else {
+            Write-ExportLog -Message "Unattended: generating fresh aggregate data (prompt B skipped; reuse suppressed for deterministic cadence)." -Level Info
+            $choice = "N"
+        }
 
         if ($choice -match '^[1-5]$') {
             $choiceIndex = [int]$choice - 1

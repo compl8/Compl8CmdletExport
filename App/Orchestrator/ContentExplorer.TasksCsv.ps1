@@ -71,10 +71,14 @@ function Invoke-ContentExplorerFromTasksCsv {
 
     # Confirm
     Write-Host ""
-    $confirm = Read-Host "  Run these tasks? [Y/N]"
-    if ([string]::IsNullOrEmpty($confirm) -or $confirm.Trim().ToUpper() -ne "Y") {
-        Write-Host "  Cancelled." -ForegroundColor Yellow
-        return
+    if (-not $script:Unattended) {
+        $confirm = Read-Host "  Run these tasks? [Y/N]"
+        if ([string]::IsNullOrEmpty($confirm) -or $confirm.Trim().ToUpper() -ne "Y") {
+            Write-Host "  Cancelled." -ForegroundColor Yellow
+            return
+        }
+    } else {
+        Write-ExportLog -Message "Unattended: proceeding with task CSV run without confirmation (prompt E skipped)." -Level Info
     }
 
     # Create a new export directory for this run

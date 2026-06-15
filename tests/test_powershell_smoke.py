@@ -787,3 +787,77 @@ def test_write_run_summary_errors_capped_to_20(tmp_path: Path) -> None:
     summary = json.loads((export_dir / "RunSummary.json").read_text(encoding="utf-8"))
     assert len(summary["errors"]) == 20
     assert summary["droppedErrors"] == 5
+
+
+# ── B2: -Unattended switch — prompt-gate source assertions ────────────────────
+
+
+def test_unattended_gate_prompt_a_proceed_confirm() -> None:
+    """Prompt A (Proceed?) in MainExecution.ps1 must be wrapped by $script:Unattended guard."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # The Read-Host must be inside an -not $script:Unattended block
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in MainExecution.ps1"
+    assert 'Read-Host "Proceed with export? [Y]/N"' in source, "Prompt A text changed or missing"
+    # The else branch must log the skip
+    assert "prompt A skipped" in source, "Unattended else-branch log for prompt A missing"
+
+
+def test_unattended_gate_prompt_b_aggregate_reuse() -> None:
+    """Prompt B (aggregate reuse) in ContentExplorer.Export.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Export.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Export.ps1"
+    assert 'Read-Host "Enter choice [N]"' in source, "Prompt B text changed or missing"
+    assert "prompt B skipped" in source, "Unattended else-branch log for prompt B missing"
+    # Unattended default must be N (generate fresh)
+    assert '$choice = "N"' in source, "Unattended default for prompt B must be N"
+
+
+def test_unattended_gate_prompt_c_resume_confirm() -> None:
+    """Prompt C (resume confirm) in ContentExplorer.Resume.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Resume.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Resume.ps1"
+    assert 'Read-Host "  Resume this export? [Y/n]"' in source, "Prompt C text changed or missing"
+    assert "prompt C skipped" in source, "Unattended else-branch log for prompt C missing"
+
+
+def test_unattended_gate_prompt_d_retry_confirm() -> None:
+    """Prompt D (retry confirm) in ContentExplorer.Retry.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Retry.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.Retry.ps1"
+    assert 'Read-Host "  Retry these tasks? [Y/N]"' in source, "Prompt D text changed or missing"
+    assert "prompt D skipped" in source, "Unattended else-branch log for prompt D missing"
+
+
+def test_unattended_gate_prompt_e_tasks_csv_confirm() -> None:
+    """Prompt E (tasks-CSV confirm) in ContentExplorer.TasksCsv.ps1 must be guarded."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.TasksCsv.ps1").read_text(encoding="utf-8")
+    assert "if (-not $script:Unattended)" in source, "Unattended guard missing in ContentExplorer.TasksCsv.ps1"
+    assert 'Read-Host "  Run these tasks? [Y/N]"' in source, "Prompt E text changed or missing"
+    assert "prompt E skipped" in source, "Unattended else-branch log for prompt E missing"
+
+
+def test_unattended_gate_confirm_connected_tenant() -> None:
+    """Confirm-ConnectedTenant's non-interactive guard must also honor $script:Unattended,
+    so a scheduled run on an interactive console (IsInputRedirected = $false) does not hang."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    assert "[Console]::IsInputRedirected -or $script:Unattended" in source, (
+        "Confirm-ConnectedTenant guard must OR in $script:Unattended"
+    )
+
+
+def test_unattended_fallback_h_config_error_exit() -> None:
+    """Fallback H in MainExecution.ps1: unattended + no-mode path must exit with ConfigError (4)."""
+    source = (SCRIPT_PARTS_ROOT / "MainExecution.ps1").read_text(encoding="utf-8")
+    # The positive-form guard `if ($script:Unattended)` is unique to fallback H — the five
+    # prompt gates all use the negative `if (-not $script:Unattended)` — so it uniquely
+    # pins the fallback-H block rather than matching any prompt gate.
+    assert "if ($script:Unattended)" in source, "positive-form fallback-H guard missing in MainExecution.ps1"
+    assert "Get-ExportExitCode -Status 'ConfigError'" in source, "ConfigError exit missing from MainExecution.ps1"
+    assert "Write-RunSummary" in source, "Write-RunSummary not called in MainExecution.ps1 fallback H"
+
+
+def test_unattended_switch_declared_in_entry_script() -> None:
+    """Export-Compl8Configuration.ps1 must declare [switch]$Unattended and propagate it."""
+    entry = (SCRIPT_PARTS_ROOT.parent / "Export-Compl8Configuration.ps1").read_text(encoding="utf-8")
+    assert "[switch]$Unattended" in entry, "[switch]$Unattended not declared in entry script"
+    assert "$script:Unattended = [bool]$Unattended" in entry, "Unattended not propagated to script scope"

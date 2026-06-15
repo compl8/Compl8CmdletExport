@@ -234,7 +234,15 @@ param(
     # produced by the external GetTCs tool, which the tool owner distributes
     # separately. This switch no longer refreshes anything itself — it checks
     # the cache and tells you how to refresh it.
-    [switch]$RefreshTrainableClassifiers
+    [switch]$RefreshTrainableClassifiers,
+
+    # Suppress all interactive prompts and use deterministic defaults, so the
+    # export can run unattended (e.g. scheduled task, cert auth). Specific
+    # defaults: proceed-confirm → proceed; aggregate reuse → generate fresh;
+    # resume/retry/tasks-csv confirm → proceed. If no recognised export mode
+    # is provided (menu/no-params path), exits with code 4 (ConfigError)
+    # instead of showing the interactive menu.
+    [switch]$Unattended
 )
 
 if ($JsonlOutput) {
@@ -346,6 +354,8 @@ Write-Verbose "Script started with $($script:BoundParameterCount) bound paramete
 
 $ErrorActionPreference = "Stop"
 $scriptRoot = $PSScriptRoot
+# Propagate -Unattended to script scope so dot-sourced App parts can read it.
+$script:Unattended = [bool]$Unattended
 # Content Explorer defaults (centralized for consistency across worker/resume/retry/export)
 $script:CEDefaultBatchSize = 10
 $script:CEDefaultWorkloads = @("SharePoint", "OneDrive")

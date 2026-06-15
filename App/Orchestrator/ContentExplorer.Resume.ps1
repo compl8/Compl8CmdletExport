@@ -68,10 +68,14 @@ function Invoke-ContentExplorerResume {
 
     # Confirm
     Write-Host ""
-    $confirm = Read-Host "  Resume this export? [Y/n]"
-    if (-not [string]::IsNullOrEmpty($confirm) -and $confirm.Trim().ToUpper() -ne "Y") {
-        Write-Host "  Resume cancelled." -ForegroundColor Yellow
-        return
+    if (-not $script:Unattended) {
+        $confirm = Read-Host "  Resume this export? [Y/n]"
+        if (-not [string]::IsNullOrEmpty($confirm) -and $confirm.Trim().ToUpper() -ne "Y") {
+            Write-Host "  Resume cancelled." -ForegroundColor Yellow
+            return
+        }
+    } else {
+        Write-ExportLog -Message "Unattended: proceeding with resume without confirmation (prompt C skipped)." -Level Info
     }
 
     # Initialize logging

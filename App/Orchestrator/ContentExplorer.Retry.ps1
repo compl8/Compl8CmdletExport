@@ -42,10 +42,14 @@ function Invoke-ContentExplorerRetry {
 
     # Confirm
     Write-Host ""
-    $confirm = Read-Host "  Retry these tasks? [Y/N]"
-    if ([string]::IsNullOrEmpty($confirm) -or $confirm.Trim().ToUpper() -ne "Y") {
-        Write-Host "  Retry cancelled." -ForegroundColor Yellow
-        return
+    if (-not $script:Unattended) {
+        $confirm = Read-Host "  Retry these tasks? [Y/N]"
+        if ([string]::IsNullOrEmpty($confirm) -or $confirm.Trim().ToUpper() -ne "Y") {
+            Write-Host "  Retry cancelled." -ForegroundColor Yellow
+            return
+        }
+    } else {
+        Write-ExportLog -Message "Unattended: proceeding with retry without confirmation (prompt D skipped)." -Level Info
     }
 
     # Initialize logging

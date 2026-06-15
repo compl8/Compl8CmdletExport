@@ -158,6 +158,19 @@ $script:MenuNoActivity = $false
 $script:MenuNoContent = $false
 
 if ($showMenu) {
+    # Fallback H: unattended mode with no recognised export mode → fail fast.
+    if ($script:Unattended) {
+        Write-ExportLog -Message "Unattended mode requires an explicit export mode (-FullExport, -DlpOnly, -ContentExplorer, etc.). No mode was provided; cannot show interactive menu." -Level Error
+        if ($script:ExportRunDirectory -and (Test-Path $script:ExportRunDirectory)) {
+            Write-RunSummary -ExportDir $script:ExportRunDirectory -Result @{
+                Mode   = 'None'
+                Status = 'ConfigError'
+                Errors = @("No export mode specified for unattended run.")
+            }
+        }
+        exit (Get-ExportExitCode -Status 'ConfigError')
+    }
+
     $menuResult = Show-ExportMenu
 
     if ($menuResult.Quit) {
@@ -516,10 +529,14 @@ switch ($script:SelectedMode) {
 Write-Host ""
 
 # Confirmation prompt (defaults to Yes on Enter)
-$confirmation = Read-Host "Proceed with export? [Y]/N"
-if ($confirmation -match '^[Nn]') {
-    Write-Host "Export cancelled by user." -ForegroundColor Yellow
-    exit 0
+if (-not $script:Unattended) {
+    $confirmation = Read-Host "Proceed with export? [Y]/N"
+    if ($confirmation -match '^[Nn]') {
+        Write-Host "Export cancelled by user." -ForegroundColor Yellow
+        exit 0
+    }
+} else {
+    Write-ExportLog -Message "Unattended: proceeding without confirmation (prompt A skipped)." -Level Info
 }
 
 Write-Host ""
@@ -591,9 +608,9 @@ function Confirm-ConnectedTenant {
         Proceed, Relabel (rename the run dir), Re-authenticate (different account), or
         Abort.
 
-        Non-interactive (input redirected / no console): logs the label + domain and
-        proceeds without prompting - forward-compat with a future -Unattended switch and
-        the cert-auth silent flow.
+        Non-interactive (input redirected / no console) or -Unattended
+        ($script:Unattended): logs the label + domain and proceeds without prompting -
+        keeps scheduled / cert-auth silent runs from hanging at this guard.
     .PARAMETER ConnectParams
         The splatted connect parameters (from Build-AuthParameters), reused for the
         Re-authenticate path.
@@ -640,9 +657,12 @@ function Confirm-ConnectedTenant {
             Write-Host "  (domain unchanged - if you intended a different account, you may need to sign out of the cached account in the browser)" -ForegroundColor Yellow
         }
 
-        # --- 3. Non-interactive guard ---
-        if ([Console]::IsInputRedirected) {
-            Write-ExportLog -Message ("Tenant confirmation skipped (non-interactive): label='{0}', connected domain='{1}'. Proceeding." -f $label, $domainDisplay) -Level Info
+        # --- 3. Non-interactive / unattended guard ---
+        # -Unattended must skip this prompt even on an interactive console (a scheduled
+        # task can launch with IsInputRedirected = $false), otherwise it would hang here.
+        if ([Console]::IsInputRedirected -or $script:Unattended) {
+            $skipReason = if ($script:Unattended) { "unattended/non-interactive" } else { "non-interactive" }
+            Write-ExportLog -Message ("Tenant confirmation skipped ({0}): label='{1}', connected domain='{2}'. Proceeding." -f $skipReason, $label, $domainDisplay) -Level Info
             return $true
         }
 
