@@ -1059,3 +1059,81 @@ def test_unattended_pre_flight_covers_all_early_exit_modes() -> None:
     # Worker calls the helper WITHOUT -WriteSummary (it doesn't own the run summary).
     # Pin it by the comment that documents the choice plus a bare helper call.
     assert "a worker doesn't own the run's summary" in source, "worker pre-flight rationale comment missing"
+
+
+# ── B4: Worker hidden-window + guaranteed shutdown ────────────────────────────
+
+
+def test_b4_stop_worker_processes_defined_in_menu() -> None:
+    """Stop-WorkerProcesses must be defined in Menu.ps1 next to Start-WorkerTerminals."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    assert "function Stop-WorkerProcesses" in source, "Stop-WorkerProcesses not defined in Menu.ps1"
+    # Must guard against empty/null collection
+    assert "if (-not $WorkerProcesses -or @($WorkerProcesses).Count -eq 0)" in source, (
+        "Stop-WorkerProcesses must no-op on empty/null collection"
+    )
+    # Must use SilentlyContinue so already-exited workers don't raise noise
+    assert "Stop-Process" in source and "SilentlyContinue" in source, (
+        "Stop-WorkerProcesses must use Stop-Process with SilentlyContinue"
+    )
+
+
+def test_b4_spawn_sites_gate_no_exit_on_unattended() -> None:
+    """Both spawn sites in Menu.ps1 must omit -NoExit and add -WindowStyle Hidden when Unattended."""
+    source = MENU_PART_PATH.read_text(encoding="utf-8")
+    # Both spawn sites (Start-WorkerTerminals and Add-WorkerToExport) set WindowStyle
+    # Hidden exactly once under unattended — assert BOTH (==2) so a regression that
+    # reverts one spawn site is caught, not just one.
+    assert source.count("WindowStyle = 'Hidden'") == 2, (
+        "Both Menu.ps1 spawn sites must set WindowStyle Hidden when unattended (one each)"
+    )
+    assert "if ($script:Unattended)" in source, (
+        "Menu.ps1 spawn sites must gate -NoExit/-WindowStyle on $script:Unattended"
+    )
+    # The interactive branch still keeps -NoExit.
+    assert '"-NoExit"' in source, "Interactive path must still include -NoExit"
+
+
+def test_b4_ae_orchestrator_calls_stop_worker_processes() -> None:
+    """ActivityExplorer.ps1 multi-terminal path must call Stop-WorkerProcesses."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ActivityExplorer.ps1").read_text(encoding="utf-8")
+    assert "Stop-WorkerProcesses" in source, (
+        "ActivityExplorer.ps1 must call Stop-WorkerProcesses to prevent worker leaks"
+    )
+    assert "finally" in source, (
+        "ActivityExplorer.ps1 must use try/finally to guarantee worker shutdown on abort"
+    )
+
+
+def test_b4_ce_resume_orchestrator_calls_stop_worker_processes() -> None:
+    """ContentExplorer.Resume.ps1 multi-terminal path must call Stop-WorkerProcesses."""
+    source = (SCRIPT_PARTS_ROOT / "Orchestrator" / "ContentExplorer.Resume.ps1").read_text(encoding="utf-8")
+    assert "Stop-WorkerProcesses" in source, (
+        "ContentExplorer.Resume.ps1 must call Stop-WorkerProcesses to prevent worker leaks"
+    )
+    assert "finally" in source, (
+        "ContentExplorer.Resume.ps1 must use try/finally to guarantee worker shutdown on abort"
+    )
+
+
+def test_b4_stop_worker_processes_no_op_on_empty(tmp_path: Path) -> None:
+    """Dot-source Menu.ps1 and call Stop-WorkerProcesses with null and empty — must not error."""
+    script = textwrap.dedent(
+        f"""
+        $scriptRoot = '{REPO_ROOT}'
+        $UserPrincipalName = $null
+        $script:Unattended = $false
+        $PageSize = $null
+        # Stub out module functions that Menu.ps1 calls at dot-source time (none at parse; ok)
+        . '{MENU_PART_PATH}'
+        # Null collection: must be a no-op
+        Stop-WorkerProcesses -WorkerProcesses $null
+        Write-Output 'NULL_OK'
+        # Empty array: must be a no-op
+        Stop-WorkerProcesses -WorkerProcesses @()
+        Write-Output 'EMPTY_OK'
+        """
+    )
+    output = run_pwsh(script)
+    assert "NULL_OK" in output, f"Stop-WorkerProcesses $null raised an error: {output}"
+    assert "EMPTY_OK" in output, f"Stop-WorkerProcesses @() raised an error: {output}"

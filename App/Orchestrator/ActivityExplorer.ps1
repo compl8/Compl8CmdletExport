@@ -514,6 +514,10 @@ function Invoke-AEMultiExport {
     }
     Write-ExportLog -Message ("{0} worker(s) spawned" -f $workerProcesses.Count) -Level Info
 
+    # Guaranteed worker shutdown: stop spawned workers on normal completion AND on any
+    # abort/exception path. Stop-WorkerProcesses is a no-op if the collection is empty.
+    try {
+
     # Dispatch loop via Invoke-DispatchLoop engine
     $exportStartTime = Get-Date
     Reset-AEDashboard
@@ -726,6 +730,14 @@ function Invoke-AEMultiExport {
     Write-ExportLog -Message ("Workers: {0}" -f $workerProcesses.Count) -Level Info
     Write-ExportLog -Message ("Duration: {0}" -f (Format-TimeSpan -Seconds $exportElapsed.TotalSeconds)) -Level Info
     Write-ExportLog -Message ("Output: per-day page files in Data/ActivityExplorer/") -Level Info
+
+    } finally {
+        # Stop any workers still running (covers both clean completion and abort paths).
+        # Workers spawned without -NoExit (unattended) will already have exited; this is
+        # a harmless no-op for them. Interactive workers (spawned with -NoExit) are stopped
+        # here so their pwsh terminals are not left orphaned on orchestrator exit or abort.
+        Stop-WorkerProcesses -WorkerProcesses $workerProcesses
+    }
 }
 
 #endregion

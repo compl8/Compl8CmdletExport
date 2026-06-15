@@ -328,6 +328,9 @@ function Invoke-ContentExplorerResume {
                         return
                     }
 
+                    # Guaranteed worker shutdown: stop spawned workers on completion AND abort.
+                    try {
+
                     # Dispatch via Invoke-DispatchLoop engine
                     $detailTaskCsvPath = Join-Path (Get-CoordinationDir $ExportDir) "DetailTasks.csv"
                     $totalDetailItems = ($detailTasks | ForEach-Object { ($_.ExpectedCount -as [long]) } | Measure-Object -Sum).Sum
@@ -513,6 +516,11 @@ function Invoke-ContentExplorerResume {
                     $doneDetailCount = @($detailTasks | Where-Object { $_.Status -in @("Completed", "Error") }).Count
                     $errorDetailCount = @($detailTasks | Where-Object { $_.Status -eq "Error" }).Count
                     Write-ExportLog -Message ("  Resume detail export complete: {0}/{1} tasks done ({2} errors)" -f $doneDetailCount, $detailTasks.Count, $errorDetailCount) -Level Success
+
+                    } finally {
+                        # Stop any workers still running (covers clean completion and abort paths).
+                        Stop-WorkerProcesses -WorkerProcesses $workerProcesses
+                    }
                 }
             }
             else {
